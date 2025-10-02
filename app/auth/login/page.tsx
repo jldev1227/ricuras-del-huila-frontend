@@ -1,10 +1,39 @@
 'use client'
 
-import { Button, Checkbox } from '@heroui/react' // Cambia a @heroui/react
+import { Button, Checkbox } from '@heroui/react'
 import Link from 'next/link'
-import React from 'react'
+import React, { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
 
 export default function Page() {
+    const router = useRouter()
+    const { login, isOnline } = useAuth()
+    
+    const [identificacion, setIdentificacion] = useState('')
+    const [password, setPassword] = useState('')
+    const [recordarme, setRecordarme] = useState(false)
+    const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError('')
+        setLoading(true)
+
+        try {
+            await login(identificacion, password)
+            
+            // Redirigir según el rol (esto lo manejas en useAuth)
+            router.push('/dashboard')
+            router.refresh()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-background">
             <div className="w-full max-w-md p-8">
@@ -16,7 +45,8 @@ export default function Page() {
                         loading='eager'
                     />
                 </div>
-                <form className="space-y-6">
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Header */}
                     <div className="mb-6">
                         <h1 className="text-4xl sm:text-5xl font-black text-foreground-700 leading-[40px] sm:leading-[55px] sm:w-[30rem]">
@@ -29,6 +59,20 @@ export default function Page() {
                             Sistema exclusivo para el personal autorizado.
                         </p>
                     </div>
+
+                    {/* Indicador offline */}
+                    {!isOnline && (
+                        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+                            Modo Offline - Solo usuarios previamente autenticados
+                        </div>
+                    )}
+
+                    {/* Error message */}
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
 
                     {/* Form fields */}
                     <div className="space-y-5">
@@ -43,7 +87,11 @@ export default function Page() {
                             <input
                                 id="identificacion"
                                 type="number"
-                                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary"
+                                value={identificacion}
+                                onChange={(e) => setIdentificacion(e.target.value)}
+                                required
+                                disabled={loading}
+                                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                                 placeholder="Ej: 1234567890"
                             />
                         </div>
@@ -59,16 +107,20 @@ export default function Page() {
                             <input
                                 id="password"
                                 type="password"
-                                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                disabled={loading}
+                                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                                 placeholder="••••••••"
                             />
                         </div>
 
                         {/* Remember me */}
                         <Checkbox
-                            id="remember"
-                            type="checkbox"
-                            className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                            isSelected={recordarme}
+                            onValueChange={setRecordarme}
+                            isDisabled={loading}
                         >
                             Recordarme
                         </Checkbox>
@@ -76,17 +128,25 @@ export default function Page() {
                         {/* Submit button */}
                         <div>
                             <Button
+                                type="submit"
                                 color="primary"
                                 variant="solid"
                                 className='h-16 font-bold text-xl'
                                 size="md"
                                 fullWidth
+                                isLoading={loading}
+                                isDisabled={loading}
                             >
-                                Ingresar
+                                {loading ? 'Ingresando...' : 'Ingresar'}
                             </Button>
                         </div>
-
-                        <p className='text-center font-bold text-foreground-700'>{" "}¿Olvidate tu contraseña? <Link href={'/auth/forgot-password'} className='text-primary'>Recuperar contraseña</Link></p>
+                        
+                        <p className='text-center font-bold text-foreground-700'>
+                            ¿Olvidaste tu contraseña?{' '}
+                            <Link href={'/auth/forgot-password'} className='text-primary'>
+                                Recuperar contraseña
+                            </Link>
+                        </p>
                     </div>
                 </form>
             </div>

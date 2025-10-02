@@ -79,3 +79,4 @@ Thumbs.db
 
 # Biome (tu linter)
 .biome/
+/lib/generated/prisma

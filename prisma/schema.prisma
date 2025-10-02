@@ -1,0 +1,116 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id                String    @id @default(uuid()) @db.Uuid
+  nombreCompleto    String    @map("nombre_completo")
+  identificacion    String    @unique
+  correo            String?   @unique
+  telefono          String?
+  password          String
+  rol               Rol       @default(MESERO)
+  activo            Boolean   @default(true)
+  passwordResets PasswordReset[]
+  
+  // Campos para manejo offline
+  ultimaConexion    DateTime? @map("ultima_conexion")
+  dispositivoId     String?   @map("dispositivo_id")
+  versionCache      Int       @default(1) @map("version_cache")
+  
+  // Timestamps
+  creadoEn          DateTime  @default(now()) @map("creado_en")
+  actualizadoEn     DateTime  @updatedAt @map("actualizado_en")
+  
+  // Relaciones
+  sesiones          Sesion[]
+  ordenes           Orden[]
+  
+  @@map("usuarios")
+}
+
+enum Rol {
+  ADMINISTRADOR
+  MESERO
+  
+  @@map("roles")
+}
+
+model Sesion {
+  id            String    @id @default(uuid()) @db.Uuid
+  usuarioId     String    @map("usuario_id") @db.Uuid
+  token         String    @unique
+  refreshToken  String?   @unique @map("refresh_token")
+  expiraEn      DateTime  @map("expira_en")
+  
+  // Info del dispositivo para offline
+  dispositivoId String?   @map("dispositivo_id")
+  ipAddress     String?   @map("ip_address")
+  userAgent     String?   @map("user_agent")
+  
+  // Control de sesión
+  activa        Boolean   @default(true)
+  ultimoUso     DateTime  @default(now()) @map("ultimo_uso")
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  
+  // Relación
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([usuarioId])
+  @@index([token])
+  @@map("sesiones")
+}
+
+model PasswordReset {
+  id             String   @id @default(uuid()) @db.Uuid
+  usuarioId      String   @map("usuario_id") @db.Uuid
+  otp            String
+  intentos       Int      @default(0)
+  usado          Boolean  @default(false)
+  expiraEn       DateTime @map("expira_en")
+  creadoEn       DateTime @default(now()) @map("creado_en")
+  
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([otp])
+  @@index([usuarioId])
+  @@map("password_resets")
+}
+
+model Orden {
+  id            String      @id @default(uuid()) @db.Uuid
+  meseroId      String      @map("mesero_id") @db.Uuid
+  total         Decimal     @db.Decimal(10, 2)
+  estado        EstadoOrden @default(PENDIENTE)
+  
+  // Para sincronización offline
+  sincronizado  Boolean     @default(false)
+  creadoOffline Boolean     @default(false) @map("creado_offline")
+  sincronizadoEn DateTime?  @map("sincronizado_en")
+  
+  creadoEn      DateTime    @default(now()) @map("creado_en")
+  actualizadoEn DateTime    @updatedAt @map("actualizado_en")
+  
+  mesero        Usuario     @relation(fields: [meseroId], references: [id])
+  
+  @@index([meseroId])
+  @@index([sincronizado])
+  @@map("ordenes")
+}
+
+enum EstadoOrden {
+  PENDIENTE
+  EN_PREPARACION
+  LISTA
+  ENTREGADA
+  CANCELADA
+  
+  @@map("estados_orden")
+}
