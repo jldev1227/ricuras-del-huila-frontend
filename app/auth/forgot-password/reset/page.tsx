@@ -62,7 +62,7 @@ export default function Page() {
 
       // Redirigir al login con mensaje de éxito
       alert('Contraseña actualizada exitosamente. Por favor inicia sesión.')
-      router.push('/auth-login')
+      router.push('/auth/login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al actualizar contraseña')
     } finally {

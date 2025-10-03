@@ -19,7 +19,8 @@ model Usuario {
   rol               Rol       @default(MESERO)
   activo            Boolean   @default(true)
   passwordResets PasswordReset[]
-  
+  sucursalId        String    @map("sucursal_id") @db.Uuid
+
   // Campos para manejo offline
   ultimaConexion    DateTime? @map("ultima_conexion")
   dispositivoId     String?   @map("dispositivo_id")
@@ -32,7 +33,7 @@ model Usuario {
   // Relaciones
   sesiones          Sesion[]
   ordenes           Orden[]
-  
+  sucursal          Sucursal  @relation(fields: [sucursalId], references: [id])  
   @@map("usuarios")
 }
 
@@ -84,23 +85,117 @@ model PasswordReset {
   @@map("password_resets")
 }
 
+model Sucursal {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String
+  direccion String
+  telefono  String?
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now()) @map("creado_en")
+  
+  usuarios  Usuario[]
+  mesas     Mesa[]
+  
+  @@map("sucursales")
+}
+
+model Mesa {
+  id             String    @id @default(uuid()) @db.Uuid
+  numero         Int
+  capacidad      Int       @default(4)
+  disponible     Boolean   @default(true)
+  sucursalId     String    @map("sucursal_id") @db.Uuid
+  ubicacion      String?
+  notas          String?
+  ultimaLimpieza DateTime? @map("ultima_limpieza")
+  creadoEn       DateTime  @default(now()) @map("creado_en")
+  actualizadoEn  DateTime  @updatedAt @map("actualizado_en")
+  
+  sucursal       Sucursal  @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  ordenes        Orden[]
+  
+  @@unique([numero, sucursalId])
+  @@index([sucursalId])
+  @@index([disponible])
+  @@map("mesas")
+}
+
+model Producto {
+  id                String    @id @default(uuid()) @db.Uuid
+  nombre            String
+  descripcion       String?
+  precio            Decimal   @db.Decimal(10, 2)
+  costoProduccion   Decimal   @map("costo_produccion") @db.Decimal(10, 2)
+  categoriaId       String    @map("categoria_id") @db.Uuid
+  imagen            String?   // Ruta de la imagen: /productos/lechona.jpg
+  disponible        Boolean   @default(true)
+  destacado         Boolean   @default(false)
+  
+  // Timestamps
+  creadoEn          DateTime  @default(now()) @map("creado_en")
+  actualizadoEn     DateTime  @updatedAt @map("actualizado_en")
+  
+  // Relaciones
+  categoria         Categoria @relation(fields: [categoriaId], references: [id])
+  ordenItems        OrdenItem[]
+  
+  @@index([categoriaId])
+  @@index([disponible])
+  @@map("productos")
+}
+
+model Categoria {
+  id          String    @id @default(uuid()) @db.Uuid
+  nombre      String    @unique
+  descripcion String?
+  icono       String?   // Emoji o nombre de icono
+  orden       Int       @default(0)
+  activo      Boolean   @default(true)
+  
+  creadoEn    DateTime  @default(now()) @map("creado_en")
+  
+  productos   Producto[]
+  
+  @@map("categorias")
+}
+
+model OrdenItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  ordenId        String   @map("orden_id") @db.Uuid
+  productoId     String   @map("producto_id") @db.Uuid
+  cantidad       Int
+  precioUnitario Decimal  @map("precio_unitario") @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+  notas          String?  // "Sin cebolla", "Extra queso", etc.
+  
+  orden          Orden    @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  producto       Producto @relation(fields: [productoId], references: [id])
+  
+  @@index([ordenId])
+  @@index([productoId])
+  @@map("orden_items")
+}
+
 model Orden {
-  id            String      @id @default(uuid()) @db.Uuid
-  meseroId      String      @map("mesero_id") @db.Uuid
-  total         Decimal     @db.Decimal(10, 2)
-  estado        EstadoOrden @default(PENDIENTE)
+  id             String      @id @default(uuid()) @db.Uuid
+  mesaId         String      @map("mesa_id") @db.Uuid
+  meseroId       String      @map("mesero_id") @db.Uuid
+  total          Decimal     @db.Decimal(10, 2)
+  estado         EstadoOrden @default(PENDIENTE)
   
-  // Para sincronización offline
-  sincronizado  Boolean     @default(false)
-  creadoOffline Boolean     @default(false) @map("creado_offline")
-  sincronizadoEn DateTime?  @map("sincronizado_en")
+  sincronizado   Boolean     @default(false)
+  creadoOffline  Boolean     @default(false) @map("creado_offline")
+  sincronizadoEn DateTime?   @map("sincronizado_en")
   
-  creadoEn      DateTime    @default(now()) @map("creado_en")
-  actualizadoEn DateTime    @updatedAt @map("actualizado_en")
+  creadoEn       DateTime    @default(now()) @map("creado_en")
+  actualizadoEn  DateTime    @updatedAt @map("actualizado_en")
   
-  mesero        Usuario     @relation(fields: [meseroId], references: [id])
+  mesa           Mesa        @relation(fields: [mesaId], references: [id])
+  mesero         Usuario     @relation(fields: [meseroId], references: [id])
+  items          OrdenItem[]
   
   @@index([meseroId])
+  @@index([mesaId])
   @@index([sincronizado])
   @@map("ordenes")
 }
