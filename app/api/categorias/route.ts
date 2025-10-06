@@ -9,6 +9,7 @@ export async function GET() {
         id: true,
         nombre: true,
         icono: true,
+        activo: true,
         _count: {
           select: {
             productos: true,

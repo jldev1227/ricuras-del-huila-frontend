@@ -56,3 +56,54 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { nombre, descripcion, precio, costoProduccion, categoriaId, imagen, disponible, destacado } = body;
+
+    // Validaciones
+    if (!nombre || !categoriaId) {
+      return NextResponse.json(
+        { message: 'Nombre y categoría son requeridos' },
+        { status: 400 }
+      );
+    }
+
+    if (precio <= 0 || costoProduccion < 0) {
+      return NextResponse.json(
+        { message: 'Precios inválidos' },
+        { status: 400 }
+      );
+    }
+
+    const producto = await prisma.producto.create({
+      data: {
+        nombre,
+        descripcion,
+        precio,
+        costoProduccion,
+        categoriaId,
+        imagen,
+        disponible: disponible ?? true,
+        destacado: destacado ?? false,
+      },
+      include: {
+        categoria: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      producto,
+      message: 'Producto creado exitosamente',
+    });
+
+  } catch (error) {
+    console.error('Error al crear producto:', error);
+    return NextResponse.json(
+      { message: 'Error al crear producto' },
+      { status: 500 }
+    );
+  }
+}

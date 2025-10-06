@@ -25,7 +25,7 @@ export default function Page() {
             await login(identificacion, password)
             
             // Redirigir según el rol (esto lo manejas en useAuth)
-            router.push('/dashboard')
+            router.push('/pos')
             router.refresh()
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Error al iniciar sesión')

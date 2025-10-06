@@ -18,22 +18,20 @@ model Usuario {
   password          String
   rol               Rol       @default(MESERO)
   activo            Boolean   @default(true)
-  passwordResets PasswordReset[]
+  passwordResets    PasswordReset[]
   sucursalId        String    @map("sucursal_id") @db.Uuid
 
-  // Campos para manejo offline
   ultimaConexion    DateTime? @map("ultima_conexion")
   dispositivoId     String?   @map("dispositivo_id")
   versionCache      Int       @default(1) @map("version_cache")
   
-  // Timestamps
   creadoEn          DateTime  @default(now()) @map("creado_en")
   actualizadoEn     DateTime  @updatedAt @map("actualizado_en")
   
-  // Relaciones
   sesiones          Sesion[]
   ordenes           Orden[]
   sucursal          Sucursal  @relation(fields: [sucursalId], references: [id])  
+  
   @@map("usuarios")
 }
 
@@ -50,18 +48,13 @@ model Sesion {
   token         String    @unique
   refreshToken  String?   @unique @map("refresh_token")
   expiraEn      DateTime  @map("expira_en")
-  
-  // Info del dispositivo para offline
   dispositivoId String?   @map("dispositivo_id")
   ipAddress     String?   @map("ip_address")
   userAgent     String?   @map("user_agent")
-  
-  // Control de sesión
   activa        Boolean   @default(true)
   ultimoUso     DateTime  @default(now()) @map("ultimo_uso")
   creadoEn      DateTime  @default(now()) @map("creado_en")
   
-  // Relación
   usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   
   @@index([usuarioId])
@@ -127,15 +120,13 @@ model Producto {
   precio            Decimal   @db.Decimal(10, 2)
   costoProduccion   Decimal   @map("costo_produccion") @db.Decimal(10, 2)
   categoriaId       String    @map("categoria_id") @db.Uuid
-  imagen            String?   // Ruta de la imagen: /productos/lechona.jpg
+  imagen            String?
   disponible        Boolean   @default(true)
   destacado         Boolean   @default(false)
   
-  // Timestamps
   creadoEn          DateTime  @default(now()) @map("creado_en")
   actualizadoEn     DateTime  @updatedAt @map("actualizado_en")
   
-  // Relaciones
   categoria         Categoria @relation(fields: [categoriaId], references: [id])
   ordenItems        OrdenItem[]
   
@@ -148,10 +139,9 @@ model Categoria {
   id          String    @id @default(uuid()) @db.Uuid
   nombre      String    @unique
   descripcion String?
-  icono       String?   // Emoji o nombre de icono
+  icono       String?
   orden       Int       @default(0)
   activo      Boolean   @default(true)
-  
   creadoEn    DateTime  @default(now()) @map("creado_en")
   
   productos   Producto[]
@@ -166,7 +156,7 @@ model OrdenItem {
   cantidad       Int
   precioUnitario Decimal  @map("precio_unitario") @db.Decimal(10, 2)
   subtotal       Decimal  @db.Decimal(10, 2)
-  notas          String?  // "Sin cebolla", "Extra queso", etc.
+  notas          String?
   
   orden          Orden    @relation(fields: [ordenId], references: [id], onDelete: Cascade)
   producto       Producto @relation(fields: [productoId], references: [id])
@@ -177,27 +167,138 @@ model OrdenItem {
 }
 
 model Orden {
-  id             String      @id @default(uuid()) @db.Uuid
-  mesaId         String      @map("mesa_id") @db.Uuid
-  meseroId       String      @map("mesero_id") @db.Uuid
-  total          Decimal     @db.Decimal(10, 2)
-  estado         EstadoOrden @default(PENDIENTE)
+  id                String      @id @default(uuid()) @db.Uuid
   
-  sincronizado   Boolean     @default(false)
-  creadoOffline  Boolean     @default(false) @map("creado_offline")
-  sincronizadoEn DateTime?   @map("sincronizado_en")
+  // Tipo de orden
+  tipoOrden         TipoOrden   @map("tipo_orden")
   
-  creadoEn       DateTime    @default(now()) @map("creado_en")
-  actualizadoEn  DateTime    @updatedAt @map("actualizado_en")
+  // Relaciones según tipo
+  mesaId            String?     @map("mesa_id") @db.Uuid // Solo para LOCAL
+  clienteId         String?     @map("cliente_id") @db.Uuid // Opcional para todos
+  meseroId          String      @map("mesero_id") @db.Uuid
   
-  mesa           Mesa        @relation(fields: [mesaId], references: [id])
-  mesero         Usuario     @relation(fields: [meseroId], references: [id])
-  items          OrdenItem[]
+  // Datos de contacto (para órdenes sin cliente registrado)
+  nombreCliente     String?     @map("nombre_cliente")
+  telefonoCliente   String?     @map("telefono_cliente")
+  
+  // Datos específicos para DOMICILIO
+  direccionEntrega  String?     @map("direccion_entrega")
+  indicacionesEntrega String?   @map("indicaciones_entrega")
+  costoEnvio        Decimal?    @map("costo_envio") @db.Decimal(10, 2)
+  
+  // Datos específicos para LLEVAR
+  costoAdicional    Decimal?    @map("costo_adicional") @db.Decimal(10, 2)
+  horaRecogida      DateTime?   @map("hora_recogida")
+  
+  // Montos
+  subtotal          Decimal     @db.Decimal(10, 2)
+  descuento         Decimal     @default(0) @db.Decimal(10, 2)
+  total             Decimal     @db.Decimal(10, 2)
+  
+  // Estado y control
+  estado            EstadoOrden @default(PENDIENTE)
+  especificaciones  String?     // Especificaciones de la orden
+  notas             String?     // Notas generales de la orden
+  
+  // Sincronización offline
+  sincronizado      Boolean     @default(false)
+  creadoOffline     Boolean     @default(false) @map("creado_offline")
+  sincronizadoEn    DateTime?   @map("sincronizado_en")
+  
+  // Timestamps
+  creadoEn          DateTime    @default(now()) @map("creado_en")
+  actualizadoEn     DateTime    @updatedAt @map("actualizado_en")
+  
+  // Relaciones
+  mesa              Mesa?       @relation(fields: [mesaId], references: [id])
+  cliente           Cliente?    @relation(fields: [clienteId], references: [id])
+  mesero            Usuario     @relation(fields: [meseroId], references: [id])
+  items             OrdenItem[]
   
   @@index([meseroId])
   @@index([mesaId])
+  @@index([clienteId])
   @@index([sincronizado])
+  @@index([tipoOrden])
+  @@index([estado])
   @@map("ordenes")
+}
+
+model Cliente {
+  id                  String    @id @default(uuid()) @db.Uuid
+  
+  // Datos básicos (mínimo requerido: nombre)
+  nombre              String
+  apellido            String?
+  telefono            String?
+  correo              String?
+  
+  // Datos para facturación electrónica DIAN
+  tipoIdentificacion  TipoIdentificacion? @map("tipo_identificacion")
+  numeroIdentificacion String?            @unique @map("numero_identificacion")
+  digitoVerificacion  String?            @map("digito_verificacion") // Para NIT
+  
+  // Información tributaria
+  tipoPersona         TipoPersona?       @map("tipo_persona")
+  regimenFiscal       RegimenFiscal?     @map("regimen_fiscal")
+  responsabilidadFiscal String?          @map("responsabilidad_fiscal") // Código DIAN (ej: "R-99-PN")
+  
+  // Dirección para domicilios y facturación
+  direccion           String?
+  ciudad              String?
+  departamento        String?
+  codigoPostal        String?            @map("codigo_postal")
+  
+  // Preferencias
+  notasEspeciales     String?            @map("notas_especiales")
+  frecuente           Boolean            @default(false) // Cliente frecuente
+  
+  // Timestamps
+  creadoEn            DateTime           @default(now()) @map("creado_en")
+  actualizadoEn       DateTime           @updatedAt @map("actualizado_en")
+  
+  // Relaciones
+  ordenes             Orden[]
+  
+  @@index([numeroIdentificacion])
+  @@index([telefono])
+  @@index([correo])
+  @@map("clientes")
+}
+
+enum TipoIdentificacion {
+  CC           // Cédula de Ciudadanía
+  CE           // Cédula de Extranjería
+  NIT          // Número de Identificación Tributaria
+  TI           // Tarjeta de Identidad
+  PASAPORTE    // Pasaporte
+  DIE          // Documento de Identificación Extranjero
+  
+  @@map("tipos_identificacion")
+}
+
+enum TipoPersona {
+  NATURAL
+  JURIDICA
+  
+  @@map("tipos_persona")
+}
+
+enum RegimenFiscal {
+  SIMPLIFICADO
+  COMUN
+  GRAN_CONTRIBUYENTE
+  NO_RESPONSABLE
+  
+  @@map("regimenes_fiscales")
+}
+
+enum TipoOrden {
+  LOCAL       // Consumo en el local (requiere mesa)
+  LLEVAR      // Para llevar
+  DOMICILIO   // A domicilio (requiere dirección)
+  
+  @@map("tipos_orden")
 }
 
 enum EstadoOrden {

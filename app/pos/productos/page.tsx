@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Button } from '@heroui/react'
+import { Button, useDisclosure } from '@heroui/react'
 import Image from 'next/image'
+import ModalFormProducto from '@/components/productos/ModalFormProducto'
+import ModalDetallesProducto from '@/components/productos/ModalDetallesProducto'
 
 interface Producto {
   id: string
@@ -37,6 +39,32 @@ export default function ProductosPage() {
   const [searchNombre, setSearchNombre] = useState('')
   const [selectedCategoria, setSelectedCategoria] = useState('')
   const [selectedDisponible, setSelectedDisponible] = useState('')
+  const { isOpen: isOpenForm, onOpen: onOpenForm, onOpenChange: onOpenChangeForm } = useDisclosure();
+  const { isOpen: isOpenDetails, onOpen: onOpenDetails, onOpenChange: onOpenChangeDetails } = useDisclosure();
+
+  const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null);
+
+  // Función para abrir modal de edición
+  const handleEdit = (producto: Producto) => {
+    setSelectedProducto(producto);
+    onOpenForm();
+  };
+
+  // Función para abrir modal de creación
+  const handleCreate = () => {
+    setSelectedProducto(null);
+    onOpenForm();
+  };
+
+  const handleViewDetails = (producto: Producto) => {
+    setSelectedProducto(producto);
+    onOpenDetails();
+  };
+
+  const handleEditFromDetails = (producto: Producto) => {
+    setSelectedProducto(producto);
+    onOpenForm();
+  };
 
   useEffect(() => {
     fetchCategorias()
@@ -102,7 +130,8 @@ export default function ProductosPage() {
             <h1 className="text-2xl font-bold text-gray-800">Gestión de Productos</h1>
             <p className="text-sm text-gray-600 mt-1">Menú de comida típica huilense</p>
           </div>
-          <Button color="primary">
+
+          <Button color="primary" onPress={handleCreate}>
             Nuevo Producto
           </Button>
         </div>
@@ -184,11 +213,11 @@ export default function ProductosPage() {
             <p className="text-gray-600">No se encontraron productos</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {productos.map((producto) => {
               const ganancia = calcularGanancia(Number(producto.precio), Number(producto.costoProduccion))
               const margen = calcularMargen(Number(producto.precio), Number(producto.costoProduccion))
-              
+
               return (
                 <div
                   key={producto.id}
@@ -210,7 +239,7 @@ export default function ProductosPage() {
                         </svg>
                       </div>
                     )}
-                    
+
                     {/* Badges */}
                     <div className="absolute top-2 right-2 flex gap-2">
                       {producto.destacado && (
@@ -219,11 +248,10 @@ export default function ProductosPage() {
                         </span>
                       )}
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          producto.disponible
-                            ? 'bg-green-500 text-white'
-                            : 'bg-red-500 text-white'
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${producto.disponible
+                          ? 'bg-green-500 text-white'
+                          : 'bg-red-500 text-white'
+                          }`}
                       >
                         {producto.disponible ? 'Disponible' : 'Agotado'}
                       </span>
@@ -281,10 +309,15 @@ export default function ProductosPage() {
 
                     {/* Acciones */}
                     <div className="flex gap-2">
-                      <Button size="sm" variant="bordered" fullWidth>
+                      <Button size="sm" variant="bordered" fullWidth onPress={() => handleEdit(producto)}>
                         Editar
                       </Button>
-                      <Button size="sm" color="primary" fullWidth>
+                      <Button
+                        size="sm"
+                        color="primary"
+                        fullWidth
+                        onPress={() => handleViewDetails(producto)}
+                      >
                         Ver detalles
                       </Button>
                     </div>
@@ -295,6 +328,21 @@ export default function ProductosPage() {
           </div>
         )}
       </div>
+
+      {/* Modales al final */}
+      <ModalFormProducto
+        isOpen={isOpenForm}
+        onOpenChange={onOpenChangeForm}
+        producto={selectedProducto}
+        onSuccess={fetchProductos}
+      />
+
+      <ModalDetallesProducto
+        isOpen={isOpenDetails}
+        onOpenChange={onOpenChangeDetails}
+        producto={selectedProducto}
+        onEdit={handleEditFromDetails}
+      />
     </div>
   )
 }
