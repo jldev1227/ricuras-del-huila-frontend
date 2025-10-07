@@ -122,7 +122,7 @@ export default function ProductosPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6">
       {/* Header con búsqueda */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-6">
@@ -213,7 +213,7 @@ export default function ProductosPage() {
             <p className="text-gray-600">No se encontraron productos</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             {productos.map((producto) => {
               const ganancia = calcularGanancia(Number(producto.precio), Number(producto.costoProduccion))
               const margen = calcularMargen(Number(producto.precio), Number(producto.costoProduccion))

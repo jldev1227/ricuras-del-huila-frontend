@@ -1,14 +1,43 @@
 'use client'
 
-import React, { ReactNode, useState } from 'react'
+import React, { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Menu, X, Bell, ChevronRight } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Menu, X, Bell, ChevronRight, MapPin, LogOut } from 'lucide-react'
+import {
+    Dropdown,
+    DropdownTrigger,
+    DropdownMenu,
+    DropdownItem,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Button,
+    useDisclosure
+} from "@heroui/react"
 
 interface MenuItem {
     name: string
     href: string
     icon: ReactNode
+}
+
+interface Sucursal {
+    id: string
+    nombre: string
+}
+
+interface AuthState {
+    state: {
+        user: any
+        token: string
+        isLoading: boolean
+        isOnline: boolean
+        sucursal?: Sucursal
+    }
+    version: number
 }
 
 const menuItems: MenuItem[] = [
@@ -83,11 +112,111 @@ const menuItems: MenuItem[] = [
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname()
+    const router = useRouter()
     const [isHovered, setIsHovered] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [sucursalActual, setSucursalActual] = useState<Sucursal | null>(null)
+    const [sucursales, setSucursales] = useState<Sucursal[]>([])
+    const [usuario, setUsuario] = useState<any>(null)
+    const [sucursalSeleccionada, setSucursalSeleccionada] = useState<Sucursal | null>(null)
+
+    const { isOpen, onOpen, onClose } = useDisclosure()
+
+    useEffect(() => {
+        cargarDatos()
+        cargarSucursales()
+    }, [])
+
+    const cargarDatos = () => {
+        try {
+            const authStorage = localStorage.getItem('auth-storage')
+            if (authStorage) {
+                const authData: AuthState = JSON.parse(authStorage)
+                setUsuario(authData.state.user)
+                if (authData.state.sucursal) {
+                    setSucursalActual(authData.state.sucursal)
+                }
+            }
+        } catch (error) {
+            console.error('Error al cargar datos:', error)
+        }
+    }
+
+    const cargarSucursales = async () => {
+        try {
+            const response = await fetch('/api/sucursales')
+            const data = await response.json()
+            if (data.success) {
+                setSucursales(data.sucursales)
+            }
+        } catch (error) {
+            console.error('Error al cargar sucursales:', error)
+        }
+    }
+
+    const handleSeleccionarSucursal = (sucursal: Sucursal) => {
+        setSucursalSeleccionada(sucursal)
+        onOpen()
+    }
+
+    const confirmarCambioSucursal = () => {
+        if (!sucursalSeleccionada) return
+
+        try {
+            const authStorage = localStorage.getItem('auth-storage')
+            if (!authStorage) return
+
+            const authData: AuthState = JSON.parse(authStorage)
+            authData.state.sucursal = sucursalSeleccionada
+            authData.version = (authData.version || 0) + 1
+
+            localStorage.setItem('auth-storage', JSON.stringify(authData))
+            localStorage.setItem('sucursal-actual', JSON.stringify(sucursalSeleccionada))
+
+            setSucursalActual(sucursalSeleccionada)
+            onClose()
+
+            // Recargar la página para actualizar todo el contexto
+            window.location.reload()
+        } catch (error) {
+            console.error('Error al cambiar sucursal:', error)
+        }
+    }
+
+    const handleLogout = () => {
+        localStorage.removeItem('auth-storage')
+        localStorage.removeItem('sucursal-actual')
+        router.push('/login')
+    }
 
     return (
         <div className="flex h-screen bg-gray-50">
+            {/* Modal de confirmación */}
+            <Modal isOpen={isOpen} onClose={onClose}>
+                <ModalContent>
+                    <ModalHeader className="flex flex-col gap-1">
+                        Confirmar cambio de sucursal
+                    </ModalHeader>
+                    <ModalBody>
+                        <p className="text-gray-700">
+                            ¿Estás seguro de cambiar a la sucursal{' '}
+                            <span className="font-bold text-wine">{sucursalSeleccionada?.nombre}</span>?
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                            Se recargará la aplicación para actualizar todos los datos.
+                        </p>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button color="danger" variant="light" onPress={onClose}>
+                            Cancelar
+                        </Button>
+                        <Button className="bg-wine text-white" onPress={confirmarCambioSucursal}>
+                            Confirmar cambio
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
             {/* Overlay para mobile */}
             {isMobileMenuOpen && (
                 <div
@@ -98,9 +227,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             {/* Sidebar Desktop */}
             <aside
-                className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${
-                    isHovered ? 'w-64' : 'w-20'
-                }`}
+                className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${isHovered ? 'w-64' : 'w-20'
+                    }`}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
@@ -123,17 +251,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                                 <li key={item.href}>
                                     <Link
                                         href={item.href}
-                                        className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
-                                            isActive
-                                                ? 'bg-wine text-white shadow-md'
-                                                : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
+                                        className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${isActive
+                                            ? 'bg-wine text-white shadow-md'
+                                            : 'text-gray-700 hover:bg-gray-100'
+                                            }`}
                                     >
                                         <span className="flex-shrink-0">{item.icon}</span>
                                         <span
-                                            className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${
-                                                isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0'
-                                            }`}
+                                            className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0'
+                                                }`}
                                         >
                                             {item.name}
                                         </span>
@@ -148,15 +274,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
                     <button className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-100 w-full transition-colors">
                         <div className="w-8 h-8 bg-wine/20 rounded-full flex-shrink-0 flex items-center justify-center text-wine font-bold">
-                            U
+                            {usuario?.nombreCompleto?.charAt(0) || 'U'}
                         </div>
                         <div
-                            className={`transition-all duration-300 overflow-hidden ${
-                                isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0'
-                            }`}
+                            className={`transition-all duration-300 overflow-hidden ${isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0'
+                                }`}
                         >
-                            <p className="text-sm font-medium text-gray-700">Usuario</p>
-                            <p className="text-xs text-gray-500">Admin</p>
+                            <p className="text-sm font-medium text-gray-700">{usuario?.nombreCompleto || 'Usuario'}</p>
+                            <p className="text-xs text-gray-500">{usuario?.rol || 'Admin'}</p>
                         </div>
                     </button>
                 </div>
@@ -164,9 +289,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             {/* Sidebar Mobile */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
-                    isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-                }`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
             >
                 {/* Header Mobile */}
                 <div className="h-20 flex items-center justify-between px-4 border-b border-gray-200">
@@ -176,12 +300,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         className="w-24 h-24"
                         loading="eager"
                     />
-                    <button
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
+                    <Button
+                        isIconOnly
+                        size='sm'
+                        onPress={() => setIsMobileMenuOpen(false)}
+                        className="p-2 bg-wine text-white rounded-lg"
                     >
                         <X size={24} />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Navigation Mobile */}
@@ -194,11 +320,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                                     <Link
                                         href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${
-                                            isActive
-                                                ? 'bg-wine text-white shadow-md'
-                                                : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
+                                        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                                            ? 'bg-wine text-white shadow-md'
+                                            : 'text-gray-700 hover:bg-gray-100'
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <span className="flex-shrink-0">{item.icon}</span>
@@ -214,14 +339,87 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
                 {/* User section Mobile */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50">
-                        <div className="w-10 h-10 bg-wine/20 rounded-full flex items-center justify-center text-wine font-bold">
-                            U
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-700">Usuario</p>
-                            <p className="text-xs text-gray-500">Admin</p>
-                        </div>
+                    {/* Sucursal Selector - Desktop */}
+                    <div className="space-y-4">
+                        <Dropdown>
+                            <DropdownTrigger>
+                                <Button
+                                    fullWidth
+                                    variant="flat"
+                                    className="border border-wine/30 bg-white hover:bg-wine/10 shadow-sm px-4 py-6 rounded-lg flex lg:hidden items-center gap-2"
+                                    startContent={
+                                        <MapPin className="text-wine" size={20} />
+                                    }
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-xs text-gray-500">Sucursal</span>
+                                        <span className="font-semibold text-wine text-sm">
+                                            {sucursalActual?.nombre || 'Sin sucursal'}
+                                        </span>
+                                    </div>
+                                </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu
+                                aria-label="Sucursales"
+                                onAction={(key) => {
+                                    const sucursal = sucursales.find(s => s.id === key)
+                                    if (sucursal && sucursal.id !== sucursalActual?.id) {
+                                        handleSeleccionarSucursal(sucursal)
+                                    }
+                                }}
+                                className="min-w-[220px]"
+                            >
+                                {sucursales.map((sucursal) => (
+                                    <DropdownItem
+                                        key={sucursal.id}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${sucursal.id === sucursalActual?.id
+                                            ? 'bg-wine/10 text-wine font-semibold'
+                                            : 'hover:bg-gray-100 text-gray-700'
+                                            }`}
+                                        startContent={
+                                            <MapPin
+                                                size={18}
+                                                className={
+                                                    sucursal.id === sucursalActual?.id
+                                                        ? 'text-wine'
+                                                        : 'text-gray-400'
+                                                }
+                                            />
+                                        }
+                                    >
+                                        {sucursal.nombre}
+                                        {sucursal.id === sucursalActual?.id && (
+                                            <span className="ml-2 px-2 py-0.5 bg-wine/20 text-xs rounded text-wine font-medium">
+                                                Actual
+                                            </span>
+                                        )}
+                                    </DropdownItem>
+                                ))}
+                            </DropdownMenu>
+                        </Dropdown>
+                        <Dropdown>
+                            <DropdownTrigger>
+                                <Button className="w-full flex items-center gap-3 px-4 py-8 rounded-lg bg-gray-50" variant="light">
+                                    <div className="w-10 h-10 bg-wine/20 rounded-full flex items-center justify-center text-wine font-bold">
+                                        {usuario?.nombreCompleto?.charAt(0) || 'U'}
+                                    </div>
+                                    <div className="flex flex-col items-start">
+                                        <p className="text-sm font-medium text-gray-700">{usuario?.nombreCompleto || 'Usuario'}</p>
+                                        <p className="text-xs text-gray-500">{usuario?.rol || 'Admin'}</p>
+                                    </div>
+                                </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu aria-label="Opciones de usuario">
+                                <DropdownItem
+                                    key="logout"
+                                    startContent={<LogOut size={18} className="text-wine" />}
+                                    onPress={handleLogout}
+                                    className="text-wine"
+                                >
+                                    Cerrar sesión
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </Dropdown>
                     </div>
                 </div>
             </aside>
@@ -245,24 +443,72 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         className="w-24 h-24 lg:hidden"
                     />
 
-                    {/* Title */}
-                    <h1 className="hidden lg:block text-xl lg:text-2xl font-bold text-gray-800">
-                        Ricuras Del Huila
-                    </h1>
+                    {/* Sucursal Selector - Desktop */}
+                    <div className="hidden lg:flex items-center gap-3">
+                        <h1 className='font-bold text-2xl'>Ricuras Del Huila</h1>
+                    </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 lg:gap-4">
+                        <Dropdown>
+                            <DropdownTrigger>
+                                <Button
+                                    variant="flat"
+                                    className="border border-wine/30 bg-white hover:bg-wine/10 shadow-sm px-10 py-6 rounded-lg hidden lg:flex items-center gap-2"
+                                    startContent={
+                                        <MapPin className="text-wine" size={20} />
+                                    }
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-xs text-gray-500">Sucursal</span>
+                                        <span className="font-semibold text-wine text-sm">
+                                            {sucursalActual?.nombre || 'Sin sucursal'}
+                                        </span>
+                                    </div>
+                                </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu
+                                aria-label="Sucursales"
+                                onAction={(key) => {
+                                    const sucursal = sucursales.find(s => s.id === key)
+                                    if (sucursal && sucursal.id !== sucursalActual?.id) {
+                                        handleSeleccionarSucursal(sucursal)
+                                    }
+                                }}
+                                className="min-w-[220px]"
+                            >
+                                {sucursales.map((sucursal) => (
+                                    <DropdownItem
+                                        key={sucursal.id}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${sucursal.id === sucursalActual?.id
+                                            ? 'bg-wine/10 text-wine font-semibold'
+                                            : 'hover:bg-gray-100 text-gray-700'
+                                            }`}
+                                        startContent={
+                                            <MapPin
+                                                size={18}
+                                                className={
+                                                    sucursal.id === sucursalActual?.id
+                                                        ? 'text-wine'
+                                                        : 'text-gray-400'
+                                                }
+                                            />
+                                        }
+                                    >
+                                        {sucursal.nombre}
+                                        {sucursal.id === sucursalActual?.id && (
+                                            <span className="ml-2 px-2 py-0.5 bg-wine/20 text-xs rounded text-wine font-medium">
+                                                Actual
+                                            </span>
+                                        )}
+                                    </DropdownItem>
+                                ))}
+                            </DropdownMenu>
+                        </Dropdown>
                         <button className="p-2 hover:bg-gray-100 rounded-lg relative">
                             <Bell size={20} className="lg:w-6 lg:h-6" />
                             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
-                        
-                        {/* User avatar - solo en desktop */}
-                        <div className="hidden lg:flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-                            <div className="w-8 h-8 bg-wine/20 rounded-full flex items-center justify-center text-wine font-bold text-sm">
-                                U
-                            </div>
-                        </div>
                     </div>
                 </header>
 

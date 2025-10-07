@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     // Filtros
+    const sucursalId = searchParams.get('sucursalId');
     const meseroId = searchParams.get('meseroId');
     const mesaId = searchParams.get('mesaId');
     const clienteId = searchParams.get('clienteId');
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     // Construir filtros
     const where: Prisma.OrdenWhereInput = {};
 
+    if (sucursalId) where.sucursalId = sucursalId;
     if (meseroId) where.meseroId = meseroId;
     if (mesaId) where.mesaId = mesaId;
     if (clienteId) where.clienteId = clienteId;
@@ -54,7 +56,13 @@ export async function GET(request: NextRequest) {
           total: true,
           descuento: true,
           creadoEn: true,
-          // Solo los campos necesarios de las relaciones
+          sucursal: {
+            select: {
+              id: true,
+              nombre: true,
+              direccion: true,
+            },
+          },
           mesa: {
             select: {
               numero: true,
@@ -71,7 +79,6 @@ export async function GET(request: NextRequest) {
               nombre: true,
             },
           },
-          // Solo el conteo de items, no los items completos
           _count: {
             select: {
               items: true,
@@ -110,6 +117,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const {
+      sucursalId,
       tipoOrden,
       mesaId,
       clienteId,
@@ -128,13 +136,28 @@ export async function POST(request: NextRequest) {
       creadoOffline = false,
     } = body;
 
-    console.log(tipoOrden,
-      meseroId,
-      items
-    );
+    // Validar sucursalId
+    if (!sucursalId) {
+      return NextResponse.json(
+        { success: false, message: 'Sucursal requerida' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que la sucursal existe
+    const sucursal = await prisma.sucursal.findUnique({
+      where: { id: sucursalId },
+    });
+
+    if (!sucursal) {
+      return NextResponse.json(
+        { success: false, message: 'Sucursal no encontrada' },
+        { status: 404 }
+      );
+    }
 
     // Validaciones básicas
-    if (!tipoOrden || !meseroId || !items || items.length === 0) {
+    if (!tipoOrden || !items || items.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Faltan campos requeridos' },
         { status: 400 }
@@ -179,6 +202,7 @@ export async function POST(request: NextRequest) {
       // Crear la orden
       const nuevaOrden = await tx.orden.create({
         data: {
+          sucursalId,
           tipoOrden,
           mesaId: tipoOrden === 'LOCAL' ? mesaId : null,
           clienteId,

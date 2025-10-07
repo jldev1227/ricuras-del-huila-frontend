@@ -88,6 +88,7 @@ model Sucursal {
   
   usuarios  Usuario[]
   mesas     Mesa[]
+  ordenes   Orden[]   // Nueva relación inversa
   
   @@map("sucursales")
 }
@@ -175,7 +176,8 @@ model Orden {
   // Relaciones según tipo
   mesaId            String?     @map("mesa_id") @db.Uuid // Solo para LOCAL
   clienteId         String?     @map("cliente_id") @db.Uuid // Opcional para todos
-  meseroId          String      @map("mesero_id") @db.Uuid
+  meseroId          String?      @map("mesero_id") @db.Uuid
+  sucursalId        String      @map("sucursal_id") @db.Uuid // Nueva relación con sucursal
   
   // Datos de contacto (para órdenes sin cliente registrado)
   nombreCliente     String?     @map("nombre_cliente")
@@ -212,12 +214,14 @@ model Orden {
   // Relaciones
   mesa              Mesa?       @relation(fields: [mesaId], references: [id])
   cliente           Cliente?    @relation(fields: [clienteId], references: [id])
-  mesero            Usuario     @relation(fields: [meseroId], references: [id])
+  mesero            Usuario?     @relation(fields: [meseroId], references: [id])
+  sucursal          Sucursal    @relation(fields: [sucursalId], references: [id]) // Nueva relación
   items             OrdenItem[]
   
   @@index([meseroId])
   @@index([mesaId])
   @@index([clienteId])
+  @@index([sucursalId]) // Nuevo índice
   @@index([sincronizado])
   @@index([tipoOrden])
   @@index([estado])

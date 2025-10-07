@@ -7,6 +7,7 @@ import { formatCOP } from '@/utils/formatCOP';
 import ModalSeleccionarMesa from '@/components/orden/ModalSeleccionarMesa';
 import { Categoria, Mesa, Producto } from '@prisma/client';
 import SelectReact, { CSSObjectWithLabel } from 'react-select';
+import { useSucursal } from '@/hooks/useSucursal';
 
 interface Carrito extends Producto {
   cantidad: number;
@@ -36,6 +37,8 @@ export default function OrderDashboard() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
   const [procesandoOrden, setProcesandoOrden] = useState(false);
 
+  // Obtener la sucursal
+  const {sucursal} = useSucursal();
 
   // Meseros y hub
   const [hubMesero, setHubMesero] = useState(false);
@@ -145,7 +148,7 @@ export default function OrderDashboard() {
   };
 
   const calcularSubtotal = () => {
-    return carrito.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+    return carrito.reduce((total, item) => total + (Number(item.precio) * item.cantidad), 0);
   };
 
   const calcularTotal = () => {
@@ -211,6 +214,7 @@ export default function OrderDashboard() {
 
     try {
       const orden = {
+        sucursalId: sucursal?.id,
         tipoOrden: tipoOrden.toUpperCase(),
         mesaId: tipoOrden === 'local' ? mesaSeleccionada?.id : null,
         clienteId: clienteSeleccionado?.id || null,
@@ -382,10 +386,10 @@ export default function OrderDashboard() {
                         alt={producto.nombre}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
-                      {producto.categoria && (
+                      {producto.categoriaId && (
                         <div className="absolute top-2 left-2">
                           <span className="bg-white/95 backdrop-blur-sm px-2 py-0.5 lg:px-3 lg:py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
-                            {producto.categoria.nombre}
+                            {categorias.find(c => c.id === producto.categoriaId)?.nombre}
                           </span>
                         </div>
                       )}
@@ -398,7 +402,7 @@ export default function OrderDashboard() {
                         {producto.nombre}
                       </h3>
                       <p className="text-base lg:text-xl font-bold text-wine">
-                        {formatCOP(producto.precio)}
+                        {formatCOP(Number(producto.precio))}
                       </p>
                     </div>
                   </div>
@@ -503,7 +507,7 @@ export default function OrderDashboard() {
                             {item.nombre}
                           </h4>
                           <p className="text-xs lg:text-sm text-gray-500 mb-2">
-                            {formatCOP(item.precio)} c/u
+                            {formatCOP(Number(item.precio))} c/u
                           </p>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 lg:gap-2 bg-gray-100 rounded-lg p-1">
@@ -524,7 +528,7 @@ export default function OrderDashboard() {
                               </button>
                             </div>
                             <p className="font-bold text-wine text-sm lg:text-base">
-                              {formatCOP(item.precio * item.cantidad)}
+                              {formatCOP(Number(item.precio) * item.cantidad)}
                             </p>
                           </div>
                         </div>
@@ -763,7 +767,7 @@ export default function OrderDashboard() {
                         <li key={item.id} className="grid grid-cols-4 text-sm">
                           <span className="col-span-2 text-gray-800">{item.nombre}</span>
                           <span className="col-span-1 text-right text-gray-500">x{item.cantidad}</span>
-                          <span className="col-span-1 text-right font-semibold text-wine">{formatCOP(item.precio * item.cantidad)}</span>
+                          <span className="col-span-1 text-right font-semibold text-wine">{formatCOP(Number(item.precio) * item.cantidad)}</span>
                         </li>
                       ))}
                     </ul>
