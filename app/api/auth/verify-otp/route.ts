@@ -1,7 +1,8 @@
 // app/api/auth/verify-otp/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { SignJWT } from 'jose';
+
+import { SignJWT } from "jose";
+import { type NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 const SECRET = new TextEncoder().encode(process.env.SESSION_SECRET);
 
@@ -16,10 +17,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!usuario) {
-      return NextResponse.json(
-        { message: 'Código inválido' },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Código inválido" }, { status: 401 });
     }
 
     // Buscar el OTP más reciente válido
@@ -33,7 +31,7 @@ export async function POST(request: NextRequest) {
         },
       },
       orderBy: {
-        creadoEn: 'desc',
+        creadoEn: "desc",
       },
     });
 
@@ -53,8 +51,8 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { message: 'Código inválido o expirado' },
-        { status: 401 }
+        { message: "Código inválido o expirado" },
+        { status: 401 },
       );
     }
 
@@ -66,8 +64,8 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { message: 'Demasiados intentos. Solicita un nuevo código' },
-        { status: 429 }
+        { message: "Demasiados intentos. Solicita un nuevo código" },
+        { status: 429 },
       );
     }
 
@@ -83,20 +81,19 @@ export async function POST(request: NextRequest) {
       identificacion,
       resetId: passwordReset.id,
     })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('10m')
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("10m")
       .sign(SECRET);
 
     return NextResponse.json({
       success: true,
       resetToken,
     });
-
   } catch (error) {
-    console.error('Error verificando OTP:', error);
+    console.error("Error verificando OTP:", error);
     return NextResponse.json(
-      { message: 'Error al verificar código' },
-      { status: 500 }
+      { message: "Error al verificar código" },
+      { status: 500 },
     );
   }
 }

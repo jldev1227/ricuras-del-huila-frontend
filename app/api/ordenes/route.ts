@@ -1,7 +1,17 @@
 // app/api/ordenes/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+
+import type { EstadoOrden, Prisma, TipoOrden } from "@prisma/client";
+import { type NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// Tipos para los items de orden
+interface OrderItem {
+  productoId: string;
+  cantidad: number;
+  precioUnitario: number;
+  especificaciones?: string;
+  notas?: string;
+}
 
 // GET - Listar órdenes con filtros
 export async function GET(request: NextRequest) {
@@ -9,18 +19,18 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     // Filtros
-    const sucursalId = searchParams.get('sucursalId');
-    const meseroId = searchParams.get('meseroId');
-    const mesaId = searchParams.get('mesaId');
-    const clienteId = searchParams.get('clienteId');
-    const estado = searchParams.get('estado');
-    const tipoOrden = searchParams.get('tipoOrden');
-    const fecha = searchParams.get('fecha');
-    const sincronizado = searchParams.get('sincronizado');
+    const sucursalId = searchParams.get("sucursalId");
+    const meseroId = searchParams.get("meseroId");
+    const mesaId = searchParams.get("mesaId");
+    const clienteId = searchParams.get("clienteId");
+    const estado = searchParams.get("estado");
+    const tipoOrden = searchParams.get("tipoOrden");
+    const fecha = searchParams.get("fecha");
+    const sincronizado = searchParams.get("sincronizado");
 
     // Paginación
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
     const skip = (page - 1) * limit;
 
     // Construir filtros
@@ -30,9 +40,9 @@ export async function GET(request: NextRequest) {
     if (meseroId) where.meseroId = meseroId;
     if (mesaId) where.mesaId = mesaId;
     if (clienteId) where.clienteId = clienteId;
-    if (estado) where.estado = estado as any;
-    if (tipoOrden) where.tipoOrden = tipoOrden as any;
-    if (sincronizado) where.sincronizado = sincronizado === 'true';
+    if (estado) where.estado = estado as EstadoOrden;
+    if (tipoOrden) where.tipoOrden = tipoOrden as TipoOrden;
+    if (sincronizado) where.sincronizado = sincronizado === "true";
 
     if (fecha) {
       const startDate = new Date(fecha);
@@ -85,7 +95,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { creadoEn: 'desc' },
+        orderBy: { creadoEn: "desc" },
         skip,
         take: limit,
       }),
@@ -103,10 +113,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error al obtener órdenes:', error);
+    console.error("Error al obtener órdenes:", error);
     return NextResponse.json(
-      { success: false, message: 'Error al obtener órdenes' },
-      { status: 500 }
+      { success: false, message: "Error al obtener órdenes" },
+      { status: 500 },
     );
   }
 }
@@ -139,8 +149,8 @@ export async function POST(request: NextRequest) {
     // Validar sucursalId
     if (!sucursalId) {
       return NextResponse.json(
-        { success: false, message: 'Sucursal requerida' },
-        { status: 400 }
+        { success: false, message: "Sucursal requerida" },
+        { status: 400 },
       );
     }
 
@@ -151,37 +161,40 @@ export async function POST(request: NextRequest) {
 
     if (!sucursal) {
       return NextResponse.json(
-        { success: false, message: 'Sucursal no encontrada' },
-        { status: 404 }
+        { success: false, message: "Sucursal no encontrada" },
+        { status: 404 },
       );
     }
 
     // Validaciones básicas
     if (!tipoOrden || !items || items.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Faltan campos requeridos' },
-        { status: 400 }
+        { success: false, message: "Faltan campos requeridos" },
+        { status: 400 },
       );
     }
 
     // Validación específica por tipo de orden
-    if (tipoOrden === 'LOCAL' && !mesaId) {
+    if (tipoOrden === "LOCAL" && !mesaId) {
       return NextResponse.json(
-        { success: false, message: 'Las órdenes locales requieren una mesa' },
-        { status: 400 }
+        { success: false, message: "Las órdenes locales requieren una mesa" },
+        { status: 400 },
       );
     }
 
-    if (tipoOrden === 'DOMICILIO' && !direccionEntrega) {
+    if (tipoOrden === "DOMICILIO" && !direccionEntrega) {
       return NextResponse.json(
-        { success: false, message: 'Las órdenes a domicilio requieren dirección' },
-        { status: 400 }
+        {
+          success: false,
+          message: "Las órdenes a domicilio requieren dirección",
+        },
+        { status: 400 },
       );
     }
 
     // Calcular subtotal
-    const subtotal = items.reduce((total: number, item: any) => {
-      return total + (item.precioUnitario * item.cantidad);
+    const subtotal = items.reduce((total: number, item: OrderItem) => {
+      return total + item.precioUnitario * item.cantidad;
     }, 0);
 
     // Calcular total
@@ -192,7 +205,7 @@ export async function POST(request: NextRequest) {
     // Crear la orden con transacción
     const orden = await prisma.$transaction(async (tx) => {
       // Si es orden local, marcar mesa como ocupada
-      if (tipoOrden === 'LOCAL' && mesaId) {
+      if (tipoOrden === "LOCAL" && mesaId) {
         await tx.mesa.update({
           where: { id: mesaId },
           data: { disponible: false },
@@ -204,7 +217,7 @@ export async function POST(request: NextRequest) {
         data: {
           sucursalId,
           tipoOrden,
-          mesaId: tipoOrden === 'LOCAL' ? mesaId : null,
+          mesaId: tipoOrden === "LOCAL" ? mesaId : null,
           clienteId,
           meseroId,
           nombreCliente,
@@ -222,7 +235,7 @@ export async function POST(request: NextRequest) {
           creadoOffline,
           sincronizado: !creadoOffline,
           items: {
-            create: items.map((item: any) => ({
+            create: items.map((item: OrderItem) => ({
               productoId: item.productoId,
               cantidad: item.cantidad,
               precioUnitario: item.precioUnitario,
@@ -251,16 +264,19 @@ export async function POST(request: NextRequest) {
       return nuevaOrden;
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Orden creada exitosamente',
-      orden,
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Error al crear orden:', error);
     return NextResponse.json(
-      { success: false, message: 'Error al crear orden' },
-      { status: 500 }
+      {
+        success: true,
+        message: "Orden creada exitosamente",
+        orden,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Error al crear orden:", error);
+    return NextResponse.json(
+      { success: false, message: "Error al crear orden" },
+      { status: 500 },
     );
   }
 }
@@ -273,8 +289,8 @@ export async function PUT(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { success: false, message: 'ID de orden requerido' },
-        { status: 400 }
+        { success: false, message: "ID de orden requerido" },
+        { status: 400 },
       );
     }
 
@@ -286,16 +302,19 @@ export async function PUT(request: NextRequest) {
 
     if (!ordenExistente) {
       return NextResponse.json(
-        { success: false, message: 'Orden no encontrada' },
-        { status: 404 }
+        { success: false, message: "Orden no encontrada" },
+        { status: 404 },
       );
     }
 
     // No permitir actualizar órdenes entregadas o canceladas
-    if (['ENTREGADA', 'CANCELADA'].includes(ordenExistente.estado)) {
+    if (["ENTREGADA", "CANCELADA"].includes(ordenExistente.estado)) {
       return NextResponse.json(
-        { success: false, message: 'No se puede actualizar una orden entregada o cancelada' },
-        { status: 400 }
+        {
+          success: false,
+          message: "No se puede actualizar una orden entregada o cancelada",
+        },
+        { status: 400 },
       );
     }
 
@@ -307,8 +326,8 @@ export async function PUT(request: NextRequest) {
           where: { ordenId: id },
         });
 
-        const subtotal = data.items.reduce((total: number, item: any) => {
-          return total + (item.precioUnitario * item.cantidad);
+        const subtotal = data.items.reduce((total: number, item: OrderItem) => {
+          return total + item.precioUnitario * item.cantidad;
         }, 0);
 
         let total = subtotal - (data.descuento || 0);
@@ -328,7 +347,7 @@ export async function PUT(request: NextRequest) {
           actualizadoEn: new Date(),
           ...(items && {
             items: {
-              create: items.map((item: any) => ({
+              create: items.map((item: OrderItem) => ({
                 productoId: item.productoId,
                 cantidad: item.cantidad,
                 precioUnitario: item.precioUnitario,
@@ -354,14 +373,14 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Orden actualizada exitosamente',
+      message: "Orden actualizada exitosamente",
       orden: ordenActualizada,
     });
   } catch (error) {
-    console.error('Error al actualizar orden:', error);
+    console.error("Error al actualizar orden:", error);
     return NextResponse.json(
-      { success: false, message: 'Error al actualizar orden' },
-      { status: 500 }
+      { success: false, message: "Error al actualizar orden" },
+      { status: 500 },
     );
   }
 }
@@ -370,12 +389,12 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get('id');
+    const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json(
-        { success: false, message: 'ID de orden requerido' },
-        { status: 400 }
+        { success: false, message: "ID de orden requerido" },
+        { status: 400 },
       );
     }
 
@@ -386,8 +405,8 @@ export async function DELETE(request: NextRequest) {
 
     if (!orden) {
       return NextResponse.json(
-        { success: false, message: 'Orden no encontrada' },
-        { status: 404 }
+        { success: false, message: "Orden no encontrada" },
+        { status: 404 },
       );
     }
 
@@ -409,13 +428,13 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Orden eliminada exitosamente',
+      message: "Orden eliminada exitosamente",
     });
   } catch (error) {
-    console.error('Error al eliminar orden:', error);
+    console.error("Error al eliminar orden:", error);
     return NextResponse.json(
-      { success: false, message: 'Error al eliminar orden' },
-      { status: 500 }
+      { success: false, message: "Error al eliminar orden" },
+      { status: 500 },
     );
   }
 }

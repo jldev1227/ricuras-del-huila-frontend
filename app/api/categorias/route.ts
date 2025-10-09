@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -16,7 +16,7 @@ export async function GET() {
           },
         },
       },
-      orderBy: { orden: 'asc' },
+      orderBy: { orden: "asc" },
     });
 
     return NextResponse.json({
@@ -24,10 +24,10 @@ export async function GET() {
       categorias,
     });
   } catch (error) {
-    console.error('Error al obtener categorías:', error);
+    console.error("Error al obtener categorías:", error);
     return NextResponse.json(
-      { message: 'Error al obtener categorías' },
-      { status: 500 }
+      { message: "Error al obtener categorías" },
+      { status: 500 },
     );
   }
 }

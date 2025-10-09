@@ -1,18 +1,18 @@
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-  Spinner,
-  Input,
-  Textarea,
-  Chip,
   addToast,
+  Button,
+  Chip,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Spinner,
+  Textarea,
 } from "@heroui/react";
-import { useEffect, useState } from "react";
 import { AlertCircle, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ModalActualizarOrdenProps {
   ordenId: string | null;
@@ -21,58 +21,58 @@ interface ModalActualizarOrdenProps {
   onOrdenActualizada?: () => void;
 }
 
-export default function ModalActualizarOrden({ 
-  ordenId, 
-  isOpen, 
+export default function ModalActualizarOrden({
+  ordenId,
+  isOpen,
   onOpenChange,
-  onOrdenActualizada 
+  onOrdenActualizada,
 }: ModalActualizarOrdenProps) {
   const [orden, setOrden] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  
+
   // Estados editables
-  const [especificaciones, setEspecificaciones] = useState('');
-  const [notas, setNotas] = useState('');
+  const [especificaciones, setEspecificaciones] = useState("");
+  const [notas, setNotas] = useState("");
   const [descuento, setDescuento] = useState<number>(0);
   const [costoAdicional, setCostoAdicional] = useState<number>(0);
   const [costoEnvio, setCostoEnvio] = useState<number>(0);
 
-  const estadosPermitidosParaEditar = ['PENDIENTE', 'EN_PREPARACION'];
+  const estadosPermitidosParaEditar = ["PENDIENTE", "EN_PREPARACION"];
 
   useEffect(() => {
+    const fetchOrden = async () => {
+      if (!ordenId) return;
+
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/ordenes/${ordenId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setOrden(data.orden);
+          setEspecificaciones(data.orden.especificaciones || "");
+          setNotas(data.orden.notas || "");
+          setDescuento(Number(data.orden.descuento) || 0);
+          setCostoAdicional(Number(data.orden.costoAdicional) || 0);
+          setCostoEnvio(Number(data.orden.costoEnvio) || 0);
+        }
+      } catch (error) {
+        console.error("Error al cargar orden:", error);
+        addToast({
+          title: "Error",
+          description: "No se pudo cargar la orden",
+          color: "danger",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (isOpen && ordenId) {
       fetchOrden();
     }
   }, [isOpen, ordenId]);
-
-  const fetchOrden = async () => {
-    if (!ordenId) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/ordenes/${ordenId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setOrden(data.orden);
-        setEspecificaciones(data.orden.especificaciones || '');
-        setNotas(data.orden.notas || '');
-        setDescuento(Number(data.orden.descuento) || 0);
-        setCostoAdicional(Number(data.orden.costoAdicional) || 0);
-        setCostoEnvio(Number(data.orden.costoEnvio) || 0);
-      }
-    } catch (error) {
-      console.error('Error al cargar orden:', error);
-      addToast({
-        title: "Error",
-        description: "No se pudo cargar la orden",
-        color: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const puedeEditar = () => {
     if (!orden) return false;
@@ -85,16 +85,18 @@ export default function ModalActualizarOrden({
     setGuardando(true);
     try {
       const response = await fetch(`/api/ordenes/${ordenId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           especificaciones,
           notas,
           descuento: Number(descuento),
-          costoAdicional: orden.tipoOrden === 'LLEVAR' ? Number(costoAdicional) : undefined,
-          costoEnvio: orden.tipoOrden === 'DOMICILIO' ? Number(costoEnvio) : undefined,
+          costoAdicional:
+            orden.tipoOrden === "LLEVAR" ? Number(costoAdicional) : undefined,
+          costoEnvio:
+            orden.tipoOrden === "DOMICILIO" ? Number(costoEnvio) : undefined,
         }),
       });
 
@@ -106,11 +108,11 @@ export default function ModalActualizarOrden({
           description: "La orden se actualizó correctamente",
           color: "success",
         });
-        
+
         if (onOrdenActualizada) {
           onOrdenActualizada();
         }
-        
+
         onOpenChange(false);
       } else {
         throw new Error(data.message);
@@ -128,18 +130,18 @@ export default function ModalActualizarOrden({
 
   const getEstadoColor = (estado: string) => {
     const colores: Record<string, any> = {
-      PENDIENTE: 'warning',
-      EN_PREPARACION: 'primary',
-      LISTA: 'success',
-      ENTREGADA: 'default',
-      CANCELADA: 'danger',
+      PENDIENTE: "warning",
+      EN_PREPARACION: "primary",
+      LISTA: "success",
+      ENTREGADA: "default",
+      CANCELADA: "danger",
     };
-    return colores[estado] || 'default';
+    return colores[estado] || "default";
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
+    <Modal
+      isOpen={isOpen}
       onOpenChange={onOpenChange}
       size="2xl"
       scrollBehavior="inside"
@@ -187,14 +189,16 @@ export default function ModalActualizarOrden({
                         No se puede editar esta orden
                       </h3>
                       <p className="text-gray-600 mb-4">
-                        Solo se pueden editar órdenes en estado <strong>PENDIENTE</strong> o <strong>EN PREPARACIÓN</strong>
+                        Solo se pueden editar órdenes en estado{" "}
+                        <strong>PENDIENTE</strong> o{" "}
+                        <strong>EN PREPARACIÓN</strong>
                       </p>
-                      <Chip 
+                      <Chip
                         color={getEstadoColor(orden.estado)}
                         size="lg"
                         variant="flat"
                       >
-                        Estado actual: {orden.estado.replace('_', ' ')}
+                        Estado actual: {orden.estado.replace("_", " ")}
                       </Chip>
                     </div>
                   </div>
@@ -204,23 +208,25 @@ export default function ModalActualizarOrden({
                   {/* Info de estado */}
                   <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <div>
-                      <p className="text-sm text-blue-900 font-semibold">Estado de la orden</p>
-                      <p className="text-xs text-blue-700">Esta orden puede ser editada</p>
+                      <p className="text-sm text-blue-900 font-semibold">
+                        Estado de la orden
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        Esta orden puede ser editada
+                      </p>
                     </div>
-                    <Chip 
-                      color={getEstadoColor(orden.estado)}
-                      variant="flat"
-                    >
-                      {orden.estado.replace('_', ' ')}
+                    <Chip color={getEstadoColor(orden.estado)} variant="flat">
+                      {orden.estado.replace("_", " ")}
                     </Chip>
                   </div>
 
                   {/* Especificaciones */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="especificaciones" className="block text-sm font-medium text-gray-700 mb-2">
                       Especificaciones de la orden
                     </label>
                     <Textarea
+                      id="especificaciones"
                       placeholder="Detalles especiales, alergias, preferencias..."
                       value={especificaciones}
                       onValueChange={setEspecificaciones}
@@ -231,10 +237,11 @@ export default function ModalActualizarOrden({
 
                   {/* Notas */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="notas" className="block text-sm font-medium text-gray-700 mb-2">
                       Notas internas
                     </label>
                     <Textarea
+                      id="notas"
                       placeholder="Notas para el personal..."
                       value={notas}
                       onValueChange={setNotas}
@@ -245,34 +252,40 @@ export default function ModalActualizarOrden({
 
                   {/* Descuento */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="descuento" className="block text-sm font-medium text-gray-700 mb-2">
                       Descuento
                     </label>
                     <Input
+                      id="descuento"
                       type="number"
                       placeholder="0"
                       value={descuento.toString()}
-                      onValueChange={(value) => setDescuento(Number(value) || 0)}
+                      onValueChange={(value) =>
+                        setDescuento(Number(value) || 0)
+                      }
                       min="0"
                       max={Number(orden.subtotal)}
                       startContent={<span className="text-gray-500">$</span>}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Máximo: ${Number(orden.subtotal).toLocaleString('es-CO')}
+                      Máximo: ${Number(orden.subtotal).toLocaleString("es-CO")}
                     </p>
                   </div>
 
                   {/* Costo adicional (solo para LLEVAR) */}
-                  {orden.tipoOrden === 'LLEVAR' && (
+                  {orden.tipoOrden === "LLEVAR" && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="costoAdicional" className="block text-sm font-medium text-gray-700 mb-2">
                         Costo adicional
                       </label>
                       <Input
+                        id='costoAdicional'
                         type="number"
                         placeholder="0"
                         value={costoAdicional.toString()}
-                        onValueChange={(value) => setCostoAdicional(Number(value) || 0)}
+                        onValueChange={(value) =>
+                          setCostoAdicional(Number(value) || 0)
+                        }
                         min="0"
                         startContent={<span className="text-gray-500">$</span>}
                       />
@@ -280,16 +293,19 @@ export default function ModalActualizarOrden({
                   )}
 
                   {/* Costo de envío (solo para DOMICILIO) */}
-                  {orden.tipoOrden === 'DOMICILIO' && (
+                  {orden.tipoOrden === "DOMICILIO" && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="costoEnvio" className="block text-sm font-medium text-gray-700 mb-2">
                         Costo de envío
                       </label>
                       <Input
+                        id="costoEnvio"
                         type="number"
                         placeholder="0"
                         value={costoEnvio.toString()}
-                        onValueChange={(value) => setCostoEnvio(Number(value) || 0)}
+                        onValueChange={(value) =>
+                          setCostoEnvio(Number(value) || 0)
+                        }
                         min="0"
                         startContent={<span className="text-gray-500">$</span>}
                       />
@@ -298,41 +314,52 @@ export default function ModalActualizarOrden({
 
                   {/* Resumen de cambios */}
                   <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">Nuevo total</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Nuevo total
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Subtotal</span>
                         <span className="font-semibold">
-                          ${Number(orden.subtotal).toLocaleString('es-CO')}
+                          ${Number(orden.subtotal).toLocaleString("es-CO")}
                         </span>
                       </div>
                       {descuento > 0 && (
                         <div className="flex justify-between text-red-600">
                           <span>Descuento</span>
-                          <span className="font-semibold">-${descuento.toLocaleString('es-CO')}</span>
+                          <span className="font-semibold">
+                            -${descuento.toLocaleString("es-CO")}
+                          </span>
                         </div>
                       )}
-                      {orden.tipoOrden === 'LLEVAR' && costoAdicional > 0 && (
+                      {orden.tipoOrden === "LLEVAR" && costoAdicional > 0 && (
                         <div className="flex justify-between text-green-600">
                           <span>Costo adicional</span>
-                          <span className="font-semibold">+${costoAdicional.toLocaleString('es-CO')}</span>
+                          <span className="font-semibold">
+                            +${costoAdicional.toLocaleString("es-CO")}
+                          </span>
                         </div>
                       )}
-                      {orden.tipoOrden === 'DOMICILIO' && costoEnvio > 0 && (
+                      {orden.tipoOrden === "DOMICILIO" && costoEnvio > 0 && (
                         <div className="flex justify-between text-green-600">
                           <span>Costo de envío</span>
-                          <span className="font-semibold">+${costoEnvio.toLocaleString('es-CO')}</span>
+                          <span className="font-semibold">
+                            +${costoEnvio.toLocaleString("es-CO")}
+                          </span>
                         </div>
                       )}
                       <div className="flex justify-between pt-2 border-t font-bold text-lg">
                         <span>Total</span>
                         <span className="text-wine">
-                          ${(
-                            Number(orden.subtotal) - 
-                            descuento + 
-                            (orden.tipoOrden === 'LLEVAR' ? costoAdicional : 0) +
-                            (orden.tipoOrden === 'DOMICILIO' ? costoEnvio : 0)
-                          ).toLocaleString('es-CO')}
+                          $
+                          {(
+                            Number(orden.subtotal) -
+                            descuento +
+                            (orden.tipoOrden === "LLEVAR"
+                              ? costoAdicional
+                              : 0) +
+                            (orden.tipoOrden === "DOMICILIO" ? costoEnvio : 0)
+                          ).toLocaleString("es-CO")}
                         </span>
                       </div>
                     </div>
@@ -345,14 +372,14 @@ export default function ModalActualizarOrden({
               <Button color="danger" variant="light" onPress={onClose}>
                 Cancelar
               </Button>
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 className="bg-wine"
                 onPress={handleActualizar}
                 isDisabled={!puedeEditar() || guardando}
                 isLoading={guardando}
               >
-                {guardando ? 'Guardando...' : 'Actualizar orden'}
+                {guardando ? "Guardando..." : "Actualizar orden"}
               </Button>
             </ModalFooter>
           </>

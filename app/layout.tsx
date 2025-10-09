@@ -6,28 +6,28 @@ import { Providers } from "./providers";
 const inter = localFont({
   src: [
     {
-      path: '../public/fonts/inter/static/Inter_18pt-Regular.ttf',
-      weight: '400',
-      style: 'normal',
+      path: "../public/fonts/inter/static/Inter_18pt-Regular.ttf",
+      weight: "400",
+      style: "normal",
     },
     {
-      path: '../public/fonts/inter/static/Inter_18pt-Medium.ttf',
-      weight: '500',
-      style: 'normal',
+      path: "../public/fonts/inter/static/Inter_18pt-Medium.ttf",
+      weight: "500",
+      style: "normal",
     },
     {
-      path: '../public/fonts/inter/static/Inter_18pt-SemiBold.ttf',
-      weight: '600',
-      style: 'normal',
+      path: "../public/fonts/inter/static/Inter_18pt-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
     },
     {
-      path: '../public/fonts/inter/static/Inter_18pt-Bold.ttf',
-      weight: '700',
-      style: 'normal',
+      path: "../public/fonts/inter/static/Inter_18pt-Bold.ttf",
+      weight: "700",
+      style: "normal",
     },
   ],
-  variable: '--font-inter',
-  display: 'swap',
+  variable: "--font-inter",
+  display: "swap",
   preload: true,
 });
 
@@ -36,7 +36,8 @@ export const metadata: Metadata = {
     default: "Ricuras del Huila - Sistema de Gestión",
     template: "%s | Ricuras del Huila",
   },
-  description: "Sistema de gestión integral para restaurante de comida típica huilense",
+  description:
+    "Sistema de gestión integral para restaurante de comida típica huilense",
 };
 
 export default function RootLayout({

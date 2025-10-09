@@ -1,19 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { type NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const nombre = searchParams.get('nombre');
-    const categoriaId = searchParams.get('categoriaId');
-    const disponible = searchParams.get('disponible');
+    const nombre = searchParams.get("nombre");
+    const categoriaId = searchParams.get("categoriaId");
+    const disponible = searchParams.get("disponible");
 
-    const where: any = {};
+    const where: {
+      nombre?: {
+        contains: string;
+        mode: "insensitive";
+      };
+      categoriaId?: string;
+      disponible?: boolean;
+    } = {};
 
     if (nombre) {
       where.nombre = {
         contains: nombre,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
@@ -22,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (disponible !== null && disponible !== undefined) {
-      where.disponible = disponible === 'true';
+      where.disponible = disponible === "true";
     }
 
     const productos = await prisma.producto.findMany({
@@ -36,10 +43,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: [
-        { destacado: 'desc' },
-        { nombre: 'asc' },
-      ],
+      orderBy: [{ destacado: "desc" }, { nombre: "asc" }],
     });
 
     return NextResponse.json({
@@ -47,12 +51,11 @@ export async function GET(request: NextRequest) {
       productos,
       total: productos.length,
     });
-
   } catch (error) {
-    console.error('Error al obtener productos:', error);
+    console.error("Error al obtener productos:", error);
     return NextResponse.json(
-      { message: 'Error al obtener productos' },
-      { status: 500 }
+      { message: "Error al obtener productos" },
+      { status: 500 },
     );
   }
 }
@@ -60,20 +63,29 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombre, descripcion, precio, costoProduccion, categoriaId, imagen, disponible, destacado } = body;
+    const {
+      nombre,
+      descripcion,
+      precio,
+      costoProduccion,
+      categoriaId,
+      imagen,
+      disponible,
+      destacado,
+    } = body;
 
     // Validaciones
     if (!nombre || !categoriaId) {
       return NextResponse.json(
-        { message: 'Nombre y categoría son requeridos' },
-        { status: 400 }
+        { message: "Nombre y categoría son requeridos" },
+        { status: 400 },
       );
     }
 
     if (precio <= 0 || costoProduccion < 0) {
       return NextResponse.json(
-        { message: 'Precios inválidos' },
-        { status: 400 }
+        { message: "Precios inválidos" },
+        { status: 400 },
       );
     }
 
@@ -96,14 +108,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       producto,
-      message: 'Producto creado exitosamente',
+      message: "Producto creado exitosamente",
     });
-
   } catch (error) {
-    console.error('Error al crear producto:', error);
+    console.error("Error al crear producto:", error);
     return NextResponse.json(
-      { message: 'Error al crear producto' },
-      { status: 500 }
+      { message: "Error al crear producto" },
+      { status: 500 },
     );
   }
 }

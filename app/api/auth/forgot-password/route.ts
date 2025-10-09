@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { SignJWT } from 'jose';
-import { sendOTPEmail } from '@/lib/email';
+import { type NextRequest, NextResponse } from "next/server";
+import { sendOTPEmail } from "@/lib/email";
+import { prisma } from "@/lib/prisma";
 
-const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || 'dev-secret-change-in-production'
+const _SECRET = new TextEncoder().encode(
+  process.env.SESSION_SECRET || "dev-secret-change-in-production",
 );
 
 export async function POST(request: NextRequest) {
@@ -14,8 +13,8 @@ export async function POST(request: NextRequest) {
     // Validar identificación
     if (!identificacion || identificacion.length < 6) {
       return NextResponse.json(
-        { message: 'Identificación inválida' },
-        { status: 400 }
+        { message: "Identificación inválida" },
+        { status: 400 },
       );
     }
 
@@ -35,11 +34,12 @@ export async function POST(request: NextRequest) {
     // Por seguridad, siempre retornar éxito (no revelar si la identificación existe)
     if (!usuario || !usuario.activo) {
       // Simular procesamiento
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       return NextResponse.json({
         success: true,
-        message: 'Si la identificación está registrada, recibirás las instrucciones',
+        message:
+          "Si la identificación está registrada, recibirás las instrucciones",
       });
     }
 
@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
       // Aún así retornar éxito por seguridad
       return NextResponse.json({
         success: true,
-        message: 'Si la identificación está registrada, recibirás las instrucciones',
+        message:
+          "Si la identificación está registrada, recibirás las instrucciones",
       });
     }
 
@@ -80,43 +81,43 @@ export async function POST(request: NextRequest) {
     try {
       await sendOTPEmail(usuario.correo, otp, usuario.nombreCompleto);
 
-      console.log('========================================');
-      console.log('EMAIL ENVIADO EXITOSAMENTE');
-      console.log('========================================');
-      console.log('Usuario:', usuario.nombreCompleto);
-      console.log('Correo:', usuario.correo);
-      console.log('Código OTP:', otp);
-      console.log('Expira en: 10 minutos');
-      console.log('========================================');
+      console.log("========================================");
+      console.log("EMAIL ENVIADO EXITOSAMENTE");
+      console.log("========================================");
+      console.log("Usuario:", usuario.nombreCompleto);
+      console.log("Correo:", usuario.correo);
+      console.log("Código OTP:", otp);
+      console.log("Expira en: 10 minutos");
+      console.log("========================================");
     } catch (emailError) {
-      console.error('Error al enviar email:', emailError);
+      console.error("Error al enviar email:", emailError);
 
       // Log de respaldo en desarrollo
-      if (process.env.NODE_ENV === 'development') {
-        console.log('========================================');
-        console.log('CÓDIGO OTP (EMAIL FALLÓ)');
-        console.log('========================================');
-        console.log('OTP:', otp);
-        console.log('========================================');
+      if (process.env.NODE_ENV === "development") {
+        console.log("========================================");
+        console.log("CÓDIGO OTP (EMAIL FALLÓ)");
+        console.log("========================================");
+        console.log("OTP:", otp);
+        console.log("========================================");
       }
 
       // Retornar error si el email falla
       return NextResponse.json(
-        { message: 'Error al enviar el código. Intenta de nuevo.' },
-        { status: 500 }
+        { message: "Error al enviar el código. Intenta de nuevo." },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Si la identificación está registrada, recibirás las instrucciones',
+      message:
+        "Si la identificación está registrada, recibirás las instrucciones",
     });
-
   } catch (error) {
-    console.error('Error en forgot-password:', error);
+    console.error("Error en forgot-password:", error);
     return NextResponse.json(
-      { message: 'Error al procesar solicitud' },
-      { status: 500 }
+      { message: "Error al procesar solicitud" },
+      { status: 500 },
     );
   }
 }

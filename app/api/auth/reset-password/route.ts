@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { jwtVerify } from 'jose';
-import bcrypt from 'bcrypt';
-import { sendPasswordChangedEmail } from '@/lib/email';
+import bcrypt from "bcrypt";
+import { jwtVerify } from "jose";
+import { type NextRequest, NextResponse } from "next/server";
+import { sendPasswordChangedEmail } from "@/lib/email";
+import { prisma } from "@/lib/prisma";
 
 const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || 'dev-secret-change-in-production'
+  process.env.SESSION_SECRET || "dev-secret-change-in-production",
 );
 
 export async function POST(request: NextRequest) {
@@ -14,27 +14,27 @@ export async function POST(request: NextRequest) {
 
     if (!resetToken || !newPassword) {
       return NextResponse.json(
-        { message: 'Datos incompletos' },
-        { status: 400 }
+        { message: "Datos incompletos" },
+        { status: 400 },
       );
     }
 
     if (newPassword.length < 6) {
       return NextResponse.json(
-        { message: 'La contraseña debe tener al menos 6 caracteres' },
-        { status: 400 }
+        { message: "La contraseña debe tener al menos 6 caracteres" },
+        { status: 400 },
       );
     }
 
     // Verificar token
-    let payload;
+    let payload: any;
     try {
       const verified = await jwtVerify(resetToken, SECRET);
       payload = verified.payload;
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json(
-        { message: 'Token inválido o expirado' },
-        { status: 401 }
+        { message: "Token inválido o expirado" },
+        { status: 401 },
       );
     }
 
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
 
     if (!usuario || !usuario.activo) {
       return NextResponse.json(
-        { message: 'Usuario no encontrado' },
-        { status: 404 }
+        { message: "Usuario no encontrado" },
+        { status: 404 },
       );
     }
 
@@ -80,10 +80,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Obtener IP del usuario
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ipAddress = forwarded ? forwarded.split(',')[0] : 
-                      request.headers.get('x-real-ip') || 
-                      'Desconocida';
+    const forwarded = request.headers.get("x-forwarded-for");
+    const ipAddress = forwarded
+      ? forwarded.split(",")[0]
+      : request.headers.get("x-real-ip") || "Desconocida";
 
     // Enviar email de confirmación
     if (usuario.correo) {
@@ -91,26 +91,27 @@ export async function POST(request: NextRequest) {
         await sendPasswordChangedEmail(
           usuario.correo,
           usuario.nombreCompleto,
-          ipAddress
+          ipAddress,
         );
       } catch (emailError) {
-        console.error('Error al enviar email de confirmación:', emailError);
+        console.error("Error al enviar email de confirmación:", emailError);
         // Continuar aunque falle el email
       }
     }
 
-    console.log(`Contraseña actualizada para usuario: ${usuario.nombreCompleto}`);
+    console.log(
+      `Contraseña actualizada para usuario: ${usuario.nombreCompleto}`,
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'Contraseña actualizada exitosamente',
+      message: "Contraseña actualizada exitosamente",
     });
-
   } catch (error) {
-    console.error('Error al resetear contraseña:', error);
+    console.error("Error al resetear contraseña:", error);
     return NextResponse.json(
-      { message: 'Error al procesar solicitud' },
-      { status: 500 }
+      { message: "Error al procesar solicitud" },
+      { status: 500 },
     );
   }
 }

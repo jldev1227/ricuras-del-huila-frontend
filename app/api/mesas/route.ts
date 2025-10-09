@@ -1,19 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { type NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const numero = searchParams.get('numero');
-    const sucursalId = searchParams.get('sucursalId');
-    const ubicacion = searchParams.get('ubicacion');
-    const disponible = searchParams.get('disponible');
+    const numero = searchParams.get("numero");
+    const sucursalId = searchParams.get("sucursalId");
+    const ubicacion = searchParams.get("ubicacion");
+    const disponible = searchParams.get("disponible");
 
     // Construir filtros dinámicos
-    const where: any = {};
+    const where: {
+      numero?: number;
+      sucursalId?: string;
+      disponible?: boolean;
+      ubicacion?: {
+        contains: string;
+        mode: "insensitive";
+      };
+    } = {};
 
     if (numero) {
-      where.numero = parseInt(numero);
+      where.numero = parseInt(numero, 10);
     }
 
     if (sucursalId) {
@@ -23,12 +31,12 @@ export async function GET(request: NextRequest) {
     if (ubicacion) {
       where.ubicacion = {
         contains: ubicacion,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
     if (disponible !== null && disponible !== undefined) {
-      where.disponible = disponible === 'true';
+      where.disponible = disponible === "true";
     }
 
     const mesas = await prisma.mesa.findMany({
@@ -46,10 +54,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: [
-        { sucursalId: 'asc' },
-        { numero: 'asc' },
-      ],
+      orderBy: [{ sucursalId: "asc" }, { numero: "asc" }],
     });
 
     return NextResponse.json({
@@ -57,12 +62,11 @@ export async function GET(request: NextRequest) {
       mesas,
       total: mesas.length,
     });
-
   } catch (error) {
-    console.error('Error al obtener mesas:', error);
+    console.error("Error al obtener mesas:", error);
     return NextResponse.json(
-      { message: 'Error al obtener mesas' },
-      { status: 500 }
+      { message: "Error al obtener mesas" },
+      { status: 500 },
     );
   }
 }

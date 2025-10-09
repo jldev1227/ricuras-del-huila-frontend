@@ -10,11 +10,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#E49F35',
-        secondary: '#967D69',
-        accent: '#F4B9B2',
-        wine: '#841339',
-        bg: '#FEFFFE'
+        primary: "#E49F35",
+        secondary: "#967D69",
+        accent: "#F4B9B2",
+        wine: "#841339",
+        bg: "#FEFFFE",
       },
     },
   },

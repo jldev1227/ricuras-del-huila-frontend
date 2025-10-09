@@ -4,46 +4,46 @@
 
 :root {
   /* Colores principales de Ricuras del Huila */
-  --primary: #E49F35;        /* Amarillo dorado */
-  --secondary: #9667D69;     /* Marrón tierra */
-  --accent: #F4B9B2;         /* Rosa suave */
-  --wine: #841339;           /* Vino/Burgundy */
-  --cream: #FEFEFE;          /* Blanco crema */
-  
+  --primary: #e49f35; /* Amarillo dorado */
+  --secondary: #967d69; /* Marrón tierra */
+  --accent: #f4b9b2; /* Rosa suave */
+  --wine: #841339; /* Vino/Burgundy */
+  --cream: #fefefe; /* Blanco crema */
+
   /* Variables de sistema */
-  --background: #FEFEFE;
+  --background: #fefefe;
   --foreground: #171717;
-  --muted: #9667D69;
-  --border: #E5E5E5;
+  --muted: #967d69;
+  --border: #e5e5e5;
 }
 
 @theme inline {
   /* Colores de marca */
   --color-primary: var(--primary);
-  --color-primary-foreground: #FEFEFE;
-  
+  --color-primary-foreground: #fefefe;
+
   --color-secondary: var(--secondary);
-  --color-secondary-foreground: #FEFEFE;
-  
+  --color-secondary-foreground: #fefefe;
+
   --color-accent: var(--accent);
   --color-accent-foreground: #171717;
-  
+
   --color-wine: var(--wine);
-  --color-wine-foreground: #FEFEFE;
-  
+  --color-wine-foreground: #fefefe;
+
   /* Colores de sistema */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
-  --color-muted-foreground: #FEFEFE;
+  --color-muted-foreground: #fefefe;
   --color-border: var(--border);
-  
+
   /* Estados */
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
-  --color-info: #3B82F6;
-  
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
   /* Fuentes */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -69,39 +69,39 @@ body {
   .bg-ricuras-primary {
     background-color: var(--primary);
   }
-  
+
   .bg-ricuras-secondary {
     background-color: var(--secondary);
   }
-  
+
   .bg-ricuras-accent {
     background-color: var(--accent);
   }
-  
+
   .bg-ricuras-wine {
     background-color: var(--wine);
   }
-  
+
   .text-ricuras-primary {
     color: var(--primary);
   }
-  
+
   .text-ricuras-secondary {
     color: var(--secondary);
   }
-  
+
   .text-ricuras-accent {
     color: var(--accent);
   }
-  
+
   .text-ricuras-wine {
     color: var(--wine);
   }
-  
+
   .border-ricuras-primary {
     border-color: var(--primary);
   }
-  
+
   .border-ricuras-secondary {
     border-color: var(--secondary);
   }

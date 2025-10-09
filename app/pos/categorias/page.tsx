@@ -1,68 +1,72 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Button, Spinner } from '@heroui/react'
-import { Plus, Edit, Trash2, Package, Search, X } from 'lucide-react'
+import { Button, Spinner } from "@heroui/react";
+import { Edit, Package, Plus, Search, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Categoria {
-  id: string
-  nombre: string
-  descripcion: string | null
-  icono: string | null
-  orden: number
-  activo: boolean
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  icono: string | null;
+  orden: number;
+  activo: boolean;
   _count: {
-    productos: number
-  }
+    productos: number;
+  };
 }
 
 export default function CategoriasPage() {
-  const [categorias, setCategorias] = useState<Categoria[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetchCategorias()
-  }, [])
+    const fetchCategorias = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch("/api/categorias");
+        const data = await response.json();
 
-  const fetchCategorias = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/categorias')
-      const data = await response.json()
-
-      if (data.success) {
-        setCategorias(data.categorias)
-        console.log(data)
+        if (data.success) {
+          setCategorias(data.categorias);
+          console.log(data);
+        }
+      } catch (error) {
+        console.error("Error al cargar categorías:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error al cargar categorías:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+    };
 
-  const categoriasFiltradas = categorias.filter(categoria =>
-    categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    fetchCategorias();
+  }, []);
 
-  const totalProductos = categorias.reduce((total, cat) => total + cat._count.productos, 0)
+  const categoriasFiltradas = categorias.filter((categoria) =>
+    categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  const totalProductos = categorias.reduce(
+    (total, cat) => total + cat._count.productos,
+    0,
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">Categorías</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                Categorías
+              </h1>
               <p className="text-sm text-gray-500">
                 Organiza tus productos por categorías
               </p>
             </div>
-            <Button 
-              color="primary" 
+            <Button
+              color="primary"
               className="bg-wine shadow-lg hover:shadow-xl transition-all"
               startContent={<Plus size={18} />}
             >
@@ -72,7 +76,10 @@ export default function CategoriasPage() {
 
           {/* Búsqueda */}
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={20}
+            />
             <input
               type="text"
               placeholder="Buscar categoría..."
@@ -81,12 +88,15 @@ export default function CategoriasPage() {
               className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine transition-all"
             />
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => setSearchTerm("")}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -98,7 +108,9 @@ export default function CategoriasPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total Categorías</p>
-                  <p className="text-3xl font-bold text-gray-900">{categorias.length}</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {categorias.length}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Package className="text-blue-600" size={24} />
@@ -110,7 +122,9 @@ export default function CategoriasPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total Productos</p>
-                  <p className="text-3xl font-bold text-wine">{totalProductos}</p>
+                  <p className="text-3xl font-bold text-wine">
+                    {totalProductos}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-wine/10 rounded-lg flex items-center justify-center">
                   <div className="text-2xl">🍽️</div>
@@ -121,9 +135,13 @@ export default function CategoriasPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Promedio por Categoría</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Promedio por Categoría
+                  </p>
                   <p className="text-3xl font-bold text-green-600">
-                    {categorias.length > 0 ? Math.round(totalProductos / categorias.length) : 0}
+                    {categorias.length > 0
+                      ? Math.round(totalProductos / categorias.length)
+                      : 0}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -139,7 +157,9 @@ export default function CategoriasPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                {loading ? 'Cargando...' : `${categoriasFiltradas.length} categoría${categoriasFiltradas.length !== 1 ? 's' : ''}`}
+                {loading
+                  ? "Cargando..."
+                  : `${categoriasFiltradas.length} categoría${categoriasFiltradas.length !== 1 ? "s" : ""}`}
               </h2>
               {searchTerm && !loading && (
                 <p className="text-sm text-gray-500 mt-1">
@@ -158,19 +178,20 @@ export default function CategoriasPage() {
             <div className="text-center py-20">
               <div className="text-6xl mb-4">📂</div>
               <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                {searchTerm ? 'No se encontraron categorías' : 'No hay categorías'}
+                {searchTerm
+                  ? "No se encontraron categorías"
+                  : "No hay categorías"}
               </h3>
               <p className="text-gray-500 mb-6">
-                {searchTerm 
+                {searchTerm
                   ? `No hay categorías que coincidan con "${searchTerm}"`
-                  : 'Comienza creando tu primera categoría'
-                }
+                  : "Comienza creando tu primera categoría"}
               </p>
               {searchTerm ? (
                 <Button
                   color="primary"
                   variant="flat"
-                  onPress={() => setSearchTerm('')}
+                  onPress={() => setSearchTerm("")}
                   startContent={<X size={16} />}
                 >
                   Limpiar búsqueda
@@ -196,7 +217,7 @@ export default function CategoriasPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-wine/10 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                        {categoria.icono || '📦'}
+                        {categoria.icono || "📦"}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -235,27 +256,28 @@ export default function CategoriasPage() {
 
                   {/* Estado */}
                   <div className="mb-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                      categoria.activo
-                        ? 'bg-green-100 text-green-700 ring-1 ring-green-600/20'
-                        : 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20'
-                    }`}>
-                      {categoria.activo ? '✓ Activa' : '⊗ Inactiva'}
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${categoria.activo
+                        ? "bg-green-100 text-green-700 ring-1 ring-green-600/20"
+                        : "bg-gray-100 text-gray-700 ring-1 ring-gray-600/20"
+                        }`}
+                    >
+                      {categoria.activo ? "✓ Activa" : "⊗ Inactiva"}
                     </span>
                   </div>
 
                   {/* Acciones */}
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="bordered" 
+                    <Button
+                      size="sm"
+                      variant="bordered"
                       className="flex-1 border-gray-300 hover:bg-gray-50"
                       startContent={<Edit size={14} />}
                     >
                       Editar
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       color="danger"
                       variant="flat"
                       isIconOnly
@@ -276,11 +298,14 @@ export default function CategoriasPage() {
         </div>
 
         {/* Categorías sin productos (si las hay) */}
-        {!loading && categorias.length > 0 && (
+        {!loading &&
+          categorias.length > 0 &&
           (() => {
-            const sinProductos = categorias.filter(c => c._count.productos === 0)
-            if (sinProductos.length === 0) return null
-            
+            const sinProductos = categorias.filter(
+              (c) => c._count.productos === 0,
+            );
+            if (sinProductos.length === 0) return null;
+
             return (
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
                 <div className="flex items-start gap-3">
@@ -293,8 +318,8 @@ export default function CategoriasPage() {
                       Las siguientes categorías no tienen productos asociados:
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {sinProductos.map(cat => (
-                        <span 
+                      {sinProductos.map((cat) => (
+                        <span
                           key={cat.id}
                           className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full text-sm text-yellow-900 border border-yellow-300"
                         >
@@ -306,10 +331,9 @@ export default function CategoriasPage() {
                   </div>
                 </div>
               </div>
-            )
-          })()
-        )}
+            );
+          })()}
       </div>
     </div>
-  )
+  );
 }

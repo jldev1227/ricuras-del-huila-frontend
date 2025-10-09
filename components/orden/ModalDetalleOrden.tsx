@@ -1,17 +1,42 @@
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
   Chip,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
   Spinner,
 } from "@heroui/react";
+import { Prisma } from "@prisma/client";
+
+import { Home, MapPin, Phone, Printer, Receipt, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { formatCOP } from '@/utils/formatCOP';
-import { MapPin, User, X, Phone, Home, Receipt, Printer } from 'lucide-react';
-import { Orden } from "@prisma/client";
+import { formatCOP } from "@/utils/formatCOP";
+
+type OrdenCompleta = Prisma.OrdenGetPayload<{
+  include: {
+    items: {
+      include: {
+        producto: {
+          include: {
+            categoria: true;
+          };
+        };
+      };
+    };
+    mesa: true;
+    cliente: true;
+    sucursal: true;
+    mesero: {
+      select: {
+        id: true;
+        nombreCompleto: true;
+        rol: true;
+      };
+    };
+  };
+}>;
 
 interface ModalDetalleOrdenProps {
   ordenId: string | null;
@@ -19,49 +44,54 @@ interface ModalDetalleOrdenProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: ModalDetalleOrdenProps) {
-  const [orden, setOrden] = useState<Orden | null>(null);
+export default function ModalDetalleOrden({
+  ordenId,
+  isOpen,
+  onOpenChange,
+}: ModalDetalleOrdenProps) {
+  // ✅ CAMBIO AQUÍ: Tipar correctamente el estado
+  const [orden, setOrden] = useState<OrdenCompleta | null>(null);
   const [loading, setLoading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (isOpen && ordenId) {
+      const fetchOrdenDetalle = async () => {
+        if (!ordenId) return;
+
+        setLoading(true);
+        try {
+          const response = await fetch(`/api/ordenes/${ordenId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            setOrden(data.orden);
+          }
+        } catch (error) {
+          console.error("Error al cargar detalle de orden:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
       fetchOrdenDetalle();
     }
   }, [isOpen, ordenId]);
 
-  const fetchOrdenDetalle = async () => {
-    if (!ordenId) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/ordenes/${ordenId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setOrden(data.orden);
-      }
-    } catch (error) {
-      console.error('Error al cargar detalle de orden:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Genera comandos ESC/POS manualmente
-  const generateESCPOS = (orden: any): Uint8Array => {
+  const generateESCPOS = (orden: OrdenCompleta): Uint8Array => {
     const encoder = new TextEncoder();
     const commands: number[] = [];
 
     // Comandos ESC/POS básicos
     const ESC = 0x1b;
     const GS = 0x1d;
-    const LF = 0x0a;
+    const _LF = 0x0a;
     const INIT = [ESC, 0x40]; // Inicializar impresora
     const CENTER = [ESC, 0x61, 0x01]; // Alinear centro
     const LEFT = [ESC, 0x61, 0x00]; // Alinear izquierda
-    const RIGHT = [ESC, 0x61, 0x02]; // Alinear derecha
+    const _RIGHT = [ESC, 0x61, 0x02]; // Alinear derecha
     const BOLD_ON = [ESC, 0x45, 0x01]; // Negrita ON
     const BOLD_OFF = [ESC, 0x45, 0x00]; // Negrita OFF
     const SIZE_NORMAL = [GS, 0x21, 0x00]; // Tamaño normal
@@ -73,13 +103,13 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
       commands.push(...Array.from(encoder.encode(text)));
     };
 
-    const addLine = (char = '-', length = 42) => {
-      addText(char.repeat(length) + '\n');
+    const addLine = (char = "-", length = 42) => {
+      addText(`${char.repeat(length)}\n`);
     };
 
     const addRow = (left: string, right: string, width = 42) => {
       const spaces = width - left.length - right.length;
-      addText(left + ' '.repeat(Math.max(spaces, 1)) + right + '\n');
+      addText(`${left + " ".repeat(Math.max(spaces, 1)) + right}\n`);
     };
 
     // Inicializar
@@ -87,38 +117,38 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
 
     // Header
     commands.push(...CENTER, ...SIZE_LARGE, ...BOLD_ON);
-    addText('MI RESTAURANTE\n');
+    addText("RICURAS DEL HUILA\n");
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
-    addText('Sucursal Principal\n');
-    addText('Tel: (123) 456-7890\n');
-    addText('NIT: 123456789-0\n');
-    addLine('=');
+    addText(`${orden.sucursal?.nombre || "Sucursal Principal"}\n`);
+    addText("Tel: (123) 456-7890\n");
+    addText("NIT: 123456789-0\n");
+    addLine("=");
 
     // Información de la orden
     commands.push(...LEFT, ...BOLD_ON);
     addText(`ORDEN #${orden.id.slice(0, 8).toUpperCase()}\n`);
     commands.push(...BOLD_OFF);
 
-    const fecha = new Date(orden.creadoEn).toLocaleString('es-CO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    const fecha = new Date(orden.creadoEn).toLocaleString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
     addText(`Fecha: ${fecha}\n`);
     addText(`Tipo: ${orden.tipoOrden}\n`);
-    addText(`Mesero: ${orden.mesero?.nombreCompleto || 'N/A'}\n`);
+    addText(`Mesero: ${orden.mesero?.nombreCompleto || "N/A"}\n`);
 
     // Mesa (si es LOCAL)
-    if (orden.tipoOrden === 'LOCAL' && orden.mesa) {
-      addText(`Mesa: ${orden.mesa.numero} - ${orden.mesa.ubicacion}\n`);
+    if (orden.tipoOrden === "LOCAL" && orden.mesa) {
+      addText(`Mesa: ${orden.mesa.numero} - ${orden.mesa.ubicacion || ""}\n`);
     }
 
     // Dirección (si es DOMICILIO)
-    if (orden.tipoOrden === 'DOMICILIO' && orden.direccionEntrega) {
+    if (orden.tipoOrden === "DOMICILIO" && orden.direccionEntrega) {
       commands.push(...BOLD_ON);
-      addText('DOMICILIO:\n');
+      addText("DOMICILIO:\n");
       commands.push(...BOLD_OFF);
       addText(`${orden.direccionEntrega}\n`);
       if (orden.nombreCliente) addText(`Cliente: ${orden.nombreCliente}\n`);
@@ -128,28 +158,30 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
     // Cliente registrado
     if (orden.cliente) {
       commands.push(...BOLD_ON);
-      addText('CLIENTE:\n');
+      addText("CLIENTE:\n");
       commands.push(...BOLD_OFF);
       addText(`${orden.cliente.nombre}\n`);
       if (orden.cliente.numeroIdentificacion) {
-        addText(`${orden.cliente.tipoIdentificacion}: ${orden.cliente.numeroIdentificacion}\n`);
+        addText(
+          `${orden.cliente.tipoIdentificacion}: ${orden.cliente.numeroIdentificacion}\n`,
+        );
       }
     }
 
-    addLine('=');
+    addLine("=");
 
     // Items
     commands.push(...BOLD_ON);
-    addText('PRODUCTOS\n');
+    addText("PRODUCTOS\n");
     commands.push(...BOLD_OFF);
-    addLine('-');
+    addLine("-");
 
-    orden.items.forEach((item: any, index: number) => {
+    orden.items.forEach((item, index) => {
       const nombre = item.producto.nombre.substring(0, 38);
       addText(`${nombre}\n`);
 
-      const cantidad = `  ${item.cantidad} x ${formatCOP(item.precioUnitario)}`;
-      const subtotal = formatCOP(item.subtotal);
+      const cantidad = `  ${item.cantidad} x ${formatCOP(Number(item.precioUnitario))}`;
+      const subtotal = formatCOP(Number(item.subtotal));
       addRow(cantidad, subtotal);
 
       if (item.notas) {
@@ -157,16 +189,16 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
       }
 
       if (index < orden.items.length - 1) {
-        addText('\n');
+        addText("\n");
       }
     });
 
-    addLine('-');
+    addLine("-");
 
     // Especificaciones
     if (orden.especificaciones) {
       commands.push(...BOLD_ON);
-      addText('ESPECIFICACIONES:\n');
+      addText("ESPECIFICACIONES:\n");
       commands.push(...BOLD_OFF);
       addText(`${orden.especificaciones}\n\n`);
     }
@@ -174,53 +206,48 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
     // Notas
     if (orden.notas) {
       commands.push(...BOLD_ON);
-      addText('NOTAS:\n');
+      addText("NOTAS:\n");
       commands.push(...BOLD_OFF);
       addText(`${orden.notas}\n\n`);
     }
 
     // Totales
-    addLine('=');
-    addRow('Subtotal:', formatCOP(Number(orden.subtotal)));
+    addLine("=");
+    addRow("Subtotal:", formatCOP(Number(orden.subtotal)));
 
-    if (orden.descuento > 0) {
-      addRow('Descuento:', `-${formatCOP(Number(orden.descuento))}`);
+    if (Number(orden.descuento) > 0) {
+      addRow("Descuento:", `-${formatCOP(Number(orden.descuento))}`);
     }
 
-    if (orden.costoEnvio && orden.costoEnvio > 0) {
-      addRow('Costo envio:', formatCOP(orden.costoEnvio));
+    if (orden.costoEnvio && Number(orden.costoEnvio) > 0) {
+      addRow("Costo envio:", formatCOP(Number(orden.costoEnvio)));
     }
 
-    if (orden.costoAdicional && orden.costoAdicional > 0) {
-      addRow('Costo adicional:', formatCOP(orden.costoAdicional));
+    if (orden.costoAdicional && Number(orden.costoAdicional) > 0) {
+      addRow("Costo adicional:", formatCOP(Number(orden.costoAdicional)));
     }
 
-    addLine('=');
+    addLine("=");
 
     commands.push(...BOLD_ON, ...SIZE_DOUBLE);
-    addRow('TOTAL:', formatCOP(orden.total));
+    addRow("TOTAL:", formatCOP(Number(orden.total)));
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
 
-    addLine('=');
+    addLine("=");
 
     // Estado
     commands.push(...CENTER, ...BOLD_ON);
-    addText(`ESTADO: ${orden.estado.replace('_', ' ')}\n`);
+    addText(`ESTADO: ${orden.estado.replace("_", " ")}\n`);
     commands.push(...BOLD_OFF);
 
-    addText('\n');
-    addText('Gracias por su compra!\n');
-    addText('www.mirestaurante.com\n');
-    addText('\n\n\n');
+    addText("\n");
+    addText("Gracias por su compra!\n");
+    addText("\n\n\n");
 
     // Cortar papel
     commands.push(...CUT);
 
     return new Uint8Array(commands);
-  };
-
-  const handleShowPreview = () => {
-    setShowPreview(true);
   };
 
   const handlePrint = async () => {
@@ -231,7 +258,7 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
       const escposData = generateESCPOS(orden);
 
       // Intentar imprimir con Web Serial API
-      if ('serial' in navigator) {
+      if ("serial" in navigator) {
         try {
           const port = await (navigator as any).serial.requestPort();
           await port.open({ baudRate: 9600 });
@@ -242,67 +269,70 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
 
           await port.close();
 
-          alert('✓ Ticket impreso correctamente');
+          alert("✓ Ticket impreso correctamente");
           return;
         } catch (err: any) {
-          if (err.name === 'NotFoundError') {
-            console.log('Usuario canceló la selección de puerto');
+          if (err.name === "NotFoundError") {
+            console.log("Usuario canceló la selección de puerto");
           } else {
-            console.error('Error al imprimir:', err);
+            console.error("Error al imprimir:", err);
           }
         }
       }
 
       // Si Web Serial no está disponible o falló, descargar archivo
       downloadReceipt(escposData);
-
     } catch (error) {
-      console.error('Error al generar ticket:', error);
-      alert('✗ Error al generar el ticket');
+      console.error("Error al generar ticket:", error);
+      alert("✗ Error al generar el ticket");
     } finally {
       setPrinting(false);
     }
   };
 
   const downloadReceipt = (data: Uint8Array) => {
-    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const blob = new Blob([data as BlobPart], {
+      type: "application/octet-stream",
+    });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `ticket-${orden?.id.slice(0, 8)}.bin`;
     link.click();
     URL.revokeObjectURL(url);
 
-    alert('📄 Ticket descargado como archivo .bin\n\nEnvíe este archivo a su impresora térmica para imprimir.');
+    alert(
+      "📄 Ticket descargado como archivo .bin\n\nEnvíe este archivo a su impresora térmica para imprimir.",
+    );
   };
 
   const getEstadoColor = (estado: string) => {
     const colores: Record<string, any> = {
-      PENDIENTE: 'warning',
-      EN_PREPARACION: 'primary',
-      LISTA: 'success',
-      ENTREGADA: 'default',
-      CANCELADA: 'danger',
+      PENDIENTE: "warning",
+      EN_PREPARACION: "primary",
+      LISTA: "success",
+      ENTREGADA: "default",
+      CANCELADA: "danger",
     };
-    return colores[estado] || 'default';
+    return colores[estado] || "default";
   };
 
   const getTipoOrdenIcon = (tipo: string) => {
     const iconos: Record<string, string> = {
-      LOCAL: '🍽️',
-      LLEVAR: '🥡',
-      DOMICILIO: '🚚',
+      LOCAL: "🍽️",
+      LLEVAR: "🥡",
+      DOMICILIO: "🚚",
     };
-    return iconos[tipo] || '📋';
+    return iconos[tipo] || "📋";
   };
 
   const formatearFecha = (fecha: string | Date) => {
-    return new Date(fecha).toLocaleString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(fecha).toLocaleString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -310,46 +340,64 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
   const TicketPreview = () => {
     if (!orden) return null;
 
-    const fecha = new Date(orden.creadoEn).toLocaleString('es-CO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    const fecha = new Date(orden.creadoEn).toLocaleString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowPreview(false)}>
-        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={() => setShowPreview(false)}
+      >
+        <div
+          className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Simulación de papel térmico */}
           <div className="bg-white p-6">
             <div className="border-2 border-dashed border-gray-300 p-4">
               {/* Header */}
               <div className="font-mono text-xs leading-tight">
-                <div className="text-center font-bold text-lg mb-1">MI RESTAURANTE</div>
-                <div className="text-center">Sucursal Principal</div>
+                <div className="text-center font-bold text-lg mb-1">
+                  RICURAS DEL HUILA
+                </div>
+                <div className="text-center">
+                  {orden.sucursal?.nombre || "Sucursal Principal"}
+                </div>
                 <div className="text-center">Tel: (123) 456-7890</div>
                 <div className="text-center">NIT: 123456789-0</div>
                 <div className="border-t-2 border-black my-2"></div>
 
                 {/* Información de la orden */}
-                <div className="font-bold">ORDEN #{orden.id.slice(0, 8).toUpperCase()}</div>
+                <div className="font-bold">
+                  ORDEN #{orden.id.slice(0, 8).toUpperCase()}
+                </div>
                 <div>Fecha: {fecha}</div>
                 <div>Tipo: {orden.tipoOrden}</div>
-                <div>Mesero: {orden.mesero?.nombreCompleto || 'N/A'}</div>
+                <div>Mesero: {orden.mesero?.nombreCompleto || "N/A"}</div>
 
                 {/* Mesa */}
-                {orden.tipoOrden === 'LOCAL' && orden.mesa && (
-                  <div>Mesa: {orden.mesa.numero} - {orden.mesa.ubicacion}</div>
+                {orden.tipoOrden === "LOCAL" && orden.mesa && (
+                  <div>
+                    Mesa: {orden.mesa.numero} - {orden.mesa.ubicacion}
+                  </div>
                 )}
 
                 {/* Domicilio */}
-                {orden.tipoOrden === 'DOMICILIO' && orden.direccionEntrega && (
+                {orden.tipoOrden === "DOMICILIO" && orden.direccionEntrega && (
                   <>
                     <div className="font-bold mt-2">DOMICILIO:</div>
                     <div>{orden.direccionEntrega}</div>
-                    {orden.nombreCliente && <div>Cliente: {orden.nombreCliente}</div>}
-                    {orden.telefonoCliente && <div>Tel: {orden.telefonoCliente}</div>}
+                    {orden.nombreCliente && (
+                      <div>Cliente: {orden.nombreCliente}</div>
+                    )}
+                    {orden.telefonoCliente && (
+                      <div>Tel: {orden.telefonoCliente}</div>
+                    )}
                   </>
                 )}
 
@@ -359,7 +407,10 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                     <div className="font-bold mt-2">CLIENTE:</div>
                     <div>{orden.cliente.nombre}</div>
                     {orden.cliente.numeroIdentificacion && (
-                      <div>{orden.cliente.tipoIdentificacion}: {orden.cliente.numeroIdentificacion}</div>
+                      <div>
+                        {orden.cliente.tipoIdentificacion}:{" "}
+                        {orden.cliente.numeroIdentificacion}
+                      </div>
                     )}
                   </>
                 )}
@@ -370,15 +421,18 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                 <div className="font-bold">PRODUCTOS</div>
                 <div className="border-t border-dashed border-gray-400 my-1"></div>
 
-                {orden.items.map((item: any, index: number) => (
+                {orden.items.map((item: any, _index: number) => (
                   <div key={item.id} className="mb-2">
                     <div>{item.producto.nombre.substring(0, 38)}</div>
                     <div className="flex justify-between">
-                      <span>  {item.cantidad} x {formatCOP(item.precioUnitario)}</span>
+                      <span>
+                        {" "}
+                        {item.cantidad} x {formatCOP(item.precioUnitario)}
+                      </span>
                       <span>{formatCOP(item.subtotal)}</span>
                     </div>
                     {item.notas && (
-                      <div className="text-gray-600">  Nota: {item.notas}</div>
+                      <div className="text-gray-600"> Nota: {item.notas}</div>
                     )}
                   </div>
                 ))}
@@ -408,24 +462,24 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                   <span>{formatCOP(Number(orden.subtotal))}</span>
                 </div>
 
-                {orden.descuento > 0 && (
+                {Number(orden.descuento) > 0 && (
                   <div className="flex justify-between">
                     <span>Descuento:</span>
                     <span>-{formatCOP(Number(orden.descuento))}</span>
                   </div>
                 )}
 
-                {orden.costoEnvio && orden.costoEnvio > 0 && (
+                {orden.costoEnvio && Number(orden.costoEnvio) > 0 && (
                   <div className="flex justify-between">
                     <span>Costo envio:</span>
-                    <span>{formatCOP(orden.costoEnvio)}</span>
+                    <span>{formatCOP(Number(orden.costoEnvio))}</span>
                   </div>
                 )}
 
-                {orden.costoAdicional && orden.costoAdicional > 0 && (
+                {orden.costoAdicional && Number(orden.costoAdicional) > 0 && (
                   <div className="flex justify-between">
                     <span>Costo adicional:</span>
-                    <span>{formatCOP(orden.costoAdicional)}</span>
+                    <span>{formatCOP(Number(orden.costoAdicional))}</span>
                   </div>
                 )}
 
@@ -433,18 +487,17 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
 
                 <div className="flex justify-between font-bold text-base">
                   <span>TOTAL:</span>
-                  <span>{formatCOP(orden.total)}</span>
+                  <span>{formatCOP(Number(orden.total))}</span>
                 </div>
 
                 <div className="border-t-2 border-black my-2"></div>
 
                 {/* Estado */}
                 <div className="text-center font-bold">
-                  ESTADO: {orden.estado.replace('_', ' ')}
+                  ESTADO: {orden.estado.replace("_", " ")}
                 </div>
 
                 <div className="text-center mt-4">Gracias por su compra!</div>
-                <div className="text-center">www.mirestaurante.com</div>
               </div>
             </div>
 
@@ -492,10 +545,14 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
             <ModalHeader className="flex flex-col gap-1 border-b">
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold text-gray-900">Obteniendo orden...</span>
+                  <span className="text-lg font-semibold text-gray-900">
+                    Obteniendo orden...
+                  </span>
                 </div>
               ) : !orden ? (
-                <h2 className="text-lg font-semibold text-gray-900">Orden no existente</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Orden no existente
+                </h2>
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
@@ -513,7 +570,7 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                       variant="flat"
                       className="font-semibold"
                     >
-                      {orden.estado.replace('_', ' ')}
+                      {orden.estado.replace("_", " ")}
                     </Chip>
                     <button
                       onClick={onClose}
@@ -542,10 +599,14 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="flex items-center gap-3">
-                        <div className="text-3xl">{getTipoOrdenIcon(orden.tipoOrden)}</div>
+                        <div className="text-3xl">
+                          {getTipoOrdenIcon(orden.tipoOrden)}
+                        </div>
                         <div>
                           <p className="text-sm text-gray-600">Tipo de orden</p>
-                          <p className="font-semibold text-gray-900">{orden.tipoOrden}</p>
+                          <p className="font-semibold text-gray-900">
+                            {orden.tipoOrden}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -558,7 +619,7 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                         <div>
                           <p className="text-sm text-gray-600">Atendido por</p>
                           <p className="font-semibold text-gray-900">
-                            {orden.mesero?.nombreCompleto || 'N/A'}
+                            {orden.mesero?.nombreCompleto || "N/A"}
                           </p>
                         </div>
                       </div>
@@ -566,26 +627,34 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                   </div>
 
                   {/* Mesa (LOCAL) */}
-                  {orden.tipoOrden === 'LOCAL' && orden.mesa && (
+                  {orden.tipoOrden === "LOCAL" && orden.mesa && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                       <div className="flex items-start gap-3">
                         <MapPin className="text-blue-600 mt-0.5" size={20} />
                         <div>
-                          <p className="font-semibold text-blue-900">Mesa {orden.mesa.numero}</p>
-                          <p className="text-sm text-blue-700">{orden.mesa.ubicacion}</p>
+                          <p className="font-semibold text-blue-900">
+                            Mesa {orden.mesa.numero}
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            {orden.mesa.ubicacion}
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Domicilio */}
-                  {orden.tipoOrden === 'DOMICILIO' && (
+                  {orden.tipoOrden === "DOMICILIO" && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-xl space-y-2">
                       <div className="flex items-start gap-3">
                         <Home className="text-green-600 mt-0.5" size={20} />
                         <div className="flex-1">
-                          <p className="font-semibold text-green-900">Dirección de entrega</p>
-                          <p className="text-sm text-green-700">{orden.direccionEntrega}</p>
+                          <p className="font-semibold text-green-900">
+                            Dirección de entrega
+                          </p>
+                          <p className="text-sm text-green-700">
+                            {orden.direccionEntrega}
+                          </p>
                         </div>
                       </div>
                       {(orden.nombreCliente || orden.telefonoCliente) && (
@@ -593,10 +662,14 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                           <Phone className="text-green-600" size={16} />
                           <div>
                             {orden.nombreCliente && (
-                              <p className="text-sm text-green-900">{orden.nombreCliente}</p>
+                              <p className="text-sm text-green-900">
+                                {orden.nombreCliente}
+                              </p>
                             )}
                             {orden.telefonoCliente && (
-                              <p className="text-sm text-green-700">{orden.telefonoCliente}</p>
+                              <p className="text-sm text-green-700">
+                                {orden.telefonoCliente}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -610,11 +683,16 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                       <div className="flex items-start gap-3">
                         <Receipt className="text-purple-600 mt-0.5" size={20} />
                         <div>
-                          <p className="font-semibold text-purple-900">Cliente registrado</p>
-                          <p className="text-sm text-purple-700">{orden.cliente.nombre}</p>
+                          <p className="font-semibold text-purple-900">
+                            Cliente registrado
+                          </p>
+                          <p className="text-sm text-purple-700">
+                            {orden.cliente.nombre}
+                          </p>
                           {orden.cliente.numeroIdentificacion && (
                             <p className="text-xs text-purple-600">
-                              {orden.cliente.tipoIdentificacion}: {orden.cliente.numeroIdentificacion}
+                              {orden.cliente.tipoIdentificacion}:{" "}
+                              {orden.cliente.numeroIdentificacion}
                             </p>
                           )}
                         </div>
@@ -659,14 +737,19 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-600">Cantidad: </span>
-                                <span className="font-semibold text-gray-900">x{item.cantidad}</span>
+                                <span className="text-gray-600">
+                                  Cantidad:{" "}
+                                </span>
+                                <span className="font-semibold text-gray-900">
+                                  x{item.cantidad}
+                                </span>
                               </div>
                             </div>
                             {item.notas && (
                               <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                                 <p className="text-xs text-yellow-800">
-                                  <span className="font-semibold">Nota:</span> {item.notas}
+                                  <span className="font-semibold">Nota:</span>{" "}
+                                  {item.notas}
                                 </p>
                               </div>
                             )}
@@ -685,8 +768,12 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                   {/* Especificaciones */}
                   {orden.especificaciones && (
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                      <p className="font-semibold text-amber-900 mb-2">Especificaciones:</p>
-                      <p className="text-sm text-amber-800">{orden.especificaciones}</p>
+                      <p className="font-semibold text-amber-900 mb-2">
+                        Especificaciones:
+                      </p>
+                      <p className="text-sm text-amber-800">
+                        {orden.especificaciones}
+                      </p>
                     </div>
                   )}
 
@@ -700,7 +787,9 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
 
                   {/* Totales */}
                   <div className="border-t pt-4">
-                    <h3 className="font-bold text-gray-900 mb-4">Resumen de pago</h3>
+                    <h3 className="font-bold text-gray-900 mb-4">
+                      Resumen de pago
+                    </h3>
                     <div className="space-y-3 bg-gray-50 p-4 rounded-xl">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Subtotal</span>
@@ -709,31 +798,39 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                         </span>
                       </div>
 
-                      {orden.descuento > 0 && (
+                      {Number(orden.descuento) > 0 && (
                         <div className="flex justify-between text-sm text-red-600">
                           <span>Descuento</span>
-                          <span className="font-semibold">-{formatCOP(Number(orden.descuento))}</span>
+                          <span className="font-semibold">
+                            -{formatCOP(Number(orden.descuento))}
+                          </span>
                         </div>
                       )}
 
-                      {orden.costoEnvio && orden.costoEnvio > 0 && (
+                      {orden.costoEnvio && Number(orden.costoEnvio) > 0 && (
                         <div className="flex justify-between text-sm text-green-600">
                           <span>Costo de envío</span>
-                          <span className="font-semibold">+{formatCOP(orden.costoEnvio)}</span>
+                          <span className="font-semibold">
+                            +{formatCOP(Number(orden.costoEnvio))}
+                          </span>
                         </div>
                       )}
 
-                      {orden.costoAdicional && orden.costoAdicional > 0 && (
+                      {orden.costoAdicional && Number(orden.costoAdicional) > 0 && (
                         <div className="flex justify-between text-sm text-green-600">
                           <span>Costo adicional</span>
-                          <span className="font-semibold">+{formatCOP(orden.costoAdicional)}</span>
+                          <span className="font-semibold">
+                            +{formatCOP(Number(orden.costoAdicional))}
+                          </span>
                         </div>
                       )}
 
                       <div className="flex justify-between pt-3 border-t border-gray-300">
-                        <span className="font-bold text-lg text-gray-900">Total</span>
+                        <span className="font-bold text-lg text-gray-900">
+                          Total
+                        </span>
                         <span className="font-bold text-2xl text-wine">
-                          {formatCOP(orden.total)}
+                          {formatCOP(Number(orden.total))}
                         </span>
                       </div>
                     </div>
@@ -761,7 +858,7 @@ export default function ModalDetalleOrden({ ordenId, isOpen, onOpenChange }: Mod
                 isLoading={printing}
                 startContent={!printing && <Printer size={18} />}
               >
-                {printing ? 'Imprimiendo...' : 'Imprimir ticket'}
+                {printing ? "Imprimiendo..." : "Imprimir ticket"}
               </Button>
             </ModalFooter>
           </>

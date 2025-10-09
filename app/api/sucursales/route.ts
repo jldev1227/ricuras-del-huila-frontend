@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -9,7 +9,7 @@ export async function GET() {
         id: true,
         nombre: true,
       },
-      orderBy: { nombre: 'asc' },
+      orderBy: { nombre: "asc" },
     });
 
     return NextResponse.json({
@@ -17,10 +17,10 @@ export async function GET() {
       sucursales,
     });
   } catch (error) {
-    console.error('Error al obtener sucursales:', error);
+    console.error("Error al obtener sucursales:", error);
     return NextResponse.json(
-      { message: 'Error al obtener sucursales' },
-      { status: 500 }
+      { message: "Error al obtener sucursales" },
+      { status: 500 },
     );
   }
 }
