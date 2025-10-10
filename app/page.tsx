@@ -72,7 +72,12 @@ export default function Home() {
         setAuthUser(authData.state.user);
 
         if (authData.state.sucursal) {
-          router.push("/pos/ordenes");
+          // Redirigir según el rol del usuario
+          if (authData.state.user?.rol === "ADMINISTRADOR") {
+            router.push("/pos/ordenes");
+          } else {
+            router.push("/mesero");
+          }
           return;
         }
 
@@ -117,7 +122,12 @@ export default function Home() {
       );
 
       setTimeout(() => {
-        router.push("/pos/ordenes");
+        // Redirigir según el rol del usuario
+        if (authUser?.rol === "ADMINISTRADOR") {
+          router.push("/pos/ordenes");
+        } else {
+          router.push("/mesero");
+        }
       }, 400);
     } catch (error) {
       console.error("Error al guardar sucursal:", error);

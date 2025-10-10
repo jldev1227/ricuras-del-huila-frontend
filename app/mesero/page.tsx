@@ -275,7 +275,7 @@ export default function MeseroPage() {
                 color="primary"
                 variant="light"
                 className="mt-4"
-                onPress={() => router.push("/pos")}
+                onPress={() => router.push("/mesero/orden")}
               >
                 Crear Primera Orden
               </Button>

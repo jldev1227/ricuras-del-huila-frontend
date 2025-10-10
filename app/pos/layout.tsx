@@ -556,6 +556,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, hasHydrated, logout } = useAuth();
   const { hasPermission: isAdmin } = useRoleGuard(["ADMINISTRADOR"]);
 
+  // Validar acceso - solo administradores pueden acceder al POS
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated && user && user.rol !== "ADMINISTRADOR") {
+      // Si el usuario no es administrador, redirigir a su área correspondiente
+      router.push("/mesero");
+    }
+  }, [hasHydrated, isAuthenticated, user, router]);
+
   // Sucursal hook
   const {
     sucursalActual,
