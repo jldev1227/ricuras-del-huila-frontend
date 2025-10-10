@@ -1,5 +1,6 @@
 import {
   Button,
+  Card,
   Input,
   Modal,
   ModalBody,
@@ -10,6 +11,7 @@ import {
 } from "@heroui/react";
 import type { Mesa } from "@prisma/client";
 import { Plus, Search, X } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface ModalSeleccionarMesaProps {
@@ -34,9 +36,24 @@ const MesaIlustracion = ({
   const isDisabled = !estado;
 
   return (
-    <button
-      onClick={onClick}
-      disabled={isDisabled}
+    <Card
+      isPressable
+      onPress={() => {
+        if (!isDisabled) {
+          onClick({
+            id: "",
+            numero,
+            capacidad: 0,
+            disponible: estado,
+            sucursalId: "",
+            ubicacion: null,
+            notas: null,
+            ultimaLimpieza: null,
+            creadoEn: new Date(),
+            actualizadoEn: new Date(),
+          });
+        }
+      }}
       className={`
                 relative rounded-2xl border-1 bg-[#f2f2f2] p-2 py-5
                 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
@@ -52,7 +69,9 @@ const MesaIlustracion = ({
 
       <div className="flex flex-col items-center justify-center">
         {/* Imagen de la mesa */}
-        <img
+        <Image
+          width={112}
+          height={112}
           src="/mesa.png"
           alt={`Mesa ${numero}`}
           className="w-28 h-28 object-contain"
@@ -79,12 +98,11 @@ const MesaIlustracion = ({
           )
         )}
       </div>
-    </button>
+    </Card>
   );
 };
 
 export default function ModalSeleccionarMesa({
-  mesaSeleccionada,
   onSelectMesa,
 }: ModalSeleccionarMesaProps) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -157,12 +175,9 @@ export default function ModalSeleccionarMesa({
                 <h2 className="text-xl font-bold text-gray-900">
                   Selecciona una mesa
                 </h2>
-                <button
-                  onClick={onClose}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                >
+                <Button isIconOnly size="sm" variant="light" onPress={onClose}>
                   <X className="w-5 h-5 text-gray-400" />
-                </button>
+                </Button>
               </ModalHeader>
 
               <ModalBody>

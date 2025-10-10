@@ -1,5 +1,5 @@
 // types/producto.ts
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 // Tipo de Producto con la relación de categoría incluida
 export type ProductoConCategoria = Prisma.ProductoGetPayload<{

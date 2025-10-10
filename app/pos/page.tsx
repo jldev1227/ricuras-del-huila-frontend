@@ -1,16 +1,19 @@
 "use client";
 
-import { addToast, Button, Spinner } from "@heroui/react";
+import { addToast, Button, Card, Spinner } from "@heroui/react";
 import type { Categoria, Mesa, Producto } from "@prisma/client";
 import {
   ArrowLeft,
+  CircleQuestionMark,
   ClipboardCheck,
+  Minus,
   Plus,
   Search,
   ShoppingBag,
   User,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
@@ -42,7 +45,14 @@ export default function OrderDashboard() {
   const [pasoActual, setPasoActual] = useState<PasoOrden>("carrito");
   const [montoPagado, setMontoPagado] = useState<number>(0);
   const [requiereFactura, setRequiereFactura] = useState(false);
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<{
+    id: string;
+    nombre: string;
+    telefono?: string;
+    email?: string;
+    tipoIdentificacion?: string;
+    numeroIdentificacion?: string;
+  } | null>(null);
   const [procesandoOrden, setProcesandoOrden] = useState(false);
 
   // Obtener la sucursal
@@ -50,8 +60,18 @@ export default function OrderDashboard() {
 
   // Meseros y hub
   const [hubMesero, setHubMesero] = useState(false);
-  const [meseroSeleccionado, setMeseroSeleccionado] = useState<any>(null);
-  const [meseros, setMeseros] = useState<any[]>([]);
+  const [meseroSeleccionado, setMeseroSeleccionado] = useState<{
+    id: string;
+    nombreCompleto: string;
+    email?: string;
+  } | null>(null);
+  const [meseros, setMeseros] = useState<
+    Array<{
+      id: string;
+      nombreCompleto: string;
+      email?: string;
+    }>
+  >([]);
 
   // Unificar fetch de meseros, categorías y productos en un solo useEffect
   useEffect(() => {
@@ -60,7 +80,9 @@ export default function OrderDashboard() {
       try {
         // Meseros
         if (hubMesero) {
-          const resMeseros = await fetch("/api/usuarios?rol=MESERO&activo=true");
+          const resMeseros = await fetch(
+            "/api/usuarios?rol=MESERO&activo=true",
+          );
           const dataMeseros = await resMeseros.json();
           if (dataMeseros.success) {
             setMeseros(dataMeseros.usuarios);
@@ -77,7 +99,8 @@ export default function OrderDashboard() {
         // Productos
         const params = new URLSearchParams();
         if (searchTerm) params.append("nombre", searchTerm);
-        if (categoriaSeleccionada) params.append("categoriaId", categoriaSeleccionada);
+        if (categoriaSeleccionada)
+          params.append("categoriaId", categoriaSeleccionada);
 
         const resProductos = await fetch(`/api/productos?${params}`);
         const dataProductos = await resProductos.json();
@@ -254,11 +277,14 @@ export default function OrderDashboard() {
 
       // Resetear todo
       resetearOrden();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log(error);
       addToast({
         title: "Error al crear orden",
-        description: error.message || "Ocurrió un error inesperado",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Ocurrió un error inesperado",
         color: "danger",
       });
     } finally {
@@ -293,9 +319,12 @@ export default function OrderDashboard() {
     <div className="flex flex-col lg:flex-row h-screen bg-gray-50">
       {/* Overlay para mobile */}
       {mostrarAside && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMostrarAside(false)}
+        <Button
+          disableAnimation
+          radius="none"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden cursor-default h-full w-full"
+          onPress={() => setMostrarAside(false)}
+          aria-label="Cerrar menú móvil"
         />
       )}
 
@@ -318,6 +347,7 @@ export default function OrderDashboard() {
               />
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
                   className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
@@ -328,17 +358,20 @@ export default function OrderDashboard() {
 
             <div className="flex gap-2 lg:gap-4 overflow-x-auto pb-2 scrollbar-hide">
               <button
+                type="button"
                 onClick={() => setCategoriaSeleccionada("")}
-                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${!categoriaSeleccionada
+                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
+                  !categoriaSeleccionada
                     ? "bg-wine text-white shadow-md"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                }`}
               >
                 Todos
               </button>
               {categorias.map((categoria) => (
                 <button
                   key={categoria.id}
+                  type="button"
                   onClick={() =>
                     setCategoriaSeleccionada(
                       categoria.id === categoriaSeleccionada
@@ -346,10 +379,11 @@ export default function OrderDashboard() {
                         : categoria.id,
                     )
                   }
-                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${categoriaSeleccionada === categoria.id
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
+                    categoriaSeleccionada === categoria.id
                       ? "bg-wine text-white shadow-md"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                  }`}
                 >
                   {categoria.nombre}
                 </button>
@@ -373,13 +407,13 @@ export default function OrderDashboard() {
               </div>
 
               {carrito.length > 0 && (
-                <button
-                  onClick={() => setMostrarAside(true)}
-                  className="flex items-center gap-2 bg-wine text-white px-3 lg:px-4 py-2 rounded-lg shadow-lg hover:bg-wine/90 transition-all"
+                <Button
+                  onPress={() => setMostrarAside(true)}
+                  className="flex items-center gap-2 bg-wine text-white px-3 lg:px-4 py-2 rounded-lg shadow-lg transition-all"
                 >
                   <ShoppingBag size={18} />
                   <span className="font-semibold">{carrito.length}</span>
-                </button>
+                </Button>
               )}
             </div>
 
@@ -393,17 +427,31 @@ export default function OrderDashboard() {
             ) : productosFiltrados.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-5">
                 {productosFiltrados.map((producto) => (
-                  <div
+                  <Card
+                    isPressable
                     key={producto.id}
-                    onClick={() => agregarAlCarrito(producto)}
+                    onPress={() => agregarAlCarrito(producto)}
                     className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:border-wine/20"
                   >
                     <div className="relative bg-gray-100 aspect-square overflow-hidden">
-                      <img
-                        src={producto.imagen || "/placeholder-food.jpg"}
-                        alt={producto.nombre}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
+                      <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                        <Image
+                          fill
+                          src={producto.imagen || "/placeholder-producto.png"}
+                          alt={producto.nombre}
+                          className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${producto.imagen ? "" : "opacity-60"}`}
+                          loading="lazy"
+                          draggable={false}
+                        />
+                        {!producto.imagen && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
+                            <CircleQuestionMark
+                              size={56}
+                              className="text-white opacity-80"
+                            />
+                          </div>
+                        )}
+                      </div>
                       {producto.categoriaId && (
                         <div className="absolute top-2 left-2">
                           <span className="bg-white/95 backdrop-blur-sm px-2 py-0.5 lg:px-3 lg:py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
@@ -415,11 +463,6 @@ export default function OrderDashboard() {
                           </span>
                         </div>
                       )}
-                      <div className="absolute bottom-2 right-2 w-8 h-8 lg:w-11 lg:h-11 bg-wine rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl scale-90 group-hover:scale-100">
-                        <span className="text-white text-lg lg:text-2xl font-bold">
-                          +
-                        </span>
-                      </div>
                     </div>
                     <div className="p-3 lg:p-4">
                       <h3 className="font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-wine transition-colors text-sm lg:text-base">
@@ -429,7 +472,7 @@ export default function OrderDashboard() {
                         {formatCOP(Number(producto.precio))}
                       </p>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -446,8 +489,9 @@ export default function OrderDashboard() {
 
       {/* Aside - Panel de Orden */}
       <div
-        className={`fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[30rem] bg-white border-l shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${mostrarAside ? "translate-x-0" : "translate-x-full"
-          }`}
+        className={`fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[30rem] bg-white border-l shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
+          mostrarAside ? "translate-x-0" : "translate-x-full"
+        }`}
       >
         {/* Header */}
         <div className="p-4 lg:p-6 border-b bg-gradient-to-r from-wine to-wine/90 flex-shrink-0">
@@ -455,6 +499,7 @@ export default function OrderDashboard() {
             <div className="flex items-center gap-2 lg:gap-3">
               {pasoActual === "pago" && (
                 <button
+                  type="button"
                   onClick={volverAlCarrito}
                   className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 >
@@ -494,16 +539,17 @@ export default function OrderDashboard() {
                 { value: "domicilio", label: "Domicilio" },
                 { value: "local", label: "Local" },
               ].map((tipo) => (
-                <button
+                <Button
                   key={tipo.value}
-                  onClick={() => setTipoOrden(tipo.value)}
-                  className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all ${tipoOrden === tipo.value
+                  onPress={() => setTipoOrden(tipo.value)}
+                  className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all ${
+                    tipoOrden === tipo.value
                       ? "bg-white text-wine shadow-lg scale-105"
                       : "bg-white/20 text-white hover:bg-white/30"
-                    }`}
+                  }`}
                 >
                   {tipo.label}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -532,11 +578,22 @@ export default function OrderDashboard() {
                       className="bg-white rounded-xl p-3 lg:p-4 shadow-sm border border-gray-100"
                     >
                       <div className="flex gap-3">
-                        <img
-                          src={item.imagen || "/placeholder-food.jpg"}
-                          alt={item.nombre}
-                          className="w-16 h-16 lg:w-20 lg:h-20 rounded-lg object-cover flex-shrink-0"
-                        />
+                        <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-lg flex-shrink-0 overflow-hidden bg-gray-100">
+                          <Image
+                            fill
+                            src={item.imagen || "/placeholder-producto.png"}
+                            alt={item.nombre}
+                            className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${item.imagen ? "" : "opacity-60"}`}
+                          />
+                          {!item.imagen && (
+                            <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                              <CircleQuestionMark
+                                size={24}
+                                className="text-white"
+                              />
+                            </div>
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-gray-900 mb-1 truncate text-sm lg:text-base">
                             {item.nombre}
@@ -546,39 +603,52 @@ export default function OrderDashboard() {
                           </p>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 lg:gap-2 bg-gray-100 rounded-lg p-1">
-                              <button
-                                onClick={() => decrementarCantidad(item.id)}
-                                className="w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center bg-white rounded-md hover:bg-gray-50 transition-colors text-sm"
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                onPress={() => decrementarCantidad(item.id)}
+                                aria-label={`Quitar una unidad de ${item.nombre}`}
+                                className="h-7 w-7 flex items-center justify-center bg-white text-gray-700 rounded-md hover:scale-105 hover:bg-gray-100 transition-all shadow focus:outline-none focus:ring-2 focus:ring-gray-300"
                               >
-                                -
-                              </button>
+                                <Minus size={16} />
+                              </Button>
                               <span className="w-6 lg:w-8 text-center font-semibold text-xs lg:text-sm">
                                 {item.cantidad}
                               </span>
-                              <button
-                                onClick={() => incrementarCantidad(item.id)}
-                                className="w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center bg-wine text-white rounded-md hover:bg-wine/90 transition-colors text-sm"
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                onPress={() => incrementarCantidad(item.id)}
+                                aria-label={`Agregar una unidad de ${item.nombre}`}
+                                className="h-7 w-7 flex items-center justify-center bg-wine text-white rounded-md hover:scale-105 transition-all shadow focus:outline-none focus:ring-2 focus:ring-wine/40"
                               >
-                                +
-                              </button>
+                                <Plus size={16} />
+                              </Button>
                             </div>
                             <p className="font-bold text-wine text-sm lg:text-base">
                               {formatCOP(Number(item.precio) * item.cantidad)}
                             </p>
                           </div>
                         </div>
-                        <button
-                          onClick={() => eliminarDelCarrito(item.id)}
-                          className="flex-shrink-0 w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="light"
+                          aria-label={`Eliminar ${item.nombre} del carrito`}
+                          onPress={() => eliminarDelCarrito(item.id)}
+                          className="flex-shrink-0 w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center text-gray-400 hover:text-danger-500 hover:bg-red-50 rounded-lg transition-all"
                         >
                           <X size={16} />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
 
                   <div className="mt-4">
-                    <label htmlFor="notas" className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="notas"
+                      className="block text-xs lg:text-sm font-medium text-gray-700 mb-2"
+                    >
                       Notas de la orden
                     </label>
                     <textarea
@@ -606,7 +676,10 @@ export default function OrderDashboard() {
 
                   {tipoOrden === "llevar" && (
                     <div>
-                      <label htmlFor="costoAdicional" className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="costoAdicional"
+                        className="block text-xs lg:text-sm font-medium text-gray-700 mb-2"
+                      >
                         Costo adicional
                       </label>
                       <div className="relative">
@@ -630,7 +703,10 @@ export default function OrderDashboard() {
 
                   {tipoOrden === "domicilio" && (
                     <div>
-                      <label htmlFor="direccion" className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="direccion"
+                        className="block text-xs lg:text-sm font-medium text-gray-700 mb-2"
+                      >
                         Dirección de entrega *
                       </label>
                       <input
@@ -669,12 +745,15 @@ export default function OrderDashboard() {
                               </p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => setMesaSeleccionada(null)}
-                            className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onPress={() => setMesaSeleccionada(null)}
+                            className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center text-gray-400 hover:text-danger-500 hover:bg-red-50 rounded-lg transition-all"
                           >
                             <X size={16} />
-                          </button>
+                          </Button>
                         </div>
                       )}
 
@@ -684,7 +763,10 @@ export default function OrderDashboard() {
                           <h3 className="font-semibold text-gray-900 text-sm">
                             ¿Un mesero atendió este pedido?
                           </h3>
-                          <label htmlFor="hayMesero" className="flex items-center gap-2 cursor-pointer">
+                          <label
+                            htmlFor="hayMesero"
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
                             <input
                               id="hayMesero"
                               type="checkbox"
@@ -705,7 +787,10 @@ export default function OrderDashboard() {
 
                         {hubMesero && (
                           <div className="pt-3 border-t">
-                            <label htmlFor="mesero" className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">
+                            <label
+                              htmlFor="mesero"
+                              className="block text-xs lg:text-sm font-medium text-gray-700 mb-2"
+                            >
                               Seleccionar mesero *
                             </label>
                             <SelectReact
@@ -727,7 +812,10 @@ export default function OrderDashboard() {
                                 }),
                                 option: (
                                   base: CSSObjectWithLabel,
-                                  state: any,
+                                  state: {
+                                    isSelected: boolean;
+                                    isFocused: boolean;
+                                  },
                                 ) => ({
                                   ...base,
                                   backgroundColor: state.isSelected
@@ -749,9 +837,9 @@ export default function OrderDashboard() {
                               value={
                                 meseroSeleccionado
                                   ? {
-                                    value: meseroSeleccionado.id,
-                                    label: meseroSeleccionado.nombreCompleto,
-                                  }
+                                      value: meseroSeleccionado.id,
+                                      label: meseroSeleccionado.nombreCompleto,
+                                    }
                                   : null
                               }
                               onChange={(option) => {
@@ -796,7 +884,10 @@ export default function OrderDashboard() {
                     )}
 
                     <div className="flex justify-between items-center">
-                      <label htmlFor="descuento" className="text-xs lg:text-sm font-medium text-gray-600">
+                      <label
+                        htmlFor="descuento"
+                        className="text-xs lg:text-sm font-medium text-gray-600"
+                      >
                         Descuento
                       </label>
                       <div className="relative w-28 lg:w-32">
@@ -828,15 +919,16 @@ export default function OrderDashboard() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={avanzarAPago}
+                  <Button
+                    size="lg"
+                    onPress={avanzarAPago}
                     disabled={!validarOrden()}
-                    className="w-full bg-wine text-white py-3 lg:py-4 rounded-xl font-semibold hover:bg-wine/90 active:scale-[0.98] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm lg:text-base"
+                    className="w-full bg-wine text-white py-3 lg:py-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
                   >
                     {validarOrden()
                       ? "Continuar al pago →"
                       : "Completa la información"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -912,7 +1004,10 @@ export default function OrderDashboard() {
 
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="montoPagado" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="montoPagado"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Con cuánto paga el cliente *
                       </label>
                       <div className="relative">
@@ -936,20 +1031,22 @@ export default function OrderDashboard() {
                     {/* Cálculo de vueltas */}
                     {montoPagado > 0 && (
                       <div
-                        className={`p-4 rounded-lg border-2 ${calcularVueltas() >= 0
+                        className={`p-4 rounded-lg border-2 ${
+                          calcularVueltas() >= 0
                             ? "bg-green-50 border-green-200"
                             : "bg-red-50 border-red-200"
-                          }`}
+                        }`}
                       >
                         <div className="flex justify-between items-center">
                           <span className="font-medium text-gray-700">
                             Devolver:
                           </span>
                           <span
-                            className={`text-2xl font-bold ${calcularVueltas() >= 0
+                            className={`text-2xl font-bold ${
+                              calcularVueltas() >= 0
                                 ? "text-green-600"
                                 : "text-red-600"
-                              }`}
+                            }`}
                           >
                             {formatCOP(Math.abs(calcularVueltas()))}
                           </span>
@@ -969,7 +1066,10 @@ export default function OrderDashboard() {
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-gray-900">Facturación</h3>
-                    <label htmlFor="requiereFactura" className="flex items-center gap-2 cursor-pointer">
+                    <label
+                      htmlFor="requiereFactura"
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
                       <input
                         id="requiereFactura"
                         type="checkbox"
@@ -986,7 +1086,10 @@ export default function OrderDashboard() {
                   {requiereFactura && (
                     <div className="space-y-3 pt-3 border-t">
                       <div>
-                        <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label
+                          htmlFor="cliente"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
                           Cliente *
                         </label>
                         <div className="flex gap-2">
@@ -1004,14 +1107,17 @@ export default function OrderDashboard() {
                               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm"
                             />
                           </div>
-                          <button
-                            onClick={() =>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            aria-label="Agregar nuevo cliente"
+                            onPress={() =>
                               console.log("Abrir modal de agregar cliente")
                             }
-                            className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-wine text-white rounded-lg hover:bg-wine/90 transition-all"
+                            className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-wine text-white rounded-lg transition-all"
                           >
                             <Plus size={20} />
-                          </button>
+                          </Button>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           Haz clic en el botón + para agregar un nuevo cliente
@@ -1037,12 +1143,16 @@ export default function OrderDashboard() {
                                 </p>
                               )}
                             </div>
-                            <button
-                              onClick={() => setClienteSeleccionado(null)}
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              aria-label="Quitar cliente seleccionado"
+                              onPress={() => setClienteSeleccionado(null)}
                               className="text-gray-400 hover:text-red-500"
                             >
                               <X size={16} />
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -1055,13 +1165,14 @@ export default function OrderDashboard() {
             {/* Footer de pago */}
             <div className="border-t bg-white p-4 lg:p-6 flex-shrink-0">
               <button
+                type="button"
                 onClick={crearOrden}
                 disabled={
                   procesandoOrden ||
                   montoPagado < calcularTotal() ||
                   (requiereFactura && !clienteSeleccionado)
                 }
-                className="w-full bg-wine text-white py-4 rounded-xl font-semibold hover:bg-wine/90 active:scale-[0.98] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                className="w-full bg-wine text-white py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {procesandoOrden ? (
                   <>

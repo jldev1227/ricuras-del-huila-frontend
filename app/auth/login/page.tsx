@@ -1,12 +1,12 @@
 "use client";
 
 import { Button, Checkbox } from "@heroui/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import Image from "next/image";
 
 export default function Page() {
   const router = useRouter();
@@ -24,10 +24,12 @@ export default function Page() {
     setLoading(true);
 
     try {
-      await login(identificacion, password);
+      const response = await login(identificacion, password);
+      const rol = response?.user?.rol;
+      const isAdmin =
+        typeof rol === "string" && rol.toUpperCase() === "ADMINISTRADOR";
 
-      // Redirigir según el rol (esto lo manejas en useAuth)
-      router.push("/pos");
+      router.push(isAdmin ? "/pos" : "/mesero");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
@@ -41,8 +43,8 @@ export default function Page() {
       <div className="w-full max-w-md p-8">
         <div className="block lg:hidden">
           <Image
-            width={224}
-            height={224}
+            width={250}
+            height={250}
             src="/logo.png"
             alt="Logo Ricuras del Huila"
             className="mx-auto relative z-10 w-56 h-56"

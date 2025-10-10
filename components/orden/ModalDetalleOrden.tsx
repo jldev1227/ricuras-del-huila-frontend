@@ -8,9 +8,19 @@ import {
   ModalHeader,
   Spinner,
 } from "@heroui/react";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
-import { Home, MapPin, Phone, Printer, Receipt, User, X } from "lucide-react";
+import {
+  CircleQuestionMark,
+  Home,
+  MapPin,
+  Phone,
+  Printer,
+  Receipt,
+  User,
+  X,
+} from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { formatCOP } from "@/utils/formatCOP";
 
@@ -260,7 +270,9 @@ export default function ModalDetalleOrden({
       // Intentar imprimir con Web Serial API
       if ("serial" in navigator) {
         try {
-          const port = await (navigator as any).serial.requestPort();
+          const port = await (
+            navigator as { serial: { requestPort: () => Promise<unknown> } }
+          ).serial.requestPort();
           await port.open({ baudRate: 9600 });
 
           const writer = port.writable.getWriter();
@@ -271,8 +283,8 @@ export default function ModalDetalleOrden({
 
           alert("✓ Ticket impreso correctamente");
           return;
-        } catch (err: any) {
-          if (err.name === "NotFoundError") {
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name === "NotFoundError") {
             console.log("Usuario canceló la selección de puerto");
           } else {
             console.error("Error al imprimir:", err);
@@ -307,7 +319,10 @@ export default function ModalDetalleOrden({
   };
 
   const getEstadoColor = (estado: string) => {
-    const colores: Record<string, any> = {
+    const colores: Record<
+      string,
+      "warning" | "primary" | "success" | "danger" | "default"
+    > = {
       PENDIENTE: "warning",
       EN_PREPARACION: "primary",
       LISTA: "success",
@@ -349,183 +364,204 @@ export default function ModalDetalleOrden({
     });
 
     return (
-      <div
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        onClick={() => setShowPreview(false)}
+      <Modal
+        isOpen={showPreview}
+        onOpenChange={setShowPreview}
+        size="md"
+        scrollBehavior="inside"
+        className="z-[100]"
+        hideCloseButton
       >
-        <div
-          className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Simulación de papel térmico */}
-          <div className="bg-white p-6">
-            <div className="border-2 border-dashed border-gray-300 p-4">
-              {/* Header */}
-              <div className="font-mono text-xs leading-tight">
-                <div className="text-center font-bold text-lg mb-1">
-                  RICURAS DEL HUILA
-                </div>
-                <div className="text-center">
-                  {orden.sucursal?.nombre || "Sucursal Principal"}
-                </div>
-                <div className="text-center">Tel: (123) 456-7890</div>
-                <div className="text-center">NIT: 123456789-0</div>
-                <div className="border-t-2 border-black my-2"></div>
-
-                {/* Información de la orden */}
-                <div className="font-bold">
-                  ORDEN #{orden.id.slice(0, 8).toUpperCase()}
-                </div>
-                <div>Fecha: {fecha}</div>
-                <div>Tipo: {orden.tipoOrden}</div>
-                <div>Mesero: {orden.mesero?.nombreCompleto || "N/A"}</div>
-
-                {/* Mesa */}
-                {orden.tipoOrden === "LOCAL" && orden.mesa && (
-                  <div>
-                    Mesa: {orden.mesa.numero} - {orden.mesa.ubicacion}
-                  </div>
-                )}
-
-                {/* Domicilio */}
-                {orden.tipoOrden === "DOMICILIO" && orden.direccionEntrega && (
-                  <>
-                    <div className="font-bold mt-2">DOMICILIO:</div>
-                    <div>{orden.direccionEntrega}</div>
-                    {orden.nombreCliente && (
-                      <div>Cliente: {orden.nombreCliente}</div>
-                    )}
-                    {orden.telefonoCliente && (
-                      <div>Tel: {orden.telefonoCliente}</div>
-                    )}
-                  </>
-                )}
-
-                {/* Cliente */}
-                {orden.cliente && (
-                  <>
-                    <div className="font-bold mt-2">CLIENTE:</div>
-                    <div>{orden.cliente.nombre}</div>
-                    {orden.cliente.numeroIdentificacion && (
-                      <div>
-                        {orden.cliente.tipoIdentificacion}:{" "}
-                        {orden.cliente.numeroIdentificacion}
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="border-b">
+                <span className="font-bold text-lg">
+                  Vista previa del ticket
+                </span>
+              </ModalHeader>
+              <ModalBody>
+                <div className="bg-white p-2">
+                  <div className="border-2 border-dashed border-gray-300 p-4">
+                    {/* Header */}
+                    <div className="font-mono text-xs leading-tight">
+                      <div className="text-center font-bold text-lg mb-1">
+                        RICURAS DEL HUILA
                       </div>
-                    )}
-                  </>
-                )}
+                      <div className="text-center">
+                        {orden.sucursal?.nombre || "Sucursal Principal"}
+                      </div>
+                      <div className="text-center">Tel: (123) 456-7890</div>
+                      <div className="text-center">NIT: 123456789-0</div>
+                      <div className="border-t-2 border-black my-2"></div>
 
-                <div className="border-t-2 border-black my-2"></div>
+                      {/* Información de la orden */}
+                      <div className="font-bold">
+                        ORDEN #{orden.id.slice(0, 8).toUpperCase()}
+                      </div>
+                      <div>Fecha: {fecha}</div>
+                      <div>Tipo: {orden.tipoOrden}</div>
+                      <div>Mesero: {orden.mesero?.nombreCompleto || "N/A"}</div>
 
-                {/* Productos */}
-                <div className="font-bold">PRODUCTOS</div>
-                <div className="border-t border-dashed border-gray-400 my-1"></div>
+                      {/* Mesa */}
+                      {orden.tipoOrden === "LOCAL" && orden.mesa && (
+                        <div>
+                          Mesa: {orden.mesa.numero} - {orden.mesa.ubicacion}
+                        </div>
+                      )}
 
-                {orden.items.map((item: any, _index: number) => (
-                  <div key={item.id} className="mb-2">
-                    <div>{item.producto.nombre.substring(0, 38)}</div>
-                    <div className="flex justify-between">
-                      <span>
-                        {" "}
-                        {item.cantidad} x {formatCOP(item.precioUnitario)}
-                      </span>
-                      <span>{formatCOP(item.subtotal)}</span>
+                      {/* Domicilio */}
+                      {orden.tipoOrden === "DOMICILIO" &&
+                        orden.direccionEntrega && (
+                          <>
+                            <div className="font-bold mt-2">DOMICILIO:</div>
+                            <div>{orden.direccionEntrega}</div>
+                            {orden.nombreCliente && (
+                              <div>Cliente: {orden.nombreCliente}</div>
+                            )}
+                            {orden.telefonoCliente && (
+                              <div>Tel: {orden.telefonoCliente}</div>
+                            )}
+                          </>
+                        )}
+
+                      {/* Cliente */}
+                      {orden.cliente && (
+                        <>
+                          <div className="font-bold mt-2">CLIENTE:</div>
+                          <div>{orden.cliente.nombre}</div>
+                          {orden.cliente.numeroIdentificacion && (
+                            <div>
+                              {orden.cliente.tipoIdentificacion}:{" "}
+                              {orden.cliente.numeroIdentificacion}
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      <div className="border-t-2 border-black my-2"></div>
+
+                      {/* Productos */}
+                      <div className="font-bold">PRODUCTOS</div>
+                      <div className="border-t border-dashed border-gray-400 my-1"></div>
+
+                      {orden.items.map(
+                        (item: Record<string, unknown>, _index: number) => (
+                          <div key={item.id as string} className="mb-2">
+                            <div>{item.producto.nombre.substring(0, 38)}</div>
+                            <div className="flex justify-between">
+                              <span>
+                                {" "}
+                                {item.cantidad} x{" "}
+                                {formatCOP(item.precioUnitario)}
+                              </span>
+                              <span>{formatCOP(item.subtotal)}</span>
+                            </div>
+                            {item.notas && (
+                              <div className="text-gray-600">
+                                {" "}
+                                Nota: {item.notas}
+                              </div>
+                            )}
+                          </div>
+                        ),
+                      )}
+
+                      <div className="border-t border-dashed border-gray-400 my-1"></div>
+
+                      {/* Especificaciones */}
+                      {orden.especificaciones && (
+                        <>
+                          <div className="font-bold">ESPECIFICACIONES:</div>
+                          <div className="mb-2">{orden.especificaciones}</div>
+                        </>
+                      )}
+
+                      {/* Notas */}
+                      {orden.notas && (
+                        <>
+                          <div className="font-bold">NOTAS:</div>
+                          <div className="mb-2">{orden.notas}</div>
+                        </>
+                      )}
+
+                      {/* Totales */}
+                      <div className="border-t-2 border-black my-2"></div>
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>{formatCOP(Number(orden.subtotal))}</span>
+                      </div>
+
+                      {Number(orden.descuento) > 0 && (
+                        <div className="flex justify-between">
+                          <span>Descuento:</span>
+                          <span>-{formatCOP(Number(orden.descuento))}</span>
+                        </div>
+                      )}
+
+                      {orden.costoEnvio && Number(orden.costoEnvio) > 0 && (
+                        <div className="flex justify-between">
+                          <span>Costo envio:</span>
+                          <span>{formatCOP(Number(orden.costoEnvio))}</span>
+                        </div>
+                      )}
+
+                      {orden.costoAdicional &&
+                        Number(orden.costoAdicional) > 0 && (
+                          <div className="flex justify-between">
+                            <span>Costo adicional:</span>
+                            <span>
+                              {formatCOP(Number(orden.costoAdicional))}
+                            </span>
+                          </div>
+                        )}
+
+                      <div className="border-t-2 border-black my-2"></div>
+
+                      <div className="flex justify-between font-bold text-base">
+                        <span>TOTAL:</span>
+                        <span>{formatCOP(Number(orden.total))}</span>
+                      </div>
+
+                      <div className="border-t-2 border-black my-2"></div>
+
+                      {/* Estado */}
+                      <div className="text-center font-bold">
+                        ESTADO: {orden.estado.replace("_", " ")}
+                      </div>
+
+                      <div className="text-center mt-4">
+                        Gracias por su compra!
+                      </div>
                     </div>
-                    {item.notas && (
-                      <div className="text-gray-600"> Nota: {item.notas}</div>
-                    )}
                   </div>
-                ))}
-
-                <div className="border-t border-dashed border-gray-400 my-1"></div>
-
-                {/* Especificaciones */}
-                {orden.especificaciones && (
-                  <>
-                    <div className="font-bold">ESPECIFICACIONES:</div>
-                    <div className="mb-2">{orden.especificaciones}</div>
-                  </>
-                )}
-
-                {/* Notas */}
-                {orden.notas && (
-                  <>
-                    <div className="font-bold">NOTAS:</div>
-                    <div className="mb-2">{orden.notas}</div>
-                  </>
-                )}
-
-                {/* Totales */}
-                <div className="border-t-2 border-black my-2"></div>
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>{formatCOP(Number(orden.subtotal))}</span>
                 </div>
-
-                {Number(orden.descuento) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Descuento:</span>
-                    <span>-{formatCOP(Number(orden.descuento))}</span>
-                  </div>
-                )}
-
-                {orden.costoEnvio && Number(orden.costoEnvio) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Costo envio:</span>
-                    <span>{formatCOP(Number(orden.costoEnvio))}</span>
-                  </div>
-                )}
-
-                {orden.costoAdicional && Number(orden.costoAdicional) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Costo adicional:</span>
-                    <span>{formatCOP(Number(orden.costoAdicional))}</span>
-                  </div>
-                )}
-
-                <div className="border-t-2 border-black my-2"></div>
-
-                <div className="flex justify-between font-bold text-base">
-                  <span>TOTAL:</span>
-                  <span>{formatCOP(Number(orden.total))}</span>
-                </div>
-
-                <div className="border-t-2 border-black my-2"></div>
-
-                {/* Estado */}
-                <div className="text-center font-bold">
-                  ESTADO: {orden.estado.replace("_", " ")}
-                </div>
-
-                <div className="text-center mt-4">Gracias por su compra!</div>
-              </div>
-            </div>
-
-            {/* Botones */}
-            <div className="flex gap-2 mt-4">
-              <Button
-                color="danger"
-                variant="light"
-                onPress={() => setShowPreview(false)}
-                className="flex-1"
-              >
-                Cerrar
-              </Button>
-              <Button
-                color="primary"
-                className="bg-wine flex-1"
-                onPress={() => {
-                  setShowPreview(false);
-                  handlePrint();
-                }}
-                startContent={<Printer size={18} />}
-              >
-                Imprimir ahora
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  color="danger"
+                  variant="light"
+                  onPress={onClose}
+                  className="flex-1"
+                >
+                  Cerrar
+                </Button>
+                <Button
+                  color="primary"
+                  className="bg-wine flex-1"
+                  onPress={() => {
+                    onClose();
+                    handlePrint();
+                  }}
+                  startContent={<Printer size={18} />}
+                >
+                  Imprimir ahora
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     );
   };
 
@@ -573,6 +609,7 @@ export default function ModalDetalleOrden({
                       {orden.estado.replace("_", " ")}
                     </Chip>
                     <button
+                      type="button"
                       onClick={onClose}
                       className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                     >
@@ -706,23 +743,37 @@ export default function ModalDetalleOrden({
                       Productos ({orden.items.length})
                     </h3>
                     <div className="space-y-3">
-                      {orden.items.map((item: any) => (
+                      {orden.items.map((item: Record<string, unknown>) => (
                         <div
                           key={item.id}
                           className="flex gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
                         >
                           <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            {item.producto.imagen ? (
-                              <img
-                                src={item.producto.imagen}
-                                alt={item.producto.nombre}
-                                className="w-full h-full object-cover"
+                            <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                              <Image
+                                fill
+                                src={
+                                  (item.producto.imagen as string) ||
+                                  (item.imagen as string) ||
+                                  "/placeholder-producto.png"
+                                }
+                                alt={item.producto.nombre as string}
+                                className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${
+                                  item.producto.imagen ? "" : "opacity-60"
+                                }`}
+                                loading="lazy"
+                                draggable={false}
                               />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-3xl">
-                                🍽️
-                              </div>
-                            )}
+                              {!item.producto.imagen && (
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
+                                  {/* You need to import CircleQuestionMark from lucide-react or your icon library */}
+                                  <CircleQuestionMark
+                                    size={32}
+                                    className="text-white opacity-80"
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -816,14 +867,15 @@ export default function ModalDetalleOrden({
                         </div>
                       )}
 
-                      {orden.costoAdicional && Number(orden.costoAdicional) > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Costo adicional</span>
-                          <span className="font-semibold">
-                            +{formatCOP(Number(orden.costoAdicional))}
-                          </span>
-                        </div>
-                      )}
+                      {orden.costoAdicional &&
+                        Number(orden.costoAdicional) > 0 && (
+                          <div className="flex justify-between text-sm text-green-600">
+                            <span>Costo adicional</span>
+                            <span className="font-semibold">
+                              +{formatCOP(Number(orden.costoAdicional))}
+                            </span>
+                          </div>
+                        )}
 
                       <div className="flex justify-between pt-3 border-t border-gray-300">
                         <span className="font-bold text-lg text-gray-900">

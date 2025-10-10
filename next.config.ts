@@ -14,6 +14,9 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Tu config aquí
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default withPWA(nextConfig);

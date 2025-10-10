@@ -37,7 +37,22 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  
+
+  const fetchSucursales = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/sucursales");
+      const data = await response.json();
+      if (data.success) {
+        setSucursales(data.sucursales);
+      }
+    } catch (error) {
+      console.error("Error al cargar sucursales:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const checkAuth = async () => {
       setAuthLoading(true);
@@ -71,22 +86,10 @@ export default function Home() {
     };
 
     checkAuth();
-  }, [router]);
-
-  const fetchSucursales = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/sucursales");
-      const data = await response.json();
-      if (data.success) {
-        setSucursales(data.sucursales);
-      }
-    } catch (error) {
-      console.error("Error al cargar sucursales:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [
+    router, // Solo si la autenticación es válida, cargar sucursales
+    fetchSucursales,
+  ]);
 
   const handleSelectSucursal = (sucursal: Sucursal) => {
     setSelectedId(sucursal.id);
@@ -144,6 +147,7 @@ export default function Home() {
               nuevamente.
             </p>
             <button
+              type="button"
               onClick={handleLogout}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
             >
@@ -164,6 +168,7 @@ export default function Home() {
                   <p className="text-xs text-secondary">{authUser.rol}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   className="flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:text-wine transition-colors"
                 >
@@ -211,9 +216,10 @@ export default function Home() {
                     className={`
                       group relative overflow-hidden
                       rounded-2xl p-0 border-2 transition-all duration-300
-                      ${selectedId === sucursal.id
-                        ? "border-wine shadow-2xl scale-105"
-                        : "border-transparent hover:border-primary hover:shadow-xl hover:scale-102"
+                      ${
+                        selectedId === sucursal.id
+                          ? "border-wine shadow-2xl scale-105"
+                          : "border-transparent hover:border-primary hover:shadow-xl hover:scale-102"
                       }
                       ${selectedId && selectedId !== sucursal.id ? "opacity-50" : ""}
                     `}
@@ -245,9 +251,10 @@ export default function Home() {
                             className={`
                               w-12 h-12 rounded-full flex items-center justify-center
                               transition-colors duration-300
-                              ${selectedId === sucursal.id
-                                ? "bg-wine"
-                                : "bg-primary/10 group-hover:bg-primary/20"
+                              ${
+                                selectedId === sucursal.id
+                                  ? "bg-wine"
+                                  : "bg-primary/10 group-hover:bg-primary/20"
                               }
                             `}
                           >
@@ -263,9 +270,10 @@ export default function Home() {
                             <h3
                               className={`
                                 font-semibold text-lg transition-colors duration-300
-                                ${selectedId === sucursal.id
-                                  ? "text-wine"
-                                  : "text-gray-900 group-hover:text-wine"
+                                ${
+                                  selectedId === sucursal.id
+                                    ? "text-wine"
+                                    : "text-gray-900 group-hover:text-wine"
                                 }
                               `}
                             >
@@ -281,9 +289,10 @@ export default function Home() {
                         <ArrowRight
                           className={`
                             transition-all duration-300
-                            ${selectedId === sucursal.id
-                              ? "text-wine translate-x-0"
-                              : "text-secondary translate-x-0 group-hover:translate-x-1"
+                            ${
+                              selectedId === sucursal.id
+                                ? "text-wine translate-x-0"
+                                : "text-secondary translate-x-0 group-hover:translate-x-1"
                             }
                           `}
                           size={24}

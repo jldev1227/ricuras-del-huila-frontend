@@ -257,10 +257,11 @@ export default function CategoriasPage() {
                   {/* Estado */}
                   <div className="mb-4">
                     <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${categoria.activo
-                        ? "bg-green-100 text-green-700 ring-1 ring-green-600/20"
-                        : "bg-gray-100 text-gray-700 ring-1 ring-gray-600/20"
-                        }`}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                        categoria.activo
+                          ? "bg-green-100 text-green-700 ring-1 ring-green-600/20"
+                          : "bg-gray-100 text-gray-700 ring-1 ring-gray-600/20"
+                      }`}
                     >
                       {categoria.activo ? "✓ Activa" : "⊗ Inactiva"}
                     </span>

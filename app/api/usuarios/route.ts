@@ -1,8 +1,8 @@
 // app/api/usuarios/route.ts
 import type { Prisma, Rol } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {

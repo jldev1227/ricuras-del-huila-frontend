@@ -1,6 +1,48 @@
 // app/api/ordenes/[id]/route.ts
+
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+
+// Types for better type safety
+interface EstadoUpdateData {
+  nuevoEstado: string;
+  razon?: string;
+}
+
+interface CancelacionData {
+  razonCancelacion: string;
+}
+
+interface FacturacionData {
+  numeroFactura?: string;
+  metodoPago?: string;
+  observaciones?: string;
+  fechaFacturacion?: string;
+  cufe?: string;
+  urlPdf?: string;
+  urlXml?: string;
+}
+
+interface NotasUpdateData {
+  notas?: string;
+  especificaciones?: string;
+}
+
+interface OrdenExistente {
+  id: string;
+  estado: string;
+  meseroId?: string | null;
+  mesaId?: string | null;
+  notas?: string | null;
+  mesa?: { numero: number } | null;
+  [key: string]: unknown;
+}
+
+interface OrdenActualizada {
+  id: string;
+  estado: string;
+  [key: string]: unknown;
+}
 
 // Tipos para los items de orden
 interface OrderItem {
@@ -14,11 +56,12 @@ interface OrderItem {
 // GET - Obtener una orden específica
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const orden = await prisma.orden.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: {
           include: {
@@ -65,14 +108,15 @@ export async function GET(
 // PUT - Actualizar orden completa
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
 
     // Verificar que la orden existe
     const ordenExistente = await prisma.orden.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { items: true },
     });
 
@@ -118,7 +162,7 @@ export async function PUT(
       if (items && Array.isArray(items)) {
         // Eliminar items antiguos
         await tx.ordenItem.deleteMany({
-          where: { ordenId: params.id },
+          where: { ordenId: id },
         });
 
         // Calcular nuevo subtotal
@@ -133,7 +177,7 @@ export async function PUT(
 
         // Actualizar orden con nuevos items
         return await tx.orden.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             tipoOrden: tipoOrden || ordenExistente.tipoOrden,
             mesaId: mesaId !== undefined ? mesaId : ordenExistente.mesaId,
@@ -214,7 +258,7 @@ export async function PUT(
         });
       } else {
         // Solo actualizar campos sin modificar items
-        const dataUpdate: Record<string, any> = {
+        const dataUpdate: Record<string, unknown> = {
           actualizadoEn: new Date(),
         };
 
@@ -270,7 +314,7 @@ export async function PUT(
         }
 
         return await tx.orden.update({
-          where: { id: params.id },
+          where: { id },
           data: dataUpdate,
           include: {
             items: {
@@ -308,15 +352,16 @@ export async function PUT(
 // PATCH - Actualizar campos específicos (cambios de estado, facturación, etc.)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { accion, ...datos } = body;
 
     // Verificar que la orden existe
     const ordenExistente = await prisma.orden.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { mesa: true },
     });
 
@@ -327,37 +372,37 @@ export async function PATCH(
       );
     }
 
-    let ordenActualizada: any;
+    let ordenActualizada: OrdenActualizada;
 
     switch (accion) {
       case "cambiar_estado":
         ordenActualizada = await cambiarEstado(
-          params.id,
+          id,
           datos,
           ordenExistente,
         );
         break;
 
       case "cancelar":
-        ordenActualizada = await cancelarOrden(params.id, datos);
+        ordenActualizada = await cancelarOrden(id, datos);
         break;
 
       case "marcar_facturada":
-        ordenActualizada = await marcarFacturada(params.id, datos);
+        ordenActualizada = await marcarFacturada(id, datos);
         break;
 
       case "sincronizar":
-        ordenActualizada = await sincronizarOrden(params.id);
+        ordenActualizada = await sincronizarOrden(id);
         break;
 
       case "actualizar_notas":
-        ordenActualizada = await actualizarNotas(params.id, datos);
+        ordenActualizada = await actualizarNotas(id, datos);
         break;
 
       default:
         // Actualización genérica de campos
         ordenActualizada = await prisma.orden.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             ...datos,
             actualizadoEn: new Date(),
@@ -393,8 +438,8 @@ export async function PATCH(
 // Función para cambiar estado de la orden
 async function cambiarEstado(
   ordenId: string,
-  datos: Record<string, any>,
-  ordenExistente: Record<string, any>,
+  datos: EstadoUpdateData,
+  ordenExistente: OrdenExistente,
 ) {
   const { nuevoEstado, razon } = datos;
 
@@ -430,10 +475,10 @@ async function cambiarEstado(
     return await tx.orden.update({
       where: { id: ordenId },
       data: {
-        estado: nuevoEstado,
-        notas: razon
+        estado: nuevoEstado as "PENDIENTE" | "EN_PREPARACION" | "LISTA" | "ENTREGADA" | "CANCELADA",
+        notas: (razon
           ? `${ordenExistente.notas || ""}\n[Cambio de estado]: ${razon}`.trim()
-          : ordenExistente.notas,
+          : ordenExistente.notas) as string | null,
         actualizadoEn: new Date(),
       },
       include: {
@@ -448,7 +493,7 @@ async function cambiarEstado(
 }
 
 // Función para cancelar orden
-async function cancelarOrden(ordenId: string, datos: Record<string, any>) {
+async function cancelarOrden(ordenId: string, datos: CancelacionData) {
   const { razonCancelacion } = datos;
 
   if (!razonCancelacion) {
@@ -497,7 +542,7 @@ async function cancelarOrden(ordenId: string, datos: Record<string, any>) {
 }
 
 // Función para marcar como facturada (agregar campo facturada al schema si es necesario)
-async function marcarFacturada(ordenId: string, datos: Record<string, any>) {
+async function marcarFacturada(ordenId: string, datos: FacturacionData) {
   const {
     numeroFactura,
     fechaFacturacion,
@@ -564,7 +609,7 @@ async function sincronizarOrden(ordenId: string) {
 }
 
 // Función para actualizar notas/especificaciones
-async function actualizarNotas(ordenId: string, datos: Record<string, any>) {
+async function actualizarNotas(ordenId: string, datos: NotasUpdateData) {
   const { notas, especificaciones } = datos;
 
   return await prisma.orden.update({

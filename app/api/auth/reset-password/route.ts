@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar token
-    let payload: any;
+    let payload: { email?: string; exp?: number };
     try {
       const verified = await jwtVerify(resetToken, SECRET);
       payload = verified.payload;

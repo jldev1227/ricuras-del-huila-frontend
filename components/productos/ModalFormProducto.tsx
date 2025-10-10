@@ -1,6 +1,5 @@
 "use client";
 
-import { ProductoConCategoria } from "@/types/producto";
 import {
   Modal,
   ModalBody,
@@ -9,28 +8,13 @@ import {
   ModalHeader,
 } from "@heroui/modal";
 import { Button } from "@heroui/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { ProductoConCategoria } from "@/types/producto";
 
 interface Categoria {
   id: string;
   nombre: string;
   icono: string | null;
-}
-
-interface ProductoEditable {
-  id: string;
-  nombre: string;
-  descripcion: string | null;
-  precio: number;
-  costoProduccion: number;
-  imagen: string | null;
-  disponible: boolean;
-  destacado: boolean;
-  categoria: {
-    id: string;
-    nombre: string;
-    icono: string | null;
-  };
 }
 
 // ✅ Tipo separado para el formulario
@@ -74,7 +58,33 @@ export default function ModalFormProducto({
     destacado: false,
   });
 
+  const resetForm = useCallback(() => {
+    setFormData({
+      nombre: "",
+      descripcion: "",
+      precio: 0,
+      costoProduccion: 0,
+      categoriaId: "",
+      imagen: "",
+      disponible: true,
+      destacado: false,
+    });
+    setError("");
+  }, []);
+
   useEffect(() => {
+    const fetchCategorias = async () => {
+      try {
+        const response = await fetch("/api/categorias");
+        const data = await response.json();
+        if (data.success) {
+          setCategorias(data.categorias);
+        }
+      } catch (error) {
+        console.error("Error al cargar categorías:", error);
+      }
+    };
+
     fetchCategorias();
   }, []);
 
@@ -94,33 +104,7 @@ export default function ModalFormProducto({
     } else {
       resetForm();
     }
-  }, [producto]);
-
-  const fetchCategorias = async () => {
-    try {
-      const response = await fetch("/api/categorias");
-      const data = await response.json();
-      if (data.success) {
-        setCategorias(data.categorias);
-      }
-    } catch (error) {
-      console.error("Error al cargar categorías:", error);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      nombre: "",
-      descripcion: "",
-      precio: 0,
-      costoProduccion: 0,
-      categoriaId: "",
-      imagen: "",
-      disponible: true,
-      destacado: false,
-    });
-    setError("");
-  };
+  }, [producto, resetForm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,7 +140,10 @@ export default function ModalFormProducto({
     }
   };
 
-  const handleChange = (field: keyof ProductoForm, value: any) => {
+  const handleChange = (
+    field: keyof ProductoForm,
+    value: string | number | boolean | File | null,
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -179,7 +166,10 @@ export default function ModalFormProducto({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Nombre */}
                 <div className="md:col-span-2">
-                  <label htmlFor="nombreProducto" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="nombreProducto"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Nombre del producto *
                   </label>
                   <input
@@ -195,7 +185,10 @@ export default function ModalFormProducto({
 
                 {/* Descripción */}
                 <div className="md:col-span-2">
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="description"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Descripción
                   </label>
                   <textarea
@@ -212,7 +205,10 @@ export default function ModalFormProducto({
 
                 {/* Categoría */}
                 <div>
-                  <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="categoria"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Categoría *
                   </label>
                   <select
@@ -235,7 +231,10 @@ export default function ModalFormProducto({
 
                 {/* Imagen */}
                 <div>
-                  <label htmlFor="imagen" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="imagen"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Imagen (ruta)
                   </label>
                   <input
@@ -250,7 +249,10 @@ export default function ModalFormProducto({
 
                 {/* Precio de venta */}
                 <div>
-                  <label htmlFor="precioVenta" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="precioVenta"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Precio de venta *
                   </label>
                   <input
@@ -270,7 +272,10 @@ export default function ModalFormProducto({
 
                 {/* Costo de producción */}
                 <div>
-                  <label htmlFor="costoProduccion" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="costoProduccion"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Costo de producción *
                   </label>
                   <input

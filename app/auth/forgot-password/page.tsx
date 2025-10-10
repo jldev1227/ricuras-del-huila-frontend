@@ -48,8 +48,8 @@ export default function Page() {
       <div className="w-full max-w-md p-8">
         <div className="block lg:hidden">
           <Image
-            width={224}
-            height={224}
+            width={250}
+            height={250}
             src="/logo.png"
             alt="Logo Ricuras del Huila"
             className="mx-auto relative z-10 w-56 h-56"

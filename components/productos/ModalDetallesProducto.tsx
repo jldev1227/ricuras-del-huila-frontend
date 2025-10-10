@@ -1,6 +1,5 @@
 "use client";
 
-import { ProductoConCategoria } from "@/types/producto";
 import {
   Modal,
   ModalBody,
@@ -10,6 +9,7 @@ import {
 } from "@heroui/modal";
 import { Button } from "@heroui/react";
 import Image from "next/image";
+import type { ProductoConCategoria } from "@/types/producto";
 
 interface ModalDetallesProductoProps {
   isOpen: boolean;
@@ -78,6 +78,8 @@ export default function ModalDetallesProducto({
                           strokeWidth={1.5}
                           stroke="currentColor"
                           className="w-24 h-24"
+                          aria-label="Sin imagen"
+                          role="img"
                         >
                           <path
                             strokeLinecap="round"

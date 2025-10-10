@@ -10,7 +10,12 @@ interface Sucursal {
 
 interface AuthState {
   state: {
-    user: any;
+    user: {
+      id: string;
+      nombreCompleto: string;
+      rol: string;
+      email?: string;
+    };
     token: string;
     isLoading: boolean;
     isOnline: boolean;

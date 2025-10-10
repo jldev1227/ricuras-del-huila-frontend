@@ -138,7 +138,9 @@ async function main() {
   });
 
   if (!platosFuertes || !bebidas) {
-    throw new Error("No se encontraron las categorías necesarias para los productos.");
+    throw new Error(
+      "No se encontraron las categorías necesarias para los productos.",
+    );
   }
 
   // Crear productos

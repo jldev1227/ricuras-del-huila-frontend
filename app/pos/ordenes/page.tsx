@@ -285,8 +285,27 @@ export default function OrdenesPage() {
     searchTerm ||
     sucursalFiltro;
 
-  const getEstadoColor = (estado: string) => {
-    const colores: Record<string, string> = {
+  type EstadoOrden =
+    | "PENDIENTE"
+    | "EN_PREPARACION"
+    | "LISTA"
+    | "ENTREGADA"
+    | "CANCELADA";
+
+  const getEstadoColor = (
+    estado: EstadoOrden,
+  ):
+    | "default"
+    | "warning"
+    | "primary"
+    | "success"
+    | "danger"
+    | "secondary"
+    | undefined => {
+    const colores: Record<
+      EstadoOrden,
+      "default" | "warning" | "primary" | "success" | "danger" | "secondary"
+    > = {
       PENDIENTE: "warning",
       EN_PREPARACION: "primary",
       LISTA: "success",
@@ -362,6 +381,7 @@ export default function OrdenesPage() {
               />
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
@@ -384,7 +404,10 @@ export default function OrdenesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Sucursal */}
               <div>
-                <label htmlFor="sucursal" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="sucursal"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Sucursal
                 </label>
                 <div className="relative">
@@ -410,7 +433,10 @@ export default function OrdenesPage() {
 
               {/* Estado */}
               <div>
-                <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="estado"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Estado
                 </label>
                 <select
@@ -430,7 +456,10 @@ export default function OrdenesPage() {
 
               {/* Tipo de orden */}
               <div>
-                <label htmlFor="tipoOrden" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="tipoOrden"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Tipo de orden
                 </label>
                 <select
@@ -448,7 +477,10 @@ export default function OrdenesPage() {
 
               {/* Fecha */}
               <div>
-                <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="fecha"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Fecha
                 </label>
                 <div className="relative">
@@ -568,7 +600,7 @@ export default function OrdenesPage() {
                         </span>
                       </div>
                       <Chip
-                        color={getEstadoColor(orden.estado) as any}
+                        color={getEstadoColor(orden.estado as EstadoOrden)}
                         size="sm"
                         variant="flat"
                       >
@@ -789,7 +821,7 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <Chip
-                            color={getEstadoColor(orden.estado) as any}
+                            color={getEstadoColor(orden.estado as EstadoOrden)}
                             size="sm"
                             variant="flat"
                           >

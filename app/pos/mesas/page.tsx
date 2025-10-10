@@ -3,7 +3,7 @@
 import { Button, Spinner } from "@heroui/react";
 import type { Mesa } from "@prisma/client";
 import { Edit, Filter, MapPin, Plus, Search, Users, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Sucursal {
   id: string;
@@ -28,39 +28,38 @@ export default function MesasPage() {
   const [selectedUbicacion, setSelectedUbicacion] = useState("");
   const [selectedDisponible, setSelectedDisponible] = useState("");
 
-  // Cargar sucursales y mesas al montar y cuando cambien los filtros
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      // Fetch sucursales
-      const sucursalesRes = await fetch("/api/sucursales");
-      const sucursalesData = await sucursalesRes.json();
-      if (sucursalesData.success) {
-        setSucursales(sucursalesData.sucursales);
-      }
-
-      // Fetch mesas con filtros
-      const params = new URLSearchParams();
-      if (searchNumero) params.append("numero", searchNumero);
-      if (selectedSucursal) params.append("sucursalId", selectedSucursal);
-      if (selectedUbicacion) params.append("ubicacion", selectedUbicacion);
-      if (selectedDisponible) params.append("disponible", selectedDisponible);
-
-      const mesasRes = await fetch(`/api/mesas?${params}`);
-      const mesasData = await mesasRes.json();
-      if (mesasData.success) {
-        setMesas(mesasData.mesas);
-      }
-    } catch (error) {
-      console.error("Error al cargar datos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    // Cargar sucursales y mesas al montar y cuando cambien los filtros
+    const fetchAll = async () => {
+      setLoading(true);
+      try {
+        // Fetch sucursales
+        const sucursalesRes = await fetch("/api/sucursales");
+        const sucursalesData = await sucursalesRes.json();
+        if (sucursalesData.success) {
+          setSucursales(sucursalesData.sucursales);
+        }
+
+        // Fetch mesas con filtros
+        const params = new URLSearchParams();
+        if (searchNumero) params.append("numero", searchNumero);
+        if (selectedSucursal) params.append("sucursalId", selectedSucursal);
+        if (selectedUbicacion) params.append("ubicacion", selectedUbicacion);
+        if (selectedDisponible) params.append("disponible", selectedDisponible);
+
+        const mesasRes = await fetch(`/api/mesas?${params}`);
+        const mesasData = await mesasRes.json();
+        if (mesasData.success) {
+          setMesas(mesasData.mesas);
+        }
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchNumero, selectedSucursal, selectedUbicacion, selectedDisponible]);
 
   const limpiarFiltros = () => {
@@ -123,7 +122,10 @@ export default function MesasPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Búsqueda por número */}
               <div>
-                <label htmlFor="numeroMesa" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="numeroMesa"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Número de mesa
                 </label>
                 <div className="relative">
@@ -144,7 +146,10 @@ export default function MesasPage() {
 
               {/* Sucursal */}
               <div>
-                <label htmlFor="sucursal" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="sucursal"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Sucursal
                 </label>
                 <select
@@ -164,7 +169,10 @@ export default function MesasPage() {
 
               {/* Ubicación */}
               <div>
-                <label htmlFor="ubicacion" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="ubicacion"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Ubicación
                 </label>
                 <select
@@ -182,7 +190,10 @@ export default function MesasPage() {
 
               {/* Estado */}
               <div>
-                <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="estado"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Estado
                 </label>
                 <select

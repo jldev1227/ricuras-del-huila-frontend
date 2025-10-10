@@ -27,7 +27,20 @@ export default function ModalActualizarOrden({
   onOpenChange,
   onOrdenActualizada,
 }: ModalActualizarOrdenProps) {
-  const [orden, setOrden] = useState<any>(null);
+  const [orden, setOrden] = useState<{
+    id: string;
+    estado: string;
+    especificaciones?: string;
+    notas?: string;
+    items?: Array<{
+      id: string;
+      cantidad: number;
+      precio: number;
+      producto: { nombre: string };
+    }>;
+    tipoOrden: string;
+    subtotal: number;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -117,11 +130,13 @@ export default function ModalActualizarOrden({
       } else {
         throw new Error(data.message);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       addToast({
         title: "Error al actualizar",
-        description: error.message || "Ocurrió un error inesperado",
-        color: "danger",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Ocurrió un error inesperado",
       });
     } finally {
       setGuardando(false);
@@ -129,7 +144,10 @@ export default function ModalActualizarOrden({
   };
 
   const getEstadoColor = (estado: string) => {
-    const colores: Record<string, any> = {
+    const colores: Record<
+      string,
+      "warning" | "primary" | "success" | "danger" | "default"
+    > = {
       PENDIENTE: "warning",
       EN_PREPARACION: "primary",
       LISTA: "success",
@@ -161,12 +179,9 @@ export default function ModalActualizarOrden({
                   </p>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
+              <Button isIconOnly size="sm" variant="light" onPress={onClose}>
                 <X className="w-5 h-5 text-gray-400" />
-              </button>
+              </Button>
             </ModalHeader>
 
             <ModalBody className="py-6">
@@ -222,7 +237,10 @@ export default function ModalActualizarOrden({
 
                   {/* Especificaciones */}
                   <div>
-                    <label htmlFor="especificaciones" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="especificaciones"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Especificaciones de la orden
                     </label>
                     <Textarea
@@ -237,7 +255,10 @@ export default function ModalActualizarOrden({
 
                   {/* Notas */}
                   <div>
-                    <label htmlFor="notas" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="notas"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Notas internas
                     </label>
                     <Textarea
@@ -252,7 +273,10 @@ export default function ModalActualizarOrden({
 
                   {/* Descuento */}
                   <div>
-                    <label htmlFor="descuento" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="descuento"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Descuento
                     </label>
                     <Input
@@ -275,11 +299,14 @@ export default function ModalActualizarOrden({
                   {/* Costo adicional (solo para LLEVAR) */}
                   {orden.tipoOrden === "LLEVAR" && (
                     <div>
-                      <label htmlFor="costoAdicional" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="costoAdicional"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Costo adicional
                       </label>
                       <Input
-                        id='costoAdicional'
+                        id="costoAdicional"
                         type="number"
                         placeholder="0"
                         value={costoAdicional.toString()}
@@ -295,7 +322,10 @@ export default function ModalActualizarOrden({
                   {/* Costo de envío (solo para DOMICILIO) */}
                   {orden.tipoOrden === "DOMICILIO" && (
                     <div>
-                      <label htmlFor="costoEnvio" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="costoEnvio"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Costo de envío
                       </label>
                       <Input

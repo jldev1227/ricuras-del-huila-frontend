@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import ModalDetallesProducto from "@/components/productos/ModalDetallesProducto";
 import ModalFormProducto from "@/components/productos/ModalFormProducto";
-import { ProductoConCategoria } from "@/types/producto";
+import type { ProductoConCategoria } from "@/types/producto";
 
 interface Categoria {
   id: string;
@@ -35,9 +35,8 @@ export default function ProductosPage() {
     onOpenChange: onOpenChangeDetails,
   } = useDisclosure();
 
-  const [selectedProducto, setSelectedProducto] = useState<ProductoConCategoria | null>(
-    null,
-  );
+  const [selectedProducto, setSelectedProducto] =
+    useState<ProductoConCategoria | null>(null);
 
   // Función para abrir modal de edición
   const handleEdit = (producto: ProductoConCategoria) => {
@@ -151,7 +150,10 @@ export default function ProductosPage() {
         {/* Filtros de búsqueda */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="search"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Buscar producto
             </label>
             <input
@@ -165,7 +167,10 @@ export default function ProductosPage() {
           </div>
 
           <div>
-            <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="categoria"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Categoría
             </label>
             <select
@@ -185,7 +190,10 @@ export default function ProductosPage() {
           </div>
 
           <div>
-            <label htmlFor="disponibilidad" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="disponibilidad"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Disponibilidad
             </label>
             <select
@@ -263,6 +271,8 @@ export default function ProductosPage() {
                           strokeWidth={1.5}
                           stroke="currentColor"
                           className="w-16 h-16"
+                          aria-label="Imagen no disponible"
+                          role="img"
                         >
                           <path
                             strokeLinecap="round"
