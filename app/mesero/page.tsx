@@ -7,6 +7,12 @@ import {
   CardHeader,
   Chip,
   Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
 } from "@heroui/react";
 import {
   Clock,
@@ -16,6 +22,7 @@ import {
   Plus,
   Eye,
   DollarSign,
+  Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,14 +36,33 @@ interface Orden {
   tipoOrden: string;
   estado: string;
   total: number;
+  subtotal?: number;
+  descuento?: number;
   mesa?: {
     numero: number;
+    capacidad: number;
   };
   cliente?: {
     nombre: string;
+    telefono?: string;
+    email?: string;
   };
   nombreCliente?: string;
+  direccionEntrega?: string;
+  especificaciones?: string;
+  notas?: string;
   creadoEn: string;
+  actualizadoEn?: string;
+  items?: {
+    id: string;
+    cantidad: number;
+    precioUnitario: number;
+    producto: {
+      id: string;
+      nombre: string;
+      imagen?: string;
+    };
+  }[];
   _count: {
     items: number;
   };
@@ -53,6 +79,8 @@ export default function MeseroPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { sucursal } = useSucursal();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [stats, setStats] = useState<Stats>({
     ordenesHoy: 0,
@@ -61,6 +89,8 @@ export default function MeseroPage() {
     promedioOrden: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState<Orden | null>(null);
+  const [loadingDetalles, setLoadingDetalles] = useState(false);
 
   // Obtener órdenes del mesero
   const fetchOrdenesDelMesero = async () => {
@@ -108,6 +138,25 @@ export default function MeseroPage() {
   useEffect(() => {
     fetchOrdenesDelMesero();
   }, [user?.id, sucursal?.id]);
+
+  // Obtener detalles completos de una orden
+  const fetchDetallesOrden = async (ordenId: string) => {
+    setLoadingDetalles(true);
+    try {
+      const response = await fetch(`/api/ordenes/${ordenId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setOrdenSeleccionada(data.orden);
+          onOpen();
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar detalles de la orden:", error);
+    } finally {
+      setLoadingDetalles(false);
+    }
+  };
 
   const getEstadoColor = (estado: string): "warning" | "primary" | "success" | "default" | "danger" => {
     switch (estado) {
@@ -169,7 +218,7 @@ export default function MeseroPage() {
           <Button
             color="primary"
             startContent={<Plus className="w-4 h-4" />}
-            onPress={() => router.push("/pos")}
+            onPress={() => router.push("/mesero/orden")}
           >
             Nueva Orden
           </Button>
@@ -260,7 +309,7 @@ export default function MeseroPage() {
               color="primary"
               size="sm"
               endContent={<Eye className="w-4 h-4" />}
-              onPress={() => router.push("/pos/ordenes")}
+              onPress={() => router.push("/mesero/ordenes")}
             >
               Ver Todas
             </Button>
@@ -328,7 +377,7 @@ export default function MeseroPage() {
                           {formatCOP(orden.total)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {orden._count.items} item
+                          {orden._count.items} producto
                           {orden._count.items !== 1 ? "s" : ""}
                         </p>
                       </div>
@@ -350,9 +399,7 @@ export default function MeseroPage() {
                         variant="light"
                         color="primary"
                         isIconOnly
-                        onPress={() =>
-                          router.push(`/pos/ordenes?orden=${orden.id}`)
-                        }
+                        onPress={() => fetchDetallesOrden(orden.id)}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -436,9 +483,7 @@ export default function MeseroPage() {
                         <Button
                           size="sm"
                           color="primary"
-                          onPress={() =>
-                            (window.location.href = `/pos/ordenes?orden=${orden.id}`)
-                          }
+                          onPress={() => fetchDetallesOrden(orden.id)}
                         >
                           Ver Detalles
                         </Button>
@@ -450,6 +495,181 @@ export default function MeseroPage() {
           </CardBody>
         </Card>
       )}
+
+      {/* Modal de detalles de orden */}
+      <Modal 
+        isOpen={isOpen} 
+        onClose={onClose}
+        size="2xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <h3 className="text-xl font-bold">
+                      Orden #{ordenSeleccionada?.numeroOrden || ordenSeleccionada?.id.slice(-6)}
+                    </h3>
+                    {ordenSeleccionada && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Chip
+                          size="sm"
+                          color={getEstadoColor(ordenSeleccionada.estado)}
+                          variant="flat"
+                        >
+                          {getEstadoTexto(ordenSeleccionada.estado)}
+                        </Chip>
+                        <span className="text-sm text-gray-500 capitalize">
+                          {ordenSeleccionada.tipoOrden}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ModalHeader>
+              <ModalBody>
+                {ordenSeleccionada && (
+                  <div className="space-y-6">
+                    {/* Información general */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-3">Información General</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-sm text-gray-500">Fecha y hora:</span>
+                          <p className="font-medium">
+                            {new Date(ordenSeleccionada.creadoEn).toLocaleDateString()} - {" "}
+                            {new Date(ordenSeleccionada.creadoEn).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        
+                        {ordenSeleccionada.mesa && (
+                          <div>
+                            <span className="text-sm text-gray-500">Mesa:</span>
+                            <p className="font-medium">
+                              Mesa {ordenSeleccionada.mesa.numero}
+                              {ordenSeleccionada.mesa.capacidad && ` (${ordenSeleccionada.mesa.capacidad} personas)`}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {(ordenSeleccionada.cliente?.nombre || ordenSeleccionada.nombreCliente) && (
+                          <div>
+                            <span className="text-sm text-gray-500">Cliente:</span>
+                            <p className="font-medium">
+                              {ordenSeleccionada.cliente?.nombre || ordenSeleccionada.nombreCliente}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {ordenSeleccionada.direccionEntrega && (
+                          <div>
+                            <span className="text-sm text-gray-500">Dirección de entrega:</span>
+                            <p className="font-medium">{ordenSeleccionada.direccionEntrega}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Productos */}
+                    {ordenSeleccionada.items && ordenSeleccionada.items.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">Productos</h4>
+                        <div className="space-y-3">
+                          {ordenSeleccionada.items.map((item) => (
+                            <div key={item.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                {item.producto.imagen ? (
+                                  <img 
+                                    src={item.producto.imagen} 
+                                    alt={item.producto.nombre}
+                                    className="w-full h-full object-cover rounded-lg"
+                                  />
+                                ) : (
+                                  <Package className="w-6 h-6 text-gray-400" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-medium text-gray-900">{item.producto.nombre}</h5>
+                                <p className="text-sm text-gray-500">
+                                  {formatCOP(item.precioUnitario)} x {item.cantidad}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-gray-900">
+                                  {formatCOP(item.precioUnitario * item.cantidad)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Especificaciones y notas */}
+                    {(ordenSeleccionada.especificaciones || ordenSeleccionada.notas) && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">Especificaciones y Notas</h4>
+                        {ordenSeleccionada.especificaciones && (
+                          <div className="mb-3">
+                            <span className="text-sm text-gray-500">Especificaciones:</span>
+                            <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">
+                              {ordenSeleccionada.especificaciones}
+                            </p>
+                          </div>
+                        )}
+                        {ordenSeleccionada.notas && (
+                          <div>
+                            <span className="text-sm text-gray-500">Notas:</span>
+                            <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">
+                              {ordenSeleccionada.notas}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Resumen financiero */}
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-3">Resumen</h4>
+                      <div className="space-y-2">
+                        {ordenSeleccionada.subtotal && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Subtotal:</span>
+                            <span className="font-medium">{formatCOP(ordenSeleccionada.subtotal)}</span>
+                          </div>
+                        )}
+                        {ordenSeleccionada.descuento && ordenSeleccionada.descuento > 0 && (
+                          <div className="flex justify-between text-green-600">
+                            <span>Descuento:</span>
+                            <span className="font-medium">-{formatCOP(ordenSeleccionada.descuento)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t border-blue-200">
+                          <span className="font-bold text-gray-900">Total:</span>
+                          <span className="font-bold text-blue-600 text-lg">
+                            {formatCOP(ordenSeleccionada.total)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button color="primary" variant="light" onPress={onClose}>
+                  Cerrar
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -1,11 +1,25 @@
 "use client";
 
-import { Button, Card, CardBody, Chip, Spinner } from "@heroui/react";
-import { Users, CheckCircle, AlertCircle, Plus, Eye } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardBody,
+  Chip,
+  Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  addToast
+} from "@heroui/react";
+import { Users, CheckCircle, AlertCircle, Plus, Eye, X, Package, UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
+import { formatCOP } from "@/utils/formatCOP";
 
 interface Mesa {
   id: string;
@@ -18,11 +32,23 @@ interface Mesa {
     numeroOrden: string;
     estado: string;
     total: number;
+    subtotal?: number;
     creadoEn: string;
     meseroId: string;
+    especificaciones?: string;
     mesero: {
       nombreCompleto: string;
     };
+    items?: {
+      id: string;
+      cantidad: number;
+      precioUnitario: number;
+      producto: {
+        id: string;
+        nombre: string;
+        imagen?: string;
+      };
+    }[];
   };
 }
 
@@ -30,8 +56,13 @@ export default function MeseroMesasPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { sucursal } = useSucursal();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
+  const [loadingDetalles, setLoadingDetalles] = useState(false);
+  const [liberandoMesa, setLiberandoMesa] = useState(false);
 
   // Obtener mesas de la sucursal
   const fetchMesas = useCallback(async () => {
@@ -39,7 +70,7 @@ export default function MeseroMesasPage() {
       if (!sucursal?.id) return;
 
       const response = await fetch(`/api/mesas?sucursalId=${sucursal.id}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         setMesas(data.mesas || []);
@@ -53,7 +84,85 @@ export default function MeseroMesasPage() {
 
   useEffect(() => {
     fetchMesas();
-  }, [fetchMesas]);  const _getEstadoMesa = (mesa: Mesa) => {
+  }, [fetchMesas]);
+
+  // Obtener detalles completos de una mesa
+  const fetchDetallesMesa = async (mesa: Mesa) => {
+    setLoadingDetalles(true);
+    try {
+      if (mesa.ordenActual) {
+        const response = await fetch(`/api/ordenes/${mesa.ordenActual.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setMesaSeleccionada({
+              ...mesa,
+              ordenActual: {
+                ...mesa.ordenActual,
+                items: data.orden.items || [],
+                subtotal: data.orden.subtotal,
+                especificaciones: data.orden.especificaciones
+              }
+            });
+          }
+        }
+      } else {
+        setMesaSeleccionada(mesa);
+      }
+      onOpen();
+    } catch (error) {
+      console.error("Error al cargar detalles de la mesa:", error);
+    } finally {
+      setLoadingDetalles(false);
+    }
+  };
+
+  // Liberar mesa (solo si es del mesero)
+  const liberarMesa = async (mesaId: string) => {
+    setLiberandoMesa(true);
+    try {
+      const response = await fetch(`/api/mesas/${mesaId}/liberar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meseroId: user?.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        addToast({
+          title: "Mesa liberada",
+          description: "La mesa ha sido liberada exitosamente",
+          color: "success",
+        });
+
+        // Refrescar la lista de mesas
+        fetchMesas();
+        onClose();
+      } else {
+        addToast({
+          title: "Error",
+          description: data.message || "No se pudo liberar la mesa",
+          color: "danger",
+        });
+      }
+    } catch (error) {
+      console.error("Error al liberar mesa:", error);
+      addToast({
+        title: "Error",
+        description: "Ocurrió un error al liberar la mesa",
+        color: "danger",
+      });
+    } finally {
+      setLiberandoMesa(false);
+    }
+  };
+
+  const _getEstadoMesa = (mesa: Mesa) => {
     if (!mesa.activa) return { text: "Inactiva", color: "default" };
     if (mesa.ordenActual) {
       if (mesa.ordenActual.meseroId === user?.id) {
@@ -229,13 +338,9 @@ export default function MeseroMesasPage() {
                           variant="flat"
                           fullWidth
                           startContent={<Eye className="w-4 h-4" />}
-                          onClick={() =>
-                            router.push(
-                              `/pos/ordenes?orden=${mesa.ordenActual?.id}`,
-                            )
-                          }
+                          onPress={() => fetchDetallesMesa(mesa)}
                         >
-                          Ver Orden
+                          Ver Detalles
                         </Button>
                       </div>
                     </div>
@@ -275,7 +380,7 @@ export default function MeseroMesasPage() {
                       variant="flat"
                       fullWidth
                       startContent={<Plus className="w-4 h-4" />}
-                      onClick={() => router.push(`/pos?mesa=${mesa.id}`)}
+                      onPress={() => router.push(`/mesero/orden?mesa=${mesa.id}`)}
                     >
                       Tomar Mesa
                     </Button>
@@ -318,7 +423,9 @@ export default function MeseroMesasPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Mesero:</span>
                         <span className="text-sm font-medium">
-                          {mesa.ordenActual.mesero.nombreCompleto}
+                          {mesa.ordenActual.mesero?.nombreCompleto
+                          ? `${mesa.ordenActual.mesero.nombreCompleto}${mesa.ordenActual.meseroId === user?.id ? " (Tú)" : ""}`
+                          : "Sin asignar"}
                         </span>
                       </div>
 
@@ -352,6 +459,19 @@ export default function MeseroMesasPage() {
                           })}
                         </span>
                       </div>
+
+                      <div className="pt-2">
+                        <Button
+                          size="sm"
+                          color="default"
+                          variant="flat"
+                          fullWidth
+                          startContent={<Eye className="w-4 h-4" />}
+                          onPress={() => fetchDetallesMesa(mesa)}
+                        >
+                          Ver Detalles
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardBody>
@@ -374,6 +494,193 @@ export default function MeseroMesasPage() {
           </p>
         </div>
       )}
+
+      {/* Modal de detalles de mesa */}
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        size="2xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex items-center gap-3">
+                  <UtensilsCrossed className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <h3 className="text-xl font-bold">
+                      Mesa {mesaSeleccionada?.numero}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-gray-500">
+                        Capacidad: {mesaSeleccionada?.capacidad} personas
+                      </span>
+                      {mesaSeleccionada?.ordenActual && (
+                        <Chip
+                          size="sm"
+                          color={
+                            mesaSeleccionada.ordenActual.meseroId === user?.id
+                              ? "primary"
+                              : "danger"
+                          }
+                          variant="flat"
+                        >
+                          {mesaSeleccionada.ordenActual.meseroId === user?.id
+                            ? "Mi Mesa"
+                            : "Ocupada"
+                          }
+                        </Chip>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </ModalHeader>
+              <ModalBody>
+                {mesaSeleccionada && (
+                  <div className="space-y-6">
+                    {mesaSeleccionada.ordenActual ? (
+                      <>
+                        {/* Información de la orden */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-3">Información de la Orden</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-sm text-gray-500">Número de orden:</span>
+                              <p className="font-medium">
+                                #{mesaSeleccionada.ordenActual.numeroOrden || mesaSeleccionada.ordenActual.id.slice(-6)}
+                              </p>
+                            </div>
+
+                            <div>
+                              <span className="text-sm text-gray-500">Estado:</span>
+                              <div className="mt-1">
+                                <Chip
+                                  size="sm"
+                                  color={
+                                    mesaSeleccionada.ordenActual.estado === "PENDIENTE"
+                                      ? "warning"
+                                      : mesaSeleccionada.ordenActual.estado === "EN_PREPARACION"
+                                        ? "primary"
+                                        : mesaSeleccionada.ordenActual.estado === "LISTA"
+                                          ? "success"
+                                          : "default"
+                                  }
+                                  variant="flat"
+                                >
+                                  {mesaSeleccionada.ordenActual.estado.replace("_", " ")}
+                                </Chip>
+                              </div>
+                            </div>
+
+                            <div>
+                              <span className="text-sm text-gray-500">Mesero:</span>
+                              <p className="font-medium">
+                                {mesaSeleccionada.ordenActual.mesero
+                                  ? mesaSeleccionada.ordenActual.mesero.nombreCompleto +
+                                    (mesaSeleccionada.ordenActual.meseroId === user?.id ? " (Tú)" : "")
+                                  : "Sin asignar"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <span className="text-sm text-gray-500">Hora de inicio:</span>
+                              <p className="font-medium">
+                                {new Date(mesaSeleccionada.ordenActual.creadoEn).toLocaleDateString()} - {" "}
+                                {new Date(mesaSeleccionada.ordenActual.creadoEn).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Productos de la orden */}
+                        {mesaSeleccionada.ordenActual.items && mesaSeleccionada.ordenActual.items.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Productos Ordenados</h4>
+                            <div className="space-y-3">
+                              {mesaSeleccionada.ordenActual.items.map((item) => (
+                                <div key={item.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    {item.producto.imagen ? (
+                                      <img
+                                        src={item.producto.imagen}
+                                        alt={item.producto.nombre}
+                                        className="w-full h-full object-cover rounded-lg"
+                                      />
+                                    ) : (
+                                      <Package className="w-6 h-6 text-gray-400" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h5 className="font-medium text-gray-900">{item.producto.nombre}</h5>
+                                    <p className="text-sm text-gray-500">
+                                      {formatCOP(item.precioUnitario)} x {item.cantidad}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-gray-900">
+                                      {formatCOP(item.precioUnitario * item.cantidad)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Especificaciones */}
+                        {mesaSeleccionada.ordenActual.especificaciones && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Especificaciones</h4>
+                            <p className="text-gray-700 p-3 bg-gray-50 rounded-lg">
+                              {mesaSeleccionada.ordenActual.especificaciones}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Total */}
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-gray-900">Total de la orden:</span>
+                            <span className="font-bold text-blue-600 text-lg">
+                              {formatCOP(mesaSeleccionada.ordenActual.total)}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <UtensilsCrossed className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">Mesa disponible</h4>
+                        <p className="text-gray-500">
+                          Esta mesa está libre y lista para recibir clientes.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                {mesaSeleccionada?.ordenActual?.meseroId === user?.id && (
+                  <Button
+                    color="danger"
+                    variant="light"
+                    onPress={() => mesaSeleccionada && liberarMesa(mesaSeleccionada.id)}
+                  >
+                    Liberar Mesa
+                  </Button>
+                )}
+                <Button color="primary" variant="light" onPress={onClose}>
+                  Cerrar
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -629,7 +629,7 @@ export default function OrdenesPage() {
                         Mesero: {orden.mesero?.nombreCompleto || "Sin asignar"}
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {orden._count?.items ?? 0} item
+                        {orden._count?.items ?? 0} producto
                         {orden._count?.items !== 1 ? "s" : ""}
                       </p>
                       <p className="font-bold text-wine">
@@ -805,7 +805,7 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <p className="text-sm font-semibold text-gray-900">
-                            {orden._count?.items ?? 0} item
+                            {orden._count?.items ?? 0} producto
                             {orden._count?.items !== 1 ? "s" : ""}
                           </p>
                         </td>
