@@ -6,22 +6,22 @@ import { Providers } from "./providers";
 const inter = localFont({
   src: [
     {
-      path: "../public/fonts/inter/static/Inter_18pt-Regular.ttf",
+      path: "/fonts/inter/static/Inter_18pt-Regular.ttf",
       weight: "400",
       style: "normal",
     },
     {
-      path: "../public/fonts/inter/static/Inter_18pt-Medium.ttf",
+      path: "/fonts/inter/static/Inter_18pt-Medium.ttf",
       weight: "500",
       style: "normal",
     },
     {
-      path: "../public/fonts/inter/static/Inter_18pt-SemiBold.ttf",
+      path: "/fonts/inter/static/Inter_18pt-SemiBold.ttf",
       weight: "600",
       style: "normal",
     },
     {
-      path: "../public/fonts/inter/static/Inter_18pt-Bold.ttf",
+      path: "/fonts/inter/static/Inter_18pt-Bold.ttf",
       weight: "700",
       style: "normal",
     },
