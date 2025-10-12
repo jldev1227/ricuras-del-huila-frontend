@@ -163,23 +163,21 @@ model sucursales {
   @@ignore
 }
 
-model Usuario {
-  id              String    @id @default(uuid()) @db.Uuid
-  nombreCompleto  String    @map("nombre_completo")
+model usuarios {
+  id              String    @id @db.Uuid
+  nombre_completo String
   identificacion  String    @unique
   correo          String?
   telefono        String?
   password        String
   rol             roles     @default(MESERO)
   activo          Boolean   @default(true)
-  ultimaConexion  DateTime? @map("ultima_conexion")
-  dispositivoId   String?   @map("dispositivo_id")
-  versionCache    Int       @default(1) @map("version_cache")
-  creadoEn        DateTime  @default(now()) @map("creado_en")
-  actualizadoEn   DateTime  @updatedAt @map("actualizado_en")
-  sucursalId      String    @map("sucursal_id") @db.Uuid
-
-  @@map("usuarios")
+  ultima_conexion DateTime?
+  dispositivo_id  String?
+  version_cache   Int       @default(1)
+  creado_en       DateTime  @default(now())
+  actualizado_en  DateTime
+  sucursal_id     String    @db.Uuid
 }
 
 enum estados_orden {
