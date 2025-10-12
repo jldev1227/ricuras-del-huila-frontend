@@ -1,8 +1,38 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { unlink } from "fs/promises";
-import { join } from "path";
+import { unlink, writeFile } from "fs/promises";
+import { join, basename } from "path";
 import { existsSync } from "fs";
 import { prisma } from "@/lib/prisma";
+import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Procesa la imagen según el formato recibido:
+ * - Si ya viene como ruta ("/productos/..."), la devuelve igual.
+ * - Si viene en base64, la guarda con UUID en /public/productos/
+ *   y devuelve la ruta con prefijo "/productos/".
+ */
+async function procesarImagen(imagen: string): Promise<string> {
+  // 🟢 Caso 1: si ya es una ruta válida
+  if (imagen.startsWith("/productos/")) {
+    return imagen;
+  }
+
+  // 🟢 Caso 2: si viene en base64
+  const matches = imagen.match(/^data:(.+);base64,(.+)$/);
+  if (!matches) throw new Error("Formato de imagen inválido");
+
+  const ext = matches[1].split("/")[1]; // png, jpg, etc.
+  const buffer = Buffer.from(matches[2], "base64");
+
+  // Genera nombre único y ruta física
+  const filename = `${uuidv4()}.${ext}`;
+  const imagePath = join(process.cwd(), "public", "productos", filename);
+
+  await writeFile(imagePath, buffer);
+
+  // 🟢 Se guarda con prefijo para usar directamente en el frontend
+  return `/productos/${filename}`;
+}
 
 export async function PUT(
   request: NextRequest,
@@ -11,6 +41,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+
     const {
       nombre,
       descripcion,
@@ -22,7 +53,6 @@ export async function PUT(
       destacado,
     } = body;
 
-    // Validaciones
     if (!nombre || !categoriaId) {
       return NextResponse.json(
         { message: "Nombre y categoría son requeridos" },
@@ -30,18 +60,7 @@ export async function PUT(
       );
     }
 
-    if (precio <= 0 || costoProduccion < 0) {
-      return NextResponse.json(
-        { message: "Precios inválidos" },
-        { status: 400 },
-      );
-    }
-
-    // Obtener el producto actual para manejar cambio de imagen
-    const productoActual = await prisma.productos.findUnique({
-      where: { id },
-    });
-
+    const productoActual = await prisma.productos.findUnique({ where: { id } });
     if (!productoActual) {
       return NextResponse.json(
         { message: "Producto no encontrado" },
@@ -49,34 +68,43 @@ export async function PUT(
       );
     }
 
-    // Si hay una nueva imagen y es diferente a la actual, eliminar la imagen anterior
-    if (productoActual.imagen && imagen && productoActual.imagen !== imagen) {
-      try {
-        const oldImagePath = join(process.cwd(), 'public', productoActual.imagen);
-        if (existsSync(oldImagePath)) {
-          await unlink(oldImagePath);
+    let nuevaImagen = productoActual.imagen;
+
+    // 🧠 Solo procesar si hay imagen nueva
+    if (imagen && imagen !== productoActual.imagen) {
+      // Si había una imagen anterior, eliminarla
+      if (productoActual.imagen?.startsWith("/productos/")) {
+        const oldPath = join(
+          process.cwd(),
+          "public",
+          productoActual.imagen.replace("/productos/", ""),
+        );
+        if (existsSync(oldPath)) {
+          await unlink(oldPath).catch((err) =>
+            console.warn("No se pudo eliminar la imagen anterior:", err),
+          );
         }
-      } catch (imageError) {
-        console.error('Error al eliminar imagen anterior:', imageError);
-        // No fallar la actualización si hay error al eliminar la imagen anterior
       }
+
+      // Procesar nueva imagen (ruta o base64)
+      nuevaImagen = await procesarImagen(imagen);
     }
 
+    // Actualizar en la base de datos
     const producto = await prisma.productos.update({
       where: { id },
       data: {
         nombre,
         descripcion,
         precio,
-        costoProduccion,
-        categoriaId,
-        imagen,
+        costo_produccion: costoProduccion,
+        categoria_id: categoriaId,
+        imagen: nuevaImagen, // ✅ ya tiene /productos/
         disponible,
         destacado,
+        actualizado_en: new Date(),
       },
-      include: {
-        categoria: true,
-      },
+      include: { categorias: true },
     });
 
     return NextResponse.json({

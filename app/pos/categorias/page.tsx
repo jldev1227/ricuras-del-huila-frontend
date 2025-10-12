@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Spinner } from "@heroui/react";
+import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, Textarea } from "@heroui/react";
 import { Edit, Package, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -16,31 +16,106 @@ interface Categoria {
   };
 }
 
+interface NuevaCategoria {
+  nombre: string;
+  descripcion: string;
+  icono: string;
+}
+
 export default function CategoriasPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState<NuevaCategoria>({
+    nombre: "",
+    descripcion: "",
+    icono: "",
+  });
+  const [errors, setErrors] = useState<Partial<NuevaCategoria>>({});
 
   useEffect(() => {
-    const fetchCategorias = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch("/api/categorias");
-        const data = await response.json();
-
-        if (data.success) {
-          setCategorias(data.categorias);
-          console.log(data);
-        }
-      } catch (error) {
-        console.error("Error al cargar categorías:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCategorias();
   }, []);
+
+  const fetchCategorias = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/categorias");
+      const data = await response.json();
+
+      if (data.success) {
+        setCategorias(data.categorias);
+      }
+    } catch (error) {
+      console.error("Error al cargar categorías:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validarFormulario = (): boolean => {
+    const newErrors: Partial<NuevaCategoria> = {};
+
+    if (!nuevaCategoria.nombre.trim()) {
+      newErrors.nombre = "El nombre es requerido";
+    } else if (nuevaCategoria.nombre.trim().length > 100) {
+      newErrors.nombre = "El nombre no puede exceder 100 caracteres";
+    }
+
+    if (nuevaCategoria.descripcion && nuevaCategoria.descripcion.length > 500) {
+      newErrors.descripcion = "La descripción no puede exceder 500 caracteres";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validarFormulario()) return;
+
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/categorias", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: nuevaCategoria.nombre.trim(),
+          descripcion: nuevaCategoria.descripcion.trim() || null,
+          icono: nuevaCategoria.icono.trim() || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Agregar la nueva categoría al estado
+        setCategorias((prev) => [...prev, data.categoria]);
+        
+        // Limpiar el formulario y cerrar el modal
+        setNuevaCategoria({ nombre: "", descripcion: "", icono: "" });
+        setErrors({});
+        setIsModalOpen(false);
+      } else {
+        // Mostrar error del servidor
+        setErrors({ nombre: data.message });
+      }
+    } catch (error) {
+      console.error("Error al crear categoría:", error);
+      setErrors({ nombre: "Error al crear la categoría. Inténtalo de nuevo." });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setNuevaCategoria({ nombre: "", descripcion: "", icono: "" });
+    setErrors({});
+  };
 
   const categoriasFiltradas = categorias.filter((categoria) =>
     categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -69,6 +144,7 @@ export default function CategoriasPage() {
               color="primary"
               className="bg-wine shadow-lg hover:shadow-xl transition-all"
               startContent={<Plus size={18} />}
+              onPress={() => setIsModalOpen(true)}
             >
               Nueva Categoría
             </Button>
@@ -201,6 +277,7 @@ export default function CategoriasPage() {
                   color="primary"
                   className="bg-wine"
                   startContent={<Plus size={16} />}
+                  onPress={() => setIsModalOpen(true)}
                 >
                   Crear primera categoría
                 </Button>
@@ -335,6 +412,134 @@ export default function CategoriasPage() {
             );
           })()}
       </div>
+
+      {/* Modal para crear nueva categoría */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal}
+        size="2xl"
+        placement="center"
+        backdrop="blur"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h2 className="text-2xl font-bold text-gray-900">Nueva Categoría</h2>
+            <p className="text-sm text-gray-500">
+              Crea una nueva categoría para organizar tus productos
+            </p>
+          </ModalHeader>
+          
+          <ModalBody className="py-6">
+            <div className="space-y-6">
+              {/* Campo Nombre */}
+              <div>
+                <Input
+                  label="Nombre de la categoría"
+                  placeholder="Ej: Platos principales, Bebidas, Postres..."
+                  value={nuevaCategoria.nombre}
+                  onChange={(e) => setNuevaCategoria(prev => ({ 
+                    ...prev, 
+                    nombre: e.target.value 
+                  }))}
+                  isInvalid={!!errors.nombre}
+                  errorMessage={errors.nombre}
+                  variant="bordered"
+                  size="lg"
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-gray-300 focus:border-wine"
+                  }}
+                />
+              </div>
+
+              {/* Campo Descripción */}
+              <div>
+                <Textarea
+                  label="Descripción (opcional)"
+                  placeholder="Describe brevemente esta categoría..."
+                  value={nuevaCategoria.descripcion}
+                  onChange={(e) => setNuevaCategoria(prev => ({ 
+                    ...prev, 
+                    descripcion: e.target.value 
+                  }))}
+                  isInvalid={!!errors.descripcion}
+                  errorMessage={errors.descripcion}
+                  variant="bordered"
+                  size="lg"
+                  minRows={3}
+                  maxRows={5}
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-gray-300 focus:border-wine"
+                  }}
+                />
+              </div>
+
+              {/* Campo Icono */}
+              <div>
+                <Input
+                  label="Icono (opcional)"
+                  placeholder="🍽️ (emoji o texto corto)"
+                  value={nuevaCategoria.icono}
+                  onChange={(e) => setNuevaCategoria(prev => ({ 
+                    ...prev, 
+                    icono: e.target.value 
+                  }))}
+                  variant="bordered"
+                  size="lg"
+                  description="Puedes usar emojis o texto corto para representar la categoría"
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-gray-300 focus:border-wine"
+                  }}
+                />
+              </div>
+
+              {/* Vista previa */}
+              {(nuevaCategoria.nombre || nuevaCategoria.icono) && (
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2 font-medium">Vista previa:</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-wine/10 rounded-lg flex items-center justify-center text-lg">
+                      {nuevaCategoria.icono || "📦"}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">
+                        {nuevaCategoria.nombre || "Nombre de la categoría"}
+                      </p>
+                      {nuevaCategoria.descripcion && (
+                        <p className="text-sm text-gray-600">
+                          {nuevaCategoria.descripcion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ModalBody>
+          
+          <ModalFooter>
+            <Button 
+              variant="light" 
+              onPress={handleCloseModal}
+              disabled={isCreating}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              color="primary" 
+              className="bg-wine"
+              onPress={handleSubmit}
+              isLoading={isCreating}
+              disabled={!nuevaCategoria.nombre.trim() || isCreating}
+              startContent={!isCreating ? <Plus size={16} /> : null}
+            >
+              {isCreating ? "Creando..." : "Crear Categoría"}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

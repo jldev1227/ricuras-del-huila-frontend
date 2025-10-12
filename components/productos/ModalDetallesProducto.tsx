@@ -26,11 +26,13 @@ export default function ModalDetallesProducto({
 }: ModalDetallesProductoProps) {
   if (!producto) return null;
 
-  const ganancia = Number(producto.precio) - Number(producto.costoProduccion);
+  const ganancia = Number(producto.precio) - Number(producto.costo_produccion);
   const margen = ((ganancia / Number(producto.precio)) * 100).toFixed(1);
 
-  const formatDate = (date: string | Date) => {
+  const formatDate = (date?: string | Date | null) => {
+    if (!date) return "Sin fecha disponible";
     const dateObj = typeof date === "string" ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return "Fecha inválida";
     return dateObj.toLocaleDateString("es-CO", {
       year: "numeric",
       month: "long",
@@ -48,7 +50,7 @@ export default function ModalDetallesProducto({
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl">
+    <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl" scrollBehavior="inside">
       <ModalContent>
         {(onClose) => (
           <>
@@ -144,10 +146,10 @@ export default function ModalDetallesProducto({
                     </h3>
                     <div className="flex items-center gap-2 text-gray-600">
                       <span className="text-lg">
-                        {producto.categoria.icono}
+                        {producto.categorias.icono}
                       </span>
                       <span className="text-sm font-medium">
-                        {producto.categoria.nombre}
+                        {producto.categorias.nombre}
                       </span>
                     </div>
                   </div>
@@ -184,7 +186,7 @@ export default function ModalDetallesProducto({
                         </span>
                         <span className="text-xl font-bold text-orange-700">
                           $
-                          {Number(producto.costoProduccion).toLocaleString(
+                          {Number(producto.costo_produccion).toLocaleString(
                             "es-CO",
                           )}
                         </span>
@@ -197,7 +199,7 @@ export default function ModalDetallesProducto({
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Creado el:</span>
                       <span className="text-gray-800">
-                        {formatDate(producto.creadoEn)}
+                        {formatDate(producto.creado_en)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -205,7 +207,7 @@ export default function ModalDetallesProducto({
                         Última actualización:
                       </span>
                       <span className="text-gray-800">
-                        {formatDate(producto.actualizadoEn)}
+                        {formatDate(producto.actualizado_en)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">

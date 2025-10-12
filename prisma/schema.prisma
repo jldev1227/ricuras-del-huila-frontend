@@ -122,7 +122,7 @@ model productos {
   disponible       Boolean       @default(true)
   destacado        Boolean       @default(false)
   creado_en        DateTime      @default(now())
-  actualizado_en   DateTime
+  actualizado_en   DateTime      @default(now())
   orden_items      orden_items[]
   categorias       categorias    @relation(fields: [categoria_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }

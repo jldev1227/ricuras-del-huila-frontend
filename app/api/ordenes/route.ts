@@ -215,48 +215,48 @@ export async function POST(request: NextRequest) {
       // Crear la orden
       const nuevaOrden = await tx.ordenes.create({
         data: {
-          sucursalId,
-          tipoOrden,
-          mesaId: tipoOrden === "LOCAL" ? mesaId : null,
-          clienteId,
-          meseroId,
-          nombreCliente,
-          telefonoCliente,
-          direccionEntrega,
-          indicacionesEntrega,
-          costoEnvio: costoEnvio ? parseFloat(costoEnvio) : null,
-          costoAdicional: costoAdicional ? parseFloat(costoAdicional) : null,
-          horaRecogida: horaRecogida ? new Date(horaRecogida) : null,
+          sucursal_id: sucursalId,
+          tipo_orden: tipoOrden,
+          mesa_id: tipoOrden === "LOCAL" ? mesaId : null,
+          cliente_id: clienteId || null,
+          mesero_id: meseroId || null,
+          nombre_cliente: nombreCliente || null,
+          telefono_cliente: telefonoCliente || null,
+          direccion_entrega: direccionEntrega || null,
+          indicaciones_entrega: indicacionesEntrega || null,
+          costo_envio: costoEnvio ? parseFloat(costoEnvio) : null,
+          costo_adicional: costoAdicional ? parseFloat(costoAdicional) : null,
+          hora_recogida: horaRecogida ? new Date(horaRecogida) : null,
           subtotal,
           descuento,
           total,
           notas,
           especificaciones,
-          creadoOffline,
+          creado_offline: creadoOffline,
           sincronizado: !creadoOffline,
-          items: {
-            create: items.map((item: OrderItem) => ({
-              productoId: item.productoId,
-              cantidad: item.cantidad,
-              precioUnitario: item.precioUnitario,
-              subtotal: item.precioUnitario * item.cantidad,
-              notas: item.notas,
-            })),
+          orden_items: {
+        create: items.map((item: OrderItem) => ({
+          producto_id: item.productoId,
+          cantidad: item.cantidad,
+          precio_unitario: item.precioUnitario,
+          subtotal: item.precioUnitario * item.cantidad,
+          notas: item.notas,
+        })),
           },
         },
         include: {
-          items: {
-            include: {
-              producto: true,
-            },
+          orden_items: {
+        include: {
+          productos: true,
+        },
           },
-          mesa: true,
-          cliente: true,
-          mesero: {
-            select: {
-              id: true,
-              nombre_completo: true,
-            },
+          mesas: true,
+          clientes: true,
+          meseros: {
+        select: {
+          id: true,
+          nombre_completo: true,
+        },
           },
         },
       });
@@ -295,9 +295,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verificar que la orden existe
-    const ordenExistente = await prisma.orden.findUnique({
+    const ordenExistente = await prisma.ordenes.findUnique({
       where: { id },
-      include: { items: true },
+      include: { orden_items: true },
     });
 
     if (!ordenExistente) {
@@ -322,8 +322,8 @@ export async function PUT(request: NextRequest) {
     const ordenActualizada = await prisma.$transaction(async (tx) => {
       // Si hay nuevos items, eliminar los antiguos y crear los nuevos
       if (data.items) {
-        await tx.ordenItem.deleteMany({
-          where: { ordenId: id },
+        await tx.orden_items.deleteMany({
+          where: { orden_id: id },
         });
 
         const subtotal = data.items.reduce((total: number, item: OrderItem) => {
@@ -340,7 +340,7 @@ export async function PUT(request: NextRequest) {
 
       const { items, ...ordenData } = data;
 
-      const updated = await tx.orden.update({
+      const updated = await tx.ordenes.update({
         where: { id },
         data: {
           ...ordenData,
@@ -358,13 +358,13 @@ export async function PUT(request: NextRequest) {
           }),
         },
         include: {
-          items: {
+          orden_items: {
             include: {
-              producto: true,
+              productos: true,
             },
           },
-          mesa: true,
-          cliente: true,
+          mesas: true,
+          clientes: true,
         },
       });
 
@@ -398,9 +398,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const orden = await prisma.orden.findUnique({
+    const orden = await prisma.ordenes.findUnique({
       where: { id },
-      include: { mesa: true },
+      include: { mesas: true },
     });
 
     if (!orden) {
@@ -413,15 +413,15 @@ export async function DELETE(request: NextRequest) {
     // Usar transacción para liberar mesa si es necesario
     await prisma.$transaction(async (tx) => {
       // Si la orden tiene mesa, liberarla
-      if (orden.mesaId) {
-        await tx.mesa.update({
-          where: { id: orden.mesaId },
+      if (orden.mesa_id) {
+        await tx.mesas.update({
+          where: { id: orden.mesa_id },
           data: { disponible: true },
         });
       }
 
       // Eliminar la orden (esto también eliminará los items por el onDelete: Cascade)
-      await tx.orden.delete({
+      await tx.ordenes.delete({
         where: { id },
       });
     });

@@ -26,6 +26,7 @@ import {
   Settings,
   ClipboardList,
   X,
+  User,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -91,6 +92,12 @@ const MENU_ITEMS: MenuItem[] = [
     name: "Categorías",
     href: "/pos/categorias",
     icon: <Grid className="w-6 h-6" />,
+    adminOnly: true,
+  },
+  {
+    name: "Usuarios",
+    href: "/pos/usuarios",
+    icon: <User className="w-6 h-6" />,
     adminOnly: true,
   },
   {

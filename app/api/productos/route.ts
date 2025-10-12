@@ -1,5 +1,37 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { writeFile } from "fs/promises";
+import { join } from "path";
 import { prisma } from "@/lib/prisma";
+import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Procesa la imagen según el formato recibido:
+ * - Si ya viene como ruta ("/productos/..."), la devuelve igual.
+ * - Si viene en base64, la guarda con UUID en /public/productos/
+ *   y devuelve la ruta con prefijo "/productos/".
+ */
+async function procesarImagen(imagen: string): Promise<string> {
+  // 🟢 Caso 1: si ya es una ruta válida
+  if (imagen.startsWith("/productos/")) {
+    return imagen;
+  }
+
+  // 🟢 Caso 2: si viene en base64
+  const matches = imagen.match(/^data:(.+);base64,(.+)$/);
+  if (!matches) throw new Error("Formato de imagen inválido");
+
+  const ext = matches[1].split("/")[1]; // png, jpg, etc.
+  const buffer = Buffer.from(matches[2], "base64");
+
+  // Genera nombre único y ruta física
+  const filename = `${uuidv4()}.${ext}`;
+  const imagePath = join(process.cwd(), "public", "productos", filename);
+
+  await writeFile(imagePath, buffer);
+
+  // 🟢 Se guarda con prefijo para usar directamente en el frontend
+  return `/productos/${filename}`;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +45,7 @@ export async function GET(request: NextRequest) {
         contains: string;
         mode: "insensitive";
       };
-      categoriaId?: string;
+      categoria_id?: string;
       disponible?: boolean;
     } = {};
 
@@ -25,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (categoriaId) {
-      where.categoriaId = categoriaId;
+      where.categoria_id = categoriaId;
     }
 
     if (disponible !== null && disponible !== undefined) {
@@ -35,7 +67,7 @@ export async function GET(request: NextRequest) {
     const productos = await prisma.productos.findMany({
       where,
       include: {
-        categoria: {
+        categorias: {
           select: {
             id: true,
             nombre: true,
@@ -67,41 +99,126 @@ export async function POST(request: NextRequest) {
       nombre,
       descripcion,
       precio,
-      costoProduccion,
+      costo_produccion,
       categoriaId,
       imagen,
-      disponible,
-      destacado,
+      disponible = true,
+      destacado = false,
     } = body;
 
-    // Validaciones
-    if (!nombre || !categoriaId) {
+    // 🔍 Validaciones mejoradas
+    if (!nombre || typeof nombre !== "string" || nombre.trim().length === 0) {
       return NextResponse.json(
-        { message: "Nombre y categoría son requeridos" },
-        { status: 400 },
+        { 
+          success: false,
+          message: "El nombre del producto es requerido" 
+        },
+        { status: 400 }
       );
     }
 
-    if (precio <= 0 || costoProduccion < 0) {
+    if (!categoriaId || typeof categoriaId !== "string") {
       return NextResponse.json(
-        { message: "Precios inválidos" },
-        { status: 400 },
+        { 
+          success: false,
+          message: "La categoría es requerida" 
+        },
+        { status: 400 }
       );
     }
 
+    if (!precio || precio <= 0) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "El precio debe ser mayor a 0" 
+        },
+        { status: 400 }
+      );
+    }
+
+    if (costo_produccion < 0) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "El costo de producción no puede ser negativo" 
+        },
+        { status: 400 }
+      );
+    }
+
+    // 🔍 Verificar que la categoría existe
+    const categoriaExiste = await prisma.categorias.findUnique({
+      where: { id: categoriaId }
+    });
+
+    if (!categoriaExiste) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "La categoría especificada no existe" 
+        },
+        { status: 404 }
+      );
+    }
+
+    // 🔍 Verificar si ya existe un producto con el mismo nombre
+    const productoExistente = await prisma.productos.findFirst({
+      where: { 
+        nombre: nombre.trim(),
+        disponible: true 
+      }
+    });
+
+    if (productoExistente) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Ya existe un producto con este nombre" 
+        },
+        { status: 409 }
+      );
+    }
+
+    // 🖼️ Procesar imagen si se proporciona
+    let imagenProcesada = null;
+    if (imagen && imagen.trim() !== "") {
+      try {
+        imagenProcesada = await procesarImagen(imagen);
+      } catch (error) {
+        return NextResponse.json(
+          { 
+            success: false,
+            message: "Error al procesar la imagen. Verifica que sea un formato válido." 
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 💾 Crear el producto
     const producto = await prisma.productos.create({
       data: {
-        nombre,
-        descripcion,
+        id: uuidv4(),
+        nombre: nombre.trim(),
+        descripcion: descripcion?.trim() || null,
         precio,
-        costoProduccion,
-        categoriaId,
-        imagen,
-        disponible: disponible ?? true,
-        destacado: destacado ?? false,
+        costo_produccion,
+        categoria_id: categoriaId,
+        imagen: imagenProcesada,
+        disponible: Boolean(disponible),
+        destacado: Boolean(destacado),
+        creado_en: new Date(),
+        actualizado_en: new Date(),
       },
       include: {
-        categoria: true,
+        categorias: {
+          select: {
+            id: true,
+            nombre: true,
+            icono: true,
+          },
+        },
       },
     });
 
@@ -110,11 +227,29 @@ export async function POST(request: NextRequest) {
       producto,
       message: "Producto creado exitosamente",
     });
+
   } catch (error) {
     console.error("Error al crear producto:", error);
+    
+    // Manejo específico de errores de Prisma
+    if (error instanceof Error) {
+      if (error.message.includes("Foreign key constraint")) {
+        return NextResponse.json(
+          { 
+            success: false,
+            message: "La categoría especificada no es válida" 
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { message: "Error al crear producto" },
-      { status: 500 },
+      { 
+        success: false,
+        message: "Error interno del servidor al crear el producto" 
+      },
+      { status: 500 }
     );
   }
 }
