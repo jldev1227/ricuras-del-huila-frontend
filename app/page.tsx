@@ -12,7 +12,7 @@ interface Sucursal {
 
 interface AuthUser {
   id: string;
-  nombreCompleto: string;
+  nombre_completo: string;
   rol: string;
 }
 
@@ -173,7 +173,7 @@ export default function Home() {
                 <div className="text-left">
                   <p className="text-sm text-secondary">Bienvenido,</p>
                   <p className="text-lg font-semibold text-wine">
-                    {authUser.nombreCompleto}
+                    {authUser.nombre_completo}
                   </p>
                   <p className="text-xs text-secondary">{authUser.rol}</p>
                 </div>

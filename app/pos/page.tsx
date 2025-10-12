@@ -62,13 +62,13 @@ export default function OrderDashboard() {
   const [hubMesero, setHubMesero] = useState(false);
   const [meseroSeleccionado, setMeseroSeleccionado] = useState<{
     id: string;
-    nombreCompleto: string;
+    nombre_completo: string;
     email?: string;
   } | null>(null);
   const [meseros, setMeseros] = useState<
     Array<{
       id: string;
-      nombreCompleto: string;
+      nombre_completo: string;
       email?: string;
     }>
   >([]);
@@ -312,7 +312,7 @@ export default function OrderDashboard() {
 
   const meserosOptions = meseros.map((mesero) => ({
     value: mesero.id,
-    label: mesero.nombreCompleto,
+    label: mesero.nombre_completo,
   }));
 
   return (
@@ -838,7 +838,7 @@ export default function OrderDashboard() {
                                 meseroSeleccionado
                                   ? {
                                       value: meseroSeleccionado.id,
-                                      label: meseroSeleccionado.nombreCompleto,
+                                      label: meseroSeleccionado.nombre_completo,
                                     }
                                   : null
                               }
@@ -855,7 +855,7 @@ export default function OrderDashboard() {
                                 <p className="text-xs text-green-800">
                                   ✓ Mesero:{" "}
                                   <span className="font-semibold">
-                                    {meseroSeleccionado.nombreCompleto}
+                                    {meseroSeleccionado.nombre_completo}
                                   </span>
                                 </p>
                               </div>

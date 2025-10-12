@@ -7,22 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model categorias {
-  id          String   @db.Uuid
+  id          String      @id @db.Uuid
   nombre      String
   descripcion String?
   icono       String?
-  orden       Int      @default(0)
-  activo      Boolean  @default(true)
-  creado_en   DateTime @default(now())
-
-  @@ignore
+  orden       Int         @default(0)
+  activo      Boolean     @default(true)
+  creado_en   DateTime    @default(now())
+  productos   productos[]
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model clientes {
-  id                     String                @db.Uuid
+  id                     String                @id @db.Uuid
   nombre                 String
   apellido               String?
   telefono               String?
@@ -41,42 +38,38 @@ model clientes {
   frecuente              Boolean               @default(false)
   creado_en              DateTime              @default(now())
   actualizado_en         DateTime
-
-  @@ignore
+  ordenes                ordenes[]
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model mesas {
-  id              String    @db.Uuid
+  id              String     @id @db.Uuid
   numero          Int
-  capacidad       Int       @default(4)
-  disponible      Boolean   @default(true)
-  sucursal_id     String    @db.Uuid
+  capacidad       Int        @default(4)
+  disponible      Boolean    @default(true)
+  sucursal_id     String     @db.Uuid
   ubicacion       String?
   notas           String?
   ultima_limpieza DateTime?
-  creado_en       DateTime  @default(now())
+  creado_en       DateTime   @default(now())
   actualizado_en  DateTime
-
-  @@ignore
+  sucursales      sucursales @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  ordenes         ordenes[]
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model orden_items {
-  id              String  @db.Uuid
-  orden_id        String  @db.Uuid
-  producto_id     String  @db.Uuid
+  id              String    @id @db.Uuid
+  orden_id        String    @db.Uuid
+  producto_id     String    @db.Uuid
   cantidad        Int
-  precio_unitario Decimal @db.Decimal(10, 2)
-  subtotal        Decimal @db.Decimal(10, 2)
+  precio_unitario Decimal   @db.Decimal(10, 2)
+  subtotal        Decimal   @db.Decimal(10, 2)
   notas           String?
-
-  @@ignore
+  ordenes         ordenes   @relation(fields: [orden_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  productos       productos @relation(fields: [producto_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model ordenes {
-  id                   String        @db.Uuid
+  id                   String        @id @db.Uuid
   mesero_id            String?       @db.Uuid
   total                Decimal       @db.Decimal(10, 2)
   estado               estados_orden @default(PENDIENTE)
@@ -100,43 +93,42 @@ model ordenes {
   tipo_orden           tipos_orden
   especificaciones     String?
   sucursal_id          String        @db.Uuid
-
-  @@ignore
+  orden_items          orden_items[]
+  clientes             clientes?     @relation(fields: [cliente_id], references: [id], onUpdate: NoAction)
+  mesas                mesas?        @relation(fields: [mesa_id], references: [id], onUpdate: NoAction)
+  usuarios             usuarios?     @relation(fields: [mesero_id], references: [id], onUpdate: NoAction)
+  sucursales           sucursales    @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model password_resets {
-  id         String   @db.Uuid
+  id         String   @id @db.Uuid
   usuario_id String   @db.Uuid
   otp        String
   intentos   Int      @default(0)
   usado      Boolean  @default(false)
   expira_en  DateTime
   creado_en  DateTime @default(now())
-
-  @@ignore
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model productos {
-  id               String   @db.Uuid
+  id               String        @id @db.Uuid
   nombre           String
   descripcion      String?
-  precio           Decimal  @db.Decimal(10, 2)
-  costo_produccion Decimal  @db.Decimal(10, 2)
-  categoria_id     String   @db.Uuid
+  precio           Decimal       @db.Decimal(10, 2)
+  costo_produccion Decimal       @db.Decimal(10, 2)
+  categoria_id     String        @db.Uuid
   imagen           String?
-  disponible       Boolean  @default(true)
-  destacado        Boolean  @default(false)
-  creado_en        DateTime @default(now())
+  disponible       Boolean       @default(true)
+  destacado        Boolean       @default(false)
+  creado_en        DateTime      @default(now())
   actualizado_en   DateTime
-
-  @@ignore
+  orden_items      orden_items[]
+  categorias       categorias    @relation(fields: [categoria_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model sesiones {
-  id             String   @db.Uuid
+  id             String   @id @db.Uuid
   usuario_id     String   @db.Uuid
   token          String
   refresh_token  String?
@@ -147,37 +139,40 @@ model sesiones {
   activa         Boolean  @default(true)
   ultimo_uso     DateTime @default(now())
   creado_en      DateTime @default(now())
-
-  @@ignore
+  usuarios       usuarios @relation(fields: [usuario_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model sucursales {
-  id        String   @db.Uuid
+  id        String     @id @db.Uuid
   nombre    String
   direccion String
   telefono  String?
-  activo    Boolean  @default(true)
-  creado_en DateTime @default(now())
-
-  @@ignore
+  activo    Boolean    @default(true)
+  creado_en DateTime   @default(now())
+  mesas     mesas[]
+  ordenes   ordenes[]
+  usuarios  usuarios[]
 }
 
 model usuarios {
-  id              String    @id @db.Uuid
+  id              String            @id @db.Uuid
   nombre_completo String
-  identificacion  String    @unique
+  identificacion  String            @unique
   correo          String?
   telefono        String?
   password        String
-  rol             roles     @default(MESERO)
-  activo          Boolean   @default(true)
+  rol             roles             @default(MESERO)
+  activo          Boolean           @default(true)
   ultima_conexion DateTime?
   dispositivo_id  String?
-  version_cache   Int       @default(1)
-  creado_en       DateTime  @default(now())
+  version_cache   Int               @default(1)
+  creado_en       DateTime          @default(now())
   actualizado_en  DateTime
-  sucursal_id     String    @db.Uuid
+  sucursal_id     String            @db.Uuid
+  ordenes         ordenes[]
+  password_resets password_resets[]
+  sesiones        sesiones[]
+  sucursales      sucursales        @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 enum estados_orden {

@@ -41,7 +41,7 @@ type OrdenCompleta = Prisma.OrdenGetPayload<{
     mesero: {
       select: {
         id: true;
-        nombreCompleto: true;
+        nombre_completo: true;
         rol: true;
       };
     };
@@ -148,7 +148,7 @@ export default function ModalDetalleOrden({
     });
     addText(`Fecha: ${fecha}\n`);
     addText(`Tipo: ${orden.tipoOrden}\n`);
-    addText(`Mesero: ${orden.mesero?.nombreCompleto || "N/A"}\n`);
+    addText(`Mesero: ${orden.mesero?.nombre_completo || "N/A"}\n`);
 
     // Mesa (si es LOCAL)
     if (orden.tipoOrden === "LOCAL" && orden.mesa) {
@@ -401,7 +401,7 @@ export default function ModalDetalleOrden({
                       </div>
                       <div>Fecha: {fecha}</div>
                       <div>Tipo: {orden.tipoOrden}</div>
-                      <div>Mesero: {orden.mesero?.nombreCompleto || "N/A"}</div>
+                      <div>Mesero: {orden.mesero?.nombre_completo || "N/A"}</div>
 
                       {/* Mesa */}
                       {orden.tipoOrden === "LOCAL" && orden.mesa && (
@@ -656,7 +656,7 @@ export default function ModalDetalleOrden({
                         <div>
                           <p className="text-sm text-gray-600">Atendido por</p>
                           <p className="font-semibold text-gray-900">
-                            {orden.mesero?.nombreCompleto || "N/A"}
+                            {orden.mesero?.nombre_completo || "N/A"}
                           </p>
                         </div>
                       </div>

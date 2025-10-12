@@ -209,7 +209,7 @@ export default function MeseroPage() {
             Panel de Mesero
           </h1>
           <p className="text-gray-600">
-            Bienvenido, {user?.nombreCompleto} - {sucursal?.nombre}
+            Bienvenido, {user?.nombre_completo} - {sucursal?.nombre}
           </p>
         </div>
 

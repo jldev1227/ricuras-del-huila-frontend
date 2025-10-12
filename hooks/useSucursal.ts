@@ -12,7 +12,7 @@ interface AuthState {
   state: {
     user: {
       id: string;
-      nombreCompleto: string;
+      nombre_completo: string;
       rol: string;
       email?: string;
     };

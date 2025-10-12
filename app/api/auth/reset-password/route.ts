@@ -41,11 +41,11 @@ export async function POST(request: NextRequest) {
     const { userId } = payload as { userId: string };
 
     // Buscar usuario con correo
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        nombreCompleto: true,
+        nombre_completo: true,
         correo: true,
         activo: true,
       },
@@ -62,13 +62,13 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Actualizar contraseña
-    await prisma.usuario.update({
+    await prisma.usuarios.update({
       where: { id: usuario.id },
       data: { password: hashedPassword },
     });
 
     // Invalidar sesiones
-    await prisma.sesion.updateMany({
+    await prisma.sesiones.updateMany({
       where: { usuarioId: usuario.id },
       data: { activa: false },
     });
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       try {
         await sendPasswordChangedEmail(
           usuario.correo,
-          usuario.nombreCompleto,
+          usuario.nombre_completo,
           ipAddress,
         );
       } catch (emailError) {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `Contraseña actualizada para usuario: ${usuario.nombreCompleto}`,
+      `Contraseña actualizada para usuario: ${usuario.nombre_completo}`,
     );
 
     return NextResponse.json({

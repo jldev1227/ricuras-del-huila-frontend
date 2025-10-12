@@ -163,7 +163,7 @@ function UserMenu({
   onLogout,
   isExpanded,
 }: {
-  user: { nombreCompleto: string; rol: string };
+  user: { nombre_completo: string; rol: string };
   onLogout: () => void;
   isExpanded: boolean;
 }) {
@@ -175,14 +175,14 @@ function UserMenu({
           className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-100 w-full"
         >
           <div className="w-8 h-8 bg-wine/20 rounded-full flex-shrink-0 flex items-center justify-center text-wine font-bold">
-            {user.nombreCompleto.charAt(0).toUpperCase()}
+            {user.nombre_completo.charAt(0).toUpperCase()}
           </div>
           <div
             className={`transition-all duration-300 overflow-hidden text-left ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
               }`}
           >
             <p className="text-sm font-medium text-gray-700">
-              {user.nombreCompleto}
+              {user.nombre_completo}
             </p>
             <p className="text-xs text-gray-500">{user.rol}</p>
           </div>
@@ -217,7 +217,7 @@ function DesktopSidebar({
   pathname: string;
   isHovered: boolean;
   onHoverChange: (hovered: boolean) => void;
-  user: { nombreCompleto: string; rol: string };
+  user: { nombre_completo: string; rol: string };
   onLogout: () => void;
 }) {
   return (
@@ -279,7 +279,7 @@ function MobileSidebar({
   onClose: () => void;
   menuItems: MenuItem[];
   pathname: string;
-  user: { nombreCompleto: string; rol: string };
+  user: { nombre_completo: string; rol: string };
   onLogout: () => void;
   sucursalActual: Sucursal | null;
   onChangeBranch: () => void;
@@ -358,11 +358,11 @@ function MobileSidebar({
                 variant="light"
               >
                 <div className="w-10 h-10 bg-wine/20 rounded-full flex items-center justify-center text-wine font-bold">
-                  {user.nombreCompleto.charAt(0).toUpperCase()}
+                  {user.nombre_completo.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col items-start">
                   <p className="text-sm font-medium text-gray-700">
-                    {user.nombreCompleto}
+                    {user.nombre_completo}
                   </p>
                   <p className="text-xs text-gray-500">{user.rol}</p>
                 </div>
@@ -507,7 +507,7 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
         isHovered={isHovered}
         onHoverChange={setIsHovered}
         user={{
-          nombreCompleto: user.nombreCompleto,
+          nombre_completo: user.nombre_completo,
           rol: user.rol,
         }}
         onLogout={onOpen}
@@ -520,7 +520,7 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
         menuItems={MENU_ITEMS}
         pathname={pathname}
         user={{
-          nombreCompleto: user.nombreCompleto,
+          nombre_completo: user.nombre_completo,
           rol: user.rol,
         }}
         onLogout={onOpen}

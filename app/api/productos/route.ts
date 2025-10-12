@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       where.disponible = disponible === "true";
     }
 
-    const productos = await prisma.producto.findMany({
+    const productos = await prisma.productos.findMany({
       where,
       include: {
         categoria: {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const producto = await prisma.producto.create({
+    const producto = await prisma.productos.create({
       data: {
         nombre,
         descripcion,

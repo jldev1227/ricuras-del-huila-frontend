@@ -47,7 +47,7 @@ interface Orden {
     ubicacion: string;
   };
   mesero?: {
-    nombreCompleto: string;
+    nombre_completo: string;
   };
   cliente?: {
     nombre: string;
@@ -328,7 +328,7 @@ export default function OrdenesPage() {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      orden.mesero?.nombreCompleto.toLowerCase().includes(search) ||
+      orden.mesero?.nombre_completo.toLowerCase().includes(search) ||
       orden.mesa?.numero.toString().includes(search) ||
       orden.cliente?.nombre.toLowerCase().includes(search) ||
       orden.sucursal.nombre.toLowerCase().includes(search)
@@ -626,7 +626,7 @@ export default function OrdenesPage() {
                         </p>
                       )}
                       <p className="text-sm text-gray-700">
-                        Mesero: {orden.mesero?.nombreCompleto || "Sin asignar"}
+                        Mesero: {orden.mesero?.nombre_completo || "Sin asignar"}
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
                         {orden._count?.items ?? 0} producto
@@ -800,7 +800,7 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <p className="text-sm text-gray-700">
-                            {orden.mesero?.nombreCompleto || "Sin asignar"}
+                            {orden.mesero?.nombre_completo || "Sin asignar"}
                           </p>
                         </td>
                         <td className="py-4">

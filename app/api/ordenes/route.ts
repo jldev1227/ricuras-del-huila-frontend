@@ -1,6 +1,6 @@
 // app/api/ordenes/route.ts
 
-import type { EstadoOrden, Prisma, TipoOrden } from "@prisma/client";
+import type { Prisma, $Enums } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -34,14 +34,14 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Construir filtros
-    const where: Prisma.OrdenWhereInput = {};
+    const where: Prisma.ordenesWhereInput = {};
 
-    if (sucursalId) where.sucursalId = sucursalId;
-    if (meseroId) where.meseroId = meseroId;
-    if (mesaId) where.mesaId = mesaId;
-    if (clienteId) where.clienteId = clienteId;
-    if (estado) where.estado = estado as EstadoOrden;
-    if (tipoOrden) where.tipoOrden = tipoOrden as TipoOrden;
+    if (sucursalId) where.sucursal_id = sucursalId;
+    if (meseroId) where.mesero_id = meseroId;
+    if (mesaId) where.mesa_id = mesaId;
+    if (clienteId) where.cliente_id = clienteId;
+    if (estado) where.estado = estado as $Enums.estados_orden;
+    if (tipoOrden) where.tipo_orden = tipoOrden as $Enums.tipos_orden;
     if (sincronizado) where.sincronizado = sincronizado === "true";
 
     if (fecha) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       const endDate = new Date(fecha);
       endDate.setDate(endDate.getDate() + 1);
 
-      where.creadoEn = {
+      where.creado_en = {
         gte: startDate,
         lt: endDate,
       };
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // Obtener órdenes con solo los campos necesarios
     const [ordenes, total] = await Promise.all([
-      prisma.orden.findMany({
+      prisma.ordenes.findMany({
         where,
         select: {
           id: true,
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
           },
           mesero: {
             select: {
-              nombreCompleto: true,
+              nombre_completo: true,
             },
           },
           cliente: {
@@ -95,11 +95,11 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { creadoEn: "desc" },
+        orderBy: { creado_en: "desc" },
         skip,
         take: limit,
       }),
-      prisma.orden.count({ where }),
+      prisma.ordenes.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que la sucursal existe
-    const sucursal = await prisma.sucursal.findUnique({
+    const sucursal = await prisma.sucursales.findUnique({
       where: { id: sucursalId },
     });
 
@@ -206,14 +206,14 @@ export async function POST(request: NextRequest) {
     const orden = await prisma.$transaction(async (tx) => {
       // Si es orden local, marcar mesa como ocupada
       if (tipoOrden === "LOCAL" && mesaId) {
-        await tx.mesa.update({
+        await tx.mesas.update({
           where: { id: mesaId },
           data: { disponible: false },
         });
       }
 
       // Crear la orden
-      const nuevaOrden = await tx.orden.create({
+      const nuevaOrden = await tx.ordenes.create({
         data: {
           sucursalId,
           tipoOrden,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
           mesero: {
             select: {
               id: true,
-              nombreCompleto: true,
+              nombre_completo: true,
             },
           },
         },

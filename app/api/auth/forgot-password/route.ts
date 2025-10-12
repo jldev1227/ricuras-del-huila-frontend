@@ -19,11 +19,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar usuario por identificación
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { identificacion: identificacion.trim() },
       select: {
         id: true,
-        nombreCompleto: true,
+        nombre_completo: true,
         identificacion: true,
         correo: true,
         telefono: true,
@@ -79,12 +79,12 @@ export async function POST(request: NextRequest) {
 
     // Enviar OTP por email
     try {
-      await sendOTPEmail(usuario.correo, otp, usuario.nombreCompleto);
+      await sendOTPEmail(usuario.correo, otp, usuario.nombre_completo);
 
       console.log("========================================");
       console.log("EMAIL ENVIADO EXITOSAMENTE");
       console.log("========================================");
-      console.log("Usuario:", usuario.nombreCompleto);
+      console.log("Usuario:", usuario.nombre_completo);
       console.log("Correo:", usuario.correo);
       console.log("Código OTP:", otp);
       console.log("Expira en: 10 minutos");

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const sucursales = await prisma.sucursal.findMany({
+    const sucursales = await prisma.sucursales.findMany({
       where: { activo: true },
       select: {
         id: true,

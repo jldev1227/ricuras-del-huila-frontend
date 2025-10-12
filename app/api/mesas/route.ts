@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // Construir filtros dinámicos
     const where: {
       numero?: number;
-      sucursalId?: string;
+      sucursal_id?: string;
       disponible?: boolean;
       ubicacion?: {
         contains: string;
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (sucursalId) {
-      where.sucursalId = sucursalId;
+      where.sucursal_id = sucursalId;
     }
 
     if (ubicacion) {
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       where.disponible = disponible === "true";
     }
 
-    const mesas = await prisma.mesa.findMany({
+    const mesas = await prisma.mesas.findMany({
       where,
       include: {
         sucursal: {
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
             mesero: {
               select: {
                 id: true,
-                nombreCompleto: true,
+                nombre_completo: true,
               }
             },
             _count: {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
             }
           },
           orderBy: {
-            creadoEn: 'desc'
+            creado_en: 'desc'
           },
           take: 1
         },
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: [{ sucursalId: "asc" }, { numero: "asc" }],
+      orderBy: [{ sucursal_id: "asc" }, { numero: "asc" }],
     });
 
     // Transformar los datos para incluir ordenActual
@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
         numeroOrden: mesa.ordenes[0].id.slice(-6), // Assuming numeroOrden is derived from id
         estado: mesa.ordenes[0].estado,
         total: mesa.ordenes[0].total,
-        creadoEn: mesa.ordenes[0].creadoEn,
-        meseroId: mesa.ordenes[0].meseroId,
+        creadoEn: mesa.ordenes[0].creado_en,
+        meseroId: mesa.ordenes[0].mesero_id,
         mesero: mesa.ordenes[0].mesero,
         _count: mesa.ordenes[0]._count
       } : null,

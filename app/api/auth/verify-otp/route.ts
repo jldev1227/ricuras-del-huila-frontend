@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { identificacion, otp } = await request.json();
 
     // Buscar usuario
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { identificacion },
       select: { id: true },
     });

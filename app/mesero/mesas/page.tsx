@@ -35,7 +35,7 @@ interface Mesa {
     meseroId: string;
     especificaciones?: string;
     mesero: {
-      nombreCompleto: string;
+      nombre_completo: string;
     };
     items?: {
       id: string;
@@ -437,7 +437,7 @@ export default function MeseroMesasPage() {
                     <div className="flex items-center gap-2 text-sm text-gray-700">
                       <span className="text-gray-500">Mesero:</span>
                       <span className="font-medium">
-                        {mesa.ordenActual.mesero?.nombreCompleto || "Sin mesero"}
+                        {mesa.ordenActual.mesero?.nombre_completo || "Sin mesero"}
                       </span>
                     </div>
                   )}
@@ -558,7 +558,7 @@ export default function MeseroMesasPage() {
                               <span className="text-sm text-gray-500">Mesero:</span>
                               <p className="font-medium">
                                 {mesaSeleccionada.ordenActual.mesero
-                                  ? mesaSeleccionada.ordenActual.mesero.nombreCompleto +
+                                  ? mesaSeleccionada.ordenActual.mesero.nombre_completo +
                                     (mesaSeleccionada.ordenActual.meseroId === user?.id ? " (Tú)" : "")
                                   : "Sin asignar"}
                               </p>

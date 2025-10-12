@@ -33,16 +33,16 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { nombreCompleto: { contains: search, mode: "insensitive" } },
+        { nombre_completo: { contains: search, mode: "insensitive" } },
         { identificacion: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    const usuarios = await prisma.usuario.findMany({
+    const usuarios = await prisma.usuarios.findMany({
       where,
       select: {
         id: true,
-        nombreCompleto: true,
+        nombre_completo: true,
         identificacion: true,
         correo: true,
         telefono: true,
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        nombreCompleto: "asc",
+        nombre_completo: "asc",
       },
     });
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      nombreCompleto,
+      nombre_completo,
       identificacion,
       correo,
       telefono,
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validaciones básicas
-    if (!nombreCompleto || !identificacion || !password || !sucursalId) {
+    if (!nombre_completo || !identificacion || !password || !sucursalId) {
       return NextResponse.json(
         { success: false, message: "Faltan campos requeridos" },
         { status: 400 },
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ Verificar que la sucursal exista
-    const sucursalExiste = await prisma.sucursal.findUnique({
+    const sucursalExiste = await prisma.sucursales.findUnique({
       where: { id: sucursalId },
     });
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si la identificación ya existe
-    const usuarioExistente = await prisma.usuario.findUnique({
+    const usuarioExistente = await prisma.usuarios.findUnique({
       where: { identificacion },
     });
 
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ Verificar si el correo ya existe (si se proporciona)
     if (correo) {
-      const correoExistente = await prisma.usuario.findUnique({
+      const correoExistente = await prisma.usuarios.findUnique({
         where: { correo },
       });
 
@@ -149,9 +149,9 @@ export async function POST(request: NextRequest) {
     // ✅ Hash de contraseña con bcrypt
     const hashedPassword = await hashPassword(password);
 
-    const nuevoUsuario = await prisma.usuario.create({
+    const nuevoUsuario = await prisma.usuarios.create({
       data: {
-        nombreCompleto,
+        nombre_completo,
         identificacion,
         correo,
         telefono,
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       },
       select: {
         id: true,
-        nombreCompleto: true,
+        nombre_completo: true,
         identificacion: true,
         correo: true,
         telefono: true,

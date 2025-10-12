@@ -6,16 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
   // Limpiar datos existentes (en orden por dependencias)
   await prisma.passwordReset.deleteMany();
-  await prisma.sesion.deleteMany();
+  await prisma.sesiones.deleteMany();
   await prisma.orden.deleteMany();
   await prisma.mesa.deleteMany();
-  await prisma.usuario.deleteMany();
-  await prisma.sucursal.deleteMany();
+  await prisma.usuarios.deleteMany();
+  await prisma.sucursales.deleteMany();
 
   console.log("🗑️  Datos anteriores eliminados");
 
   // 1. Crear sucursales
-  const sucursalCentro = await prisma.sucursal.create({
+  const sucursalCentro = await prisma.sucursales.create({
     data: {
       nombre: "Ricuras Centro",
       direccion: "Calle 5 #10-20, Centro, Neiva",
@@ -24,7 +24,7 @@ async function main() {
     },
   });
 
-  const sucursalNorte = await prisma.sucursal.create({
+  const sucursalNorte = await prisma.sucursales.create({
     data: {
       nombre: "Ricuras Norte",
       direccion: "Carrera 15 #25-30, Norte, Neiva",
@@ -42,9 +42,9 @@ async function main() {
   const adminPassword = await bcrypt.hash("admin123", 10);
   const meseroPassword = await bcrypt.hash("mesero123", 10);
 
-  const admin = await prisma.usuario.create({
+  const admin = await prisma.usuarios.create({
     data: {
-      nombreCompleto: "Administrador Principal",
+      nombre_completo: "Administrador Principal",
       identificacion: "1234567890",
       correo: "admin@ricurasdelhuila.com",
       telefono: "3001234567",
@@ -54,9 +54,9 @@ async function main() {
     },
   });
 
-  const mesero1 = await prisma.usuario.create({
+  const mesero1 = await prisma.usuarios.create({
     data: {
-      nombreCompleto: "Juan Mesero",
+      nombre_completo: "Juan Mesero",
       identificacion: "0987654321",
       correo: "mesero@ricurasdelhuila.com",
       telefono: "3009876543",
@@ -66,9 +66,9 @@ async function main() {
     },
   });
 
-  const mesero2 = await prisma.usuario.create({
+  const mesero2 = await prisma.usuarios.create({
     data: {
-      nombreCompleto: "María Mesera",
+      nombre_completo: "María Mesera",
       identificacion: "1122334455",
       correo: "maria@ricurasdelhuila.com",
       telefono: "3005556677",
@@ -79,9 +79,9 @@ async function main() {
   });
 
   console.log("✅ Usuarios creados:", {
-    admin: admin.nombreCompleto,
-    mesero1: mesero1.nombreCompleto,
-    mesero2: mesero2.nombreCompleto,
+    admin: admin.nombre_completo,
+    mesero1: mesero1.nombre_completo,
+    mesero2: mesero2.nombre_completo,
   });
 
   // 3. Crear mesas para Sucursal Centro
@@ -144,7 +144,7 @@ async function main() {
   }
 
   // Crear productos
-  await prisma.producto.createMany({
+  await prisma.productos.createMany({
     data: [
       {
         nombre: "Lechona Completa",

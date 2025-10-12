@@ -361,7 +361,7 @@ export default function MeseroNuevaOrden() {
                   Nueva Orden
                 </h1>
                 <p className="text-sm text-gray-600">
-                  {user?.nombreCompleto} - {sucursal?.nombre}
+                  {user?.nombre_completo} - {sucursal?.nombre}
                 </p>
               </div>
             </div>

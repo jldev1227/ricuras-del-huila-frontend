@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { SignJWT } from "jose";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { v4 as uuidv4 } from "uuid";
 
 const SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET || "dev-secret-change-in-production",
@@ -22,11 +23,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar usuario en la base de datos
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { identificacion },
       select: {
         id: true,
-        nombreCompleto: true,
+        nombre_completo: true,
         identificacion: true,
         correo: true,
         telefono: true,
@@ -92,22 +93,25 @@ export async function POST(request: NextRequest) {
       ? forwarded.split(",")[0]
       : request.headers.get("x-real-ip") || "unknown";
 
-    await prisma.sesion.create({
+    const sessionId = uuidv4();
+
+    await prisma.sesiones.create({
       data: {
-        usuarioId: usuario.id,
-        token,
-        refreshToken,
-        expiraEn,
-        dispositivoId: request.headers.get("x-device-id") || undefined,
-        ipAddress,
-        userAgent: request.headers.get("user-agent") || undefined,
+      id: sessionId,
+      usuario_id: usuario.id,
+      token,
+      refresh_token: refreshToken,
+      expira_en: expiraEn,
+      dispositivo_id: request.headers.get("x-device-id") || undefined,
+      ip_address: ipAddress,
+      user_agent: request.headers.get("user-agent") || undefined,
       },
     });
 
     // Actualizar última conexión
-    await prisma.usuario.update({
+    await prisma.usuarios.update({
       where: { id: usuario.id },
-      data: { ultimaConexion: new Date() },
+      data: { ultima_conexion: new Date() },
     });
 
     // Respuesta exitosa (sin password)

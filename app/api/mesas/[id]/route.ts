@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = params;
 
-    const mesa = await prisma.mesa.findUnique({
+    const mesa = await prisma.mesas.findUnique({
       where: { id },
       include: {
         ordenes: {
@@ -21,7 +21,7 @@ export async function GET(
             mesero: {
               select: {
                 id: true,
-                nombreCompleto: true,
+                nombre_completo: true,
                 correo: true
               }
             },

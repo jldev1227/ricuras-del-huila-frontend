@@ -78,7 +78,7 @@ export async function GET(
         mesero: {
           select: {
             id: true,
-            nombreCompleto: true,
+            nombre_completo: true,
             rol: true,
           },
         },
@@ -251,7 +251,7 @@ export async function PUT(
             mesero: {
               select: {
                 id: true,
-                nombreCompleto: true,
+                nombre_completo: true,
               },
             },
           },
@@ -327,7 +327,7 @@ export async function PUT(
             mesero: {
               select: {
                 id: true,
-                nombreCompleto: true,
+                nombre_completo: true,
               },
             },
           },

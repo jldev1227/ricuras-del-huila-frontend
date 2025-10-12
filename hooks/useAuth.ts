@@ -12,7 +12,7 @@ type UserRole = "ADMINISTRADOR" | "MESERO";
 
 interface User {
   id: string;
-  nombreCompleto: string;
+  nombre_completo: string;
   identificacion: string;
   rol: UserRole;
   correo?: string;
@@ -170,7 +170,7 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
           });
 
-          logger.log("Login exitoso:", data.user.nombreCompleto);
+          logger.log("Login exitoso:", data.user.nombre_completo);
           return data;
         } catch (error) {
           const authError: AuthError = {
@@ -253,7 +253,7 @@ export const useAuthStore = create<AuthStore>()(
           logger.log("Estado rehidratado:", {
             hasUser: !!state.user,
             hasToken: !!state.token,
-            userName: state.user?.nombreCompleto,
+            userName: state.user?.nombre_completo,
           });
           state.setHasHydrated(true);
         }

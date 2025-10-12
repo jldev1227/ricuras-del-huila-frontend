@@ -22,7 +22,7 @@ export async function PUT(
     }
 
     // Verificar que la mesa existe y obtener la orden activa
-    const mesa = await prisma.mesa.findUnique({
+    const mesa = await prisma.mesas.findUnique({
       where: { id: mesaId },
       include: {
         ordenes: {

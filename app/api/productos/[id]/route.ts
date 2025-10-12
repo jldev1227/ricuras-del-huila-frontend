@@ -38,7 +38,7 @@ export async function PUT(
     }
 
     // Obtener el producto actual para manejar cambio de imagen
-    const productoActual = await prisma.producto.findUnique({
+    const productoActual = await prisma.productos.findUnique({
       where: { id },
     });
 
@@ -62,7 +62,7 @@ export async function PUT(
       }
     }
 
-    const producto = await prisma.producto.update({
+    const producto = await prisma.productos.update({
       where: { id },
       data: {
         nombre,
@@ -101,7 +101,7 @@ export async function DELETE(
     const { id } = await params;
 
     // Obtener el producto para acceder a la imagen antes de eliminarlo
-    const producto = await prisma.producto.findUnique({
+    const producto = await prisma.productos.findUnique({
       where: { id },
     });
 
@@ -113,7 +113,7 @@ export async function DELETE(
     }
 
     // Eliminar el producto de la base de datos
-    await prisma.producto.delete({
+    await prisma.productos.delete({
       where: { id },
     });
 

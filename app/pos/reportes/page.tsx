@@ -107,7 +107,7 @@ export default function ReportsPage() {
           if (data.success && data.ordenes.length > 0) {
             type OrdenWithRelations = Orden & {
               sucursal?: { id: string; nombre: string };
-              mesero?: { id: string; nombreCompleto: string };
+              mesero?: { id: string; nombre_completo: string };
               mesa?: { id: string; numero: number };
               cliente?: { id: string; nombre: string };
               _count?: { items: number };
@@ -119,7 +119,7 @@ export default function ReportsPage() {
                 fecha: new Date(orden.creadoEn),
                 sucursal: orden.sucursal?.nombre || "Sin sucursal",
                 sucursalId: orden.sucursal?.id || orden.sucursalId,
-                mesero: orden.mesero?.nombreCompleto || "Sin mesero",
+                mesero: orden.mesero?.nombre_completo || "Sin mesero",
                 tipoOrden: orden.tipoOrden,
                 mesa: orden.mesa ? `Mesa ${orden.mesa.numero}` : null,
                 mesaNumero: orden.mesa?.numero,
