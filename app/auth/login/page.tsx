@@ -10,18 +10,14 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function Page() {
   const router = useRouter();
-  const { login, isOnline } = useAuth();
+  const { login, isOnline, error, clearError, isLoading } = useAuth();
 
   const [identificacion, setIdentificacion] = useState("");
   const [password, setPassword] = useState("");
-  const [recordarme, setRecordarme] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    clearError(); // Limpiar errores previos usando el hook
 
     try {
       const response = await login(identificacion, password);
@@ -32,9 +28,8 @@ export default function Page() {
       router.push(isAdmin ? "/pos" : "/mesero");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
-    } finally {
-      setLoading(false);
+      // El error ya está siendo manejado por el hook useAuth
+      console.log("Error de login manejado por useAuth:", err);
     }
   };
 
@@ -73,8 +68,8 @@ export default function Page() {
 
           {/* Error message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <strong>Error:</strong> {error.message}
             </div>
           )}
 
@@ -92,9 +87,11 @@ export default function Page() {
                 id="identificacion"
                 type="number"
                 value={identificacion}
-                onChange={(e) => setIdentificacion(e.target.value)}
+                onChange={(e) => {
+                  setIdentificacion(e.target.value);
+                }}
                 required
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                 placeholder="Ej: 1234567890"
               />
@@ -112,22 +109,15 @@ export default function Page() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                }}
                 required
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                 placeholder="••••••••"
               />
             </div>
-
-            {/* Remember me */}
-            <Checkbox
-              isSelected={recordarme}
-              onValueChange={setRecordarme}
-              isDisabled={loading}
-            >
-              Recordarme
-            </Checkbox>
 
             {/* Submit button */}
             <div>
@@ -138,10 +128,10 @@ export default function Page() {
                 className="h-16 font-bold text-xl"
                 size="md"
                 fullWidth
-                isLoading={loading}
-                isDisabled={loading}
+                isLoading={isLoading}
+                isDisabled={isLoading}
               >
-                {loading ? "Ingresando..." : "Ingresar"}
+                {isLoading ? "Ingresando..." : "Ingresar"}
               </Button>
             </div>
 

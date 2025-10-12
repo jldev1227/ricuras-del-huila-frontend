@@ -237,8 +237,8 @@ export default function MeseroPage() {
         <Card>
           <CardBody className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ClipboardList className="w-6 h-6 text-blue-600" />
+              <div className="p-2 bg-primary/20 rounded-lg">
+                <ClipboardList className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-sm text-gray-500">Órdenes Hoy</p>
@@ -382,7 +382,7 @@ export default function MeseroPage() {
                         </p>
                       </div>
 
-                      <div className="text-right">
+                      <div className="hidden sm:block text-right">
                         <p className="text-sm text-gray-500">
                           {new Date(orden.creadoEn).toLocaleDateString()}
                         </p>
@@ -508,7 +508,7 @@ export default function MeseroPage() {
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
-                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  <ClipboardList className="w-5 h-5 text-primary" />
                   <div>
                     <h3 className="text-xl font-bold">
                       Orden #{ordenSeleccionada?.numeroOrden || ordenSeleccionada?.id.slice(-6)}
@@ -635,7 +635,7 @@ export default function MeseroPage() {
                     )}
 
                     {/* Resumen financiero */}
-                    <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="bg-primary/20 p-4 rounded-lg">
                       <h4 className="font-semibold text-gray-900 mb-3">Resumen</h4>
                       <div className="space-y-2">
                         {ordenSeleccionada.subtotal && (
@@ -650,9 +650,9 @@ export default function MeseroPage() {
                             <span className="font-medium">-{formatCOP(ordenSeleccionada.descuento)}</span>
                           </div>
                         )}
-                        <div className="flex justify-between pt-2 border-t border-blue-200">
+                        <div className="flex justify-between pt-2 border-t border-primary">
                           <span className="font-bold text-gray-900">Total:</span>
-                          <span className="font-bold text-blue-600 text-lg">
+                          <span className="font-bold text-primary text-lg">
                             {formatCOP(ordenSeleccionada.total)}
                           </span>
                         </div>
@@ -662,7 +662,7 @@ export default function MeseroPage() {
                 )}
               </ModalBody>
               <ModalFooter>
-                <Button color="primary" variant="light" onPress={onClose}>
+                <Button color="danger" variant="light" onPress={onClose}>
                   Cerrar
                 </Button>
               </ModalFooter>

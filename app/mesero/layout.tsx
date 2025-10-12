@@ -16,12 +16,12 @@ import {
 import {
   Bell,
   ChevronRight,
+  Home,
   LogOut,
   MapPin,
   Menu,
-  X,
   ClipboardList,
-  Home,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,7 +30,6 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import { useAuth, useRoleGuard } from "@/hooks/useAuth";
@@ -46,6 +45,13 @@ interface MenuItem {
   icon: ReactNode;
 }
 
+interface Sucursal {
+  id: string;
+  nombre: string;
+  direccion?: string;
+  telefono?: string;
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -54,12 +60,21 @@ const MENU_ITEMS: MenuItem[] = [
   {
     name: "Mis Órdenes",
     href: "/mesero",
-    icon: <ClipboardList className="w-6 h-6" />,
+    icon: <Home className="w-6 h-6" />,
   },
   {
     name: "Mesas",
     href: "/mesero/mesas",
-    icon: <Home className="w-6 h-6" />,
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="24" height="24" fill="currentColor">
+      <rect x="64" y="120" width="392" height="48" rx="8" />
+      <rect x="96" y="152" width="48" height="240" rx="6" />
+      <rect x="392" y="152" width="48" height="240" rx="6" />
+    </svg>
+  },
+  {
+    name: "Nueva Orden",
+    href: "/mesero/orden",
+    icon: <ClipboardList className="w-6 h-6" />,
   },
 ];
 
@@ -67,56 +82,344 @@ const MENU_ITEMS: MenuItem[] = [
 // COMPONENTS
 // ============================================================================
 
-interface LayoutProps {
-  children: ReactNode;
+/**
+ * Componente de navegación individual
+ */
+function NavItem({
+  item,
+  isActive,
+  isExpanded,
+  onClick,
+}: {
+  item: MenuItem;
+  isActive: boolean;
+  isExpanded: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${isActive
+          ? "bg-wine text-white shadow-md"
+          : "text-gray-700 hover:bg-gray-100"
+        }`}
+    >
+      <span className="flex-shrink-0">{item.icon}</span>
+      <span
+        className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+          }`}
+      >
+        {item.name}
+      </span>
+      {!isExpanded && (
+        <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+          {item.name}
+        </span>
+      )}
+    </Link>
+  );
 }
 
-export default function MeseroLayout({ children }: LayoutProps) {
-  const router = useRouter();
+/**
+ * Selector de sucursal
+ */
+function SucursalSelector({
+  sucursalActual,
+  onChangeBranch,
+  variant = "desktop",
+}: {
+  sucursalActual: Sucursal | null;
+  onChangeBranch: () => void;
+  variant?: "desktop" | "mobile";
+}) {
+  const buttonClasses =
+    variant === "desktop"
+      ? "border border-wine/30 bg-white hover:bg-wine/10 shadow-sm px-10 py-6 rounded-lg hidden lg:flex items-center gap-2"
+      : "border border-wine/30 bg-white hover:bg-wine/10 shadow-sm px-4 py-6 rounded-lg flex lg:hidden items-center gap-2 w-full";
+
+  return (
+    <Button
+      variant="flat"
+      className={buttonClasses}
+      startContent={<MapPin className="text-wine" size={20} />}
+      onPress={onChangeBranch}
+    >
+      <div className="flex flex-col items-start">
+        <span className="text-xs text-gray-500">Sucursal</span>
+        <span className="font-semibold text-wine text-sm">
+          {sucursalActual?.nombre || "Sin sucursal"}
+        </span>
+      </div>
+    </Button>
+  );
+}
+
+/**
+ * Menú de usuario
+ */
+function UserMenu({
+  user,
+  onLogout,
+  isExpanded,
+}: {
+  user: { nombreCompleto: string; rol: string };
+  onLogout: () => void;
+  isExpanded: boolean;
+}) {
+  return (
+    <Dropdown>
+      <DropdownTrigger>
+        <Button
+          variant="light"
+          className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-100 w-full"
+        >
+          <div className="w-8 h-8 bg-wine/20 rounded-full flex-shrink-0 flex items-center justify-center text-wine font-bold">
+            {user.nombreCompleto.charAt(0).toUpperCase()}
+          </div>
+          <div
+            className={`transition-all duration-300 overflow-hidden text-left ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+              }`}
+          >
+            <p className="text-sm font-medium text-gray-700">
+              {user.nombreCompleto}
+            </p>
+            <p className="text-xs text-gray-500">{user.rol}</p>
+          </div>
+        </Button>
+      </DropdownTrigger>
+      <DropdownMenu aria-label="Opciones de usuario">
+        <DropdownItem
+          key="logout"
+          startContent={<LogOut size={18} className="text-wine" />}
+          onPress={onLogout}
+          className="text-wine"
+        >
+          Cerrar sesión
+        </DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
+  );
+}
+
+/**
+ * Sidebar Desktop
+ */
+function DesktopSidebar({
+  menuItems,
+  pathname,
+  isHovered,
+  onHoverChange,
+  user,
+  onLogout,
+}: {
+  menuItems: MenuItem[];
+  pathname: string;
+  isHovered: boolean;
+  onHoverChange: (hovered: boolean) => void;
+  user: { nombreCompleto: string; rol: string };
+  onLogout: () => void;
+}) {
+  return (
+    <aside
+      className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${isHovered ? "w-64" : "w-20"
+        }`}
+      onMouseEnter={() => onHoverChange(true)}
+      onMouseLeave={() => onHoverChange(false)}
+    >
+      {/* Logo */}
+      <div className="h-20 flex items-center justify-center border-b border-gray-200">
+        <Image
+          width={250}
+          height={250}
+          src="/logo.png"
+          alt="Logo Ricuras del Huila"
+          className="transition-all duration-300 w-24 h-24"
+          priority
+        />
+      </div>
+
+      {/* Navigation */}
+      <nav className="p-4">
+        <ul className="space-y-2">
+          {menuItems.map((item) => (
+            <li key={item.href} className="relative">
+              <NavItem
+                item={item}
+                isActive={pathname === item.href}
+                isExpanded={isHovered}
+              />
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* User section */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+        <UserMenu user={user} onLogout={onLogout} isExpanded={isHovered} />
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * Sidebar Mobile
+ */
+function MobileSidebar({
+  isOpen,
+  onClose,
+  menuItems,
+  pathname,
+  user,
+  onLogout,
+  sucursalActual,
+  onChangeBranch,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  menuItems: MenuItem[];
+  pathname: string;
+  user: { nombreCompleto: string; rol: string };
+  onLogout: () => void;
+  sucursalActual: Sucursal | null;
+  onChangeBranch: () => void;
+}) {
+  return (
+    <>
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+      >
+        {/* Header */}
+        <div className="h-20 flex items-center justify-between px-4 border-b border-gray-200">
+          <Image
+            width={250}
+            height={250}
+            src="/logo.png"
+            alt="Logo Ricuras del Huila"
+            className="w-24 h-24"
+            priority
+          />
+          <Button
+            isIconOnly
+            size="sm"
+            onPress={onClose}
+            className="p-2 bg-wine text-white rounded-lg"
+          >
+            <X size={24} />
+          </Button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="p-4">
+          <ul className="space-y-2">
+            {menuItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${pathname === item.href
+                      ? "bg-wine text-white shadow-md"
+                      : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="font-medium">{item.name}</span>
+                  </div>
+                  {pathname === item.href && <ChevronRight size={20} />}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white space-y-4">
+          <SucursalSelector
+            sucursalActual={sucursalActual}
+            onChangeBranch={onChangeBranch}
+            variant="mobile"
+          />
+
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                className="w-full flex items-center gap-3 px-4 py-8 rounded-lg bg-gray-50"
+                variant="light"
+              >
+                <div className="w-10 h-10 bg-wine/20 rounded-full flex items-center justify-center text-wine font-bold">
+                  {user.nombreCompleto.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex flex-col items-start">
+                  <p className="text-sm font-medium text-gray-700">
+                    {user.nombreCompleto}
+                  </p>
+                  <p className="text-xs text-gray-500">{user.rol}</p>
+                </div>
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu aria-label="Opciones de usuario">
+              <DropdownItem
+                key="logout"
+                startContent={<LogOut size={18} className="text-wine" />}
+                onPress={onLogout}
+                className="text-wine"
+              >
+                Cerrar sesión
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export default function MeseroLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user, logout, isLoading: authLoading, hasHydrated } = useAuth();
-  const { sucursal, loading: sucursalLoading } = useSucursal();
+  const router = useRouter();
 
-  // Estados del componente
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-
-  // Proteger la ruta para solo meseros
+  // Auth hooks
+  const { user, isAuthenticated, hasHydrated, logout } = useAuth();
   const { hasPermission } = useRoleGuard(["MESERO"]);
 
+  // Validar acceso - solo meseros pueden acceder
   useEffect(() => {
-    if (!hasPermission && !authLoading && hasHydrated) {
-      router.push("/auth/login");
+    if (hasHydrated && isAuthenticated && user && user.rol !== "MESERO") {
+      // Si el usuario no es mesero, redirigir a su área correspondiente
+      if (user.rol === "ADMINISTRADOR") {
+        router.push("/pos");
+      } else {
+        router.push("/auth/login");
+      }
     }
-  }, [hasPermission, authLoading, hasHydrated, router]);
+  }, [hasHydrated, isAuthenticated, user, router]);
 
-  // Verificar si tenemos sucursal seleccionada
-  useEffect(() => {
-    if (!authLoading && !sucursalLoading && user && !sucursal) {
-      // Si no hay sucursal seleccionada, redirigir a la página principal
-      router.push("/");
-      return;
-    }
-  }, [user, sucursal, authLoading, sucursalLoading, router]);
+  // Sucursal hook
+  const { sucursal, loading: isLoadingSucursal } = useSucursal();
 
-  // Funciones auxiliares
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
-  }, []);
+  // UI State
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const closeSidebar = useCallback(() => {
-    setIsSidebarOpen(false);
-  }, []);
+  // Modal
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const handleLogout = useCallback(async () => {
-    try {
-      await logout();
-      router.push("/auth/login");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
-  }, [logout, router]);
-
+  // Manejar cambio de sucursal
   const handleChangeBranch = useCallback(() => {
     // Limpiar sucursal del localStorage y redirigir
     localStorage.removeItem("sucursal-actual");
@@ -131,365 +434,159 @@ export default function MeseroLayout({ children }: LayoutProps) {
     router.push("/");
   }, [router]);
 
-  // Elementos de navegación filtrados
-  const navigationItems = useMemo(() => {
-    return MENU_ITEMS;
-  }, []);
+  // Manejar logout
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      localStorage.removeItem("sucursal-actual");
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  }, [logout, router]);
 
-  // Si está cargando o no hay sucursal, no renderizar el layout
-  if (authLoading || sucursalLoading || !user || !sucursal) {
+  // Protección de rutas
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    if (!isAuthenticated) {
+      router.push("/auth/login");
+      return;
+    }
+
+    if (!isLoadingSucursal && !sucursal) {
+      router.push("/");
+    }
+  }, [hasHydrated, isAuthenticated, isLoadingSucursal, sucursal, router]);
+
+  // Loading state
+  if (!hasHydrated || isLoadingSucursal || !sucursal || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-wine"
+            role="status"
+            aria-label="Cargando"
+          />
+          <p className="text-sm text-gray-600">Cargando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar Desktop */}
-      <aside className="hidden lg:flex lg:flex-shrink-0">
-        <div className="flex flex-col w-80">
-          <div className="flex flex-col h-0 flex-1 bg-white border-r border-gray-200 shadow-sm">
-            {/* Header */}
-            <div className="flex items-center h-20 flex-shrink-0 px-4 bg-white border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Image
-                    width={48}
-                    height={48}
-                    src="/logo.png"
-                    alt="Logo"
-                    className="w-12 h-12"
-                    priority
-                  />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-gray-900">
-                    Ricuras del Huila
-                  </h1>
-                  <p className="text-sm text-gray-500">Sistema Mesero</p>
-                </div>
-              </div>
-            </div>
-
-            {/* User Info */}
-            <div className="px-4 py-4 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium">
-                    {user?.nombreCompleto?.charAt(0)?.toUpperCase() || "U"}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {user?.nombreCompleto || "Usuario"}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user?.rol?.toLowerCase() || "mesero"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Sucursal Info */}
-              <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {sucursal.nombre}
-                      </p>
-                      <p className="text-xs text-gray-500">Sucursal actual</p>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="light"
-                    color="primary"
-                    onClick={handleChangeBranch}
-                    className="text-xs"
-                  >
-                    Cambiar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-              {navigationItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-2 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-primary text-white"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    <span
-                      className={`mr-3 flex-shrink-0 ${
-                        isActive ? "text-white" : "text-gray-400"
-                      }`}
-                    >
-                      {item.icon}
-                    </span>
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Logout Button */}
-            <div className="flex-shrink-0 p-4 border-t border-gray-200">
-              <Button
-                variant="light"
-                color="danger"
-                onClick={onOpen}
-                startContent={<LogOut className="w-4 h-4" />}
-                className="w-full justify-start"
-              >
-                Cerrar Sesión
-              </Button>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile Sidebar */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 flex z-50 lg:hidden">
-          <div
-            className="fixed inset-0 bg-black opacity-50"
-            onClick={closeSidebar}
-            onKeyDown={(e) => e.key === "Escape" && closeSidebar()}
-            role="button"
-            tabIndex={0}
-            aria-label="Cerrar menú"
-          />
-          <aside className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
-            {/* Close Button */}
-            <div className="absolute top-0 right-0 -mr-12 pt-2">
-              <Button
-                isIconOnly
-                variant="light"
-                onClick={closeSidebar}
-                className="text-white"
-              >
-                <X className="w-6 h-6" />
-              </Button>
-            </div>
-
-            {/* Mobile Sidebar Content */}
-            <div className="flex flex-col h-0 flex-1">
-              {/* Header */}
-              <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white border-b border-gray-200">
-                <div className="flex items-center gap-3">
-                  <Image
-                    width={32}
-                    height={32}
-                    src="/logo.png"
-                    alt="Logo"
-                    className="w-8 h-8"
-                  />
-                  <h1 className="text-lg font-bold text-gray-900">
-                    Sistema Mesero
-                  </h1>
-                </div>
-              </div>
-
-              {/* User Info Mobile */}
-              <div className="px-4 py-4 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
-                      {user?.nombreCompleto?.charAt(0)?.toUpperCase() || "U"}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {user?.nombreCompleto || "Usuario"}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">
-                      {user?.rol?.toLowerCase() || "mesero"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Sucursal Info Mobile */}
-                <div className="mt-3 p-2 bg-white rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {sucursal.nombre}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      color="primary"
-                      onClick={handleChangeBranch}
-                      className="text-xs"
-                    >
-                      Cambiar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Navigation */}
-              <nav className="flex-1 px-2 py-4 space-y-1">
-                {navigationItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={closeSidebar}
-                      className={`group flex items-center px-2 py-3 text-sm font-medium rounded-lg transition-colors ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <span
-                        className={`mr-3 flex-shrink-0 ${
-                          isActive ? "text-white" : "text-gray-400"
-                        }`}
-                      >
-                        {item.icon}
-                      </span>
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              {/* Mobile Logout */}
-              <div className="flex-shrink-0 p-4 border-t border-gray-200">
-                <Button
-                  variant="light"
-                  color="danger"
-                  onClick={onOpen}
-                  startContent={<LogOut className="w-4 h-4" />}
-                  className="w-full justify-start"
-                >
-                  Cerrar Sesión
-                </Button>
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Top Bar Mobile */}
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button isIconOnly variant="light" onClick={toggleSidebar}>
-                <Menu className="w-6 h-6" />
-              </Button>
-              <Image
-                width={32}
-                height={32}
-                src="/logo.png"
-                alt="Logo"
-                className="w-8 h-8"
-              />
-              <h1 className="text-lg font-bold text-gray-900">
-                Sistema Mesero
-              </h1>
-            </div>
-
-            {/* Mobile Actions */}
-            <div className="flex items-center gap-2">
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button isIconOnly variant="light" className="text-gray-500">
-                    <Bell className="w-5 h-5" />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu>
-                  <DropdownItem key="no-notifications">
-                    No hay notificaciones
-                  </DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
-
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button variant="light" className="gap-2">
-                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">
-                        {user?.nombreCompleto?.charAt(0)?.toUpperCase() || "U"}
-                      </span>
-                    </div>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu>
-                  <DropdownItem key="profile" className="h-14 gap-2">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-small">
-                        {user?.nombreCompleto || "Usuario"}
-                      </p>
-                      <p className="text-tiny text-default-400 capitalize">
-                        {user?.rol?.toLowerCase() || "mesero"}
-                      </p>
-                    </div>
-                  </DropdownItem>
-                  <DropdownItem
-                    key="branch"
-                    startContent={<MapPin className="w-4 h-4" />}
-                    onClick={handleChangeBranch}
-                  >
-                    Cambiar Sucursal
-                  </DropdownItem>
-                  <DropdownItem
-                    key="logout"
-                    color="danger"
-                    startContent={<LogOut className="w-4 h-4" />}
-                    onClick={onOpen}
-                  >
-                    Cerrar Sesión
-                  </DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
-      </div>
-
-      {/* Logout Confirmation Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="sm">
+    <div className="flex h-screen bg-gray-50">
+      {/* Modal de confirmación de logout */}
+      <Modal isOpen={isOpen} onClose={onClose}>
         <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            Confirmar cierre de sesión
-          </ModalHeader>
+          <ModalHeader>Confirmar cierre de sesión</ModalHeader>
           <ModalBody>
-            <p>¿Estás seguro de que quieres cerrar sesión?</p>
+            <p className="text-gray-700">
+              ¿Estás seguro de que quieres cerrar sesión?
+            </p>
           </ModalBody>
           <ModalFooter>
-            <Button variant="light" onPress={onClose}>
+            <Button color="danger" variant="light" onPress={onClose}>
               Cancelar
             </Button>
-            <Button color="danger" onPress={handleLogout}>
-              Cerrar Sesión
+            <Button
+              className="bg-wine text-white"
+              onPress={handleLogout}
+            >
+              Cerrar sesión
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Desktop Sidebar */}
+      <DesktopSidebar
+        menuItems={MENU_ITEMS}
+        pathname={pathname}
+        isHovered={isHovered}
+        onHoverChange={setIsHovered}
+        user={{
+          nombreCompleto: user.nombreCompleto,
+          rol: user.rol,
+        }}
+        onLogout={onOpen}
+      />
+
+      {/* Mobile Sidebar */}
+      <MobileSidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        menuItems={MENU_ITEMS}
+        pathname={pathname}
+        user={{
+          nombreCompleto: user.nombreCompleto,
+          rol: user.rol,
+        }}
+        onLogout={onOpen}
+        sucursalActual={sucursal}
+        onChangeBranch={handleChangeBranch}
+      />
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 h-16 lg:h-20 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 sticky top-0 z-30">
+          {/* Mobile menu button */}
+          <Button
+            isIconOnly
+            variant="light"
+            onPress={() => setIsMobileMenuOpen(true)}
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+            aria-label="Abrir menú"
+          >
+            <Menu size={24} />
+          </Button>
+
+          {/* Logo mobile */}
+          <Image
+            width={250}
+            height={250}
+            src="/logo.png"
+            alt="Logo"
+            className="w-24 h-24 lg:hidden"
+            priority
+          />
+
+          {/* Title Desktop */}
+          <div className="hidden lg:flex items-center gap-3">
+            <h1 className="font-bold text-2xl">Sistema Mesero</h1>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Sucursal Selector - Desktop */}
+            <SucursalSelector
+              sucursalActual={sucursal}
+              onChangeBranch={handleChangeBranch}
+              variant="desktop"
+            />
+
+            {/* Notifications */}
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="p-2 hover:bg-gray-100 rounded-lg relative"
+              aria-label="Notificaciones"
+            >
+              <Bell size={20} className="lg:w-6 lg:h-6" />
+              <span
+                className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
+                aria-label="Tienes notificaciones nuevas"
+              />
+            </Button>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <div className="flex-1 overflow-auto">{children}</div>
+      </main>
     </div>
   );
 }

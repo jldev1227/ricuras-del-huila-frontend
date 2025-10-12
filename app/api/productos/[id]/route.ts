@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { unlink } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
 import { prisma } from "@/lib/prisma";
 
 export async function PUT(
@@ -32,6 +35,31 @@ export async function PUT(
         { message: "Precios inválidos" },
         { status: 400 },
       );
+    }
+
+    // Obtener el producto actual para manejar cambio de imagen
+    const productoActual = await prisma.producto.findUnique({
+      where: { id },
+    });
+
+    if (!productoActual) {
+      return NextResponse.json(
+        { message: "Producto no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    // Si hay una nueva imagen y es diferente a la actual, eliminar la imagen anterior
+    if (productoActual.imagen && imagen && productoActual.imagen !== imagen) {
+      try {
+        const oldImagePath = join(process.cwd(), 'public', productoActual.imagen);
+        if (existsSync(oldImagePath)) {
+          await unlink(oldImagePath);
+        }
+      } catch (imageError) {
+        console.error('Error al eliminar imagen anterior:', imageError);
+        // No fallar la actualización si hay error al eliminar la imagen anterior
+      }
     }
 
     const producto = await prisma.producto.update({
@@ -72,9 +100,35 @@ export async function DELETE(
   try {
     const { id } = await params;
 
+    // Obtener el producto para acceder a la imagen antes de eliminarlo
+    const producto = await prisma.producto.findUnique({
+      where: { id },
+    });
+
+    if (!producto) {
+      return NextResponse.json(
+        { message: "Producto no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    // Eliminar el producto de la base de datos
     await prisma.producto.delete({
       where: { id },
     });
+
+    // Si el producto tenía imagen, eliminarla del sistema de archivos
+    if (producto.imagen) {
+      try {
+        const imagePath = join(process.cwd(), 'public', producto.imagen);
+        if (existsSync(imagePath)) {
+          await unlink(imagePath);
+        }
+      } catch (imageError) {
+        console.error('Error al eliminar imagen del producto:', imageError);
+        // No fallar la eliminación del producto si hay error al eliminar la imagen
+      }
+    }
 
     return NextResponse.json({
       success: true,

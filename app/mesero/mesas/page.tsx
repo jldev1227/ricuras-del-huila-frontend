@@ -2,8 +2,6 @@
 
 import {
   Button,
-  Card,
-  CardBody,
   Chip,
   Spinner,
   Modal,
@@ -215,51 +213,43 @@ export default function MeseroMesasPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardBody className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium">Mis Mesas</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-600">
-                {misMesas.length}
-              </p>
-            </CardBody>
-          </Card>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-3 h-3 bg-primary rounded-full"></div>
+              <span className="text-sm font-medium">Mis Mesas</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">
+              {misMesas.length}
+            </p>
+          </div>
 
-          <Card>
-            <CardBody className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium">Disponibles</span>
-              </div>
-              <p className="text-2xl font-bold text-green-600">
-                {mesasDisponibles.length}
-              </p>
-            </CardBody>
-          </Card>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-sm font-medium">Disponibles</span>
+            </div>
+            <p className="text-2xl font-bold text-green-600">
+              {mesasDisponibles.length}
+            </p>
+          </div>
 
-          <Card>
-            <CardBody className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm font-medium">Ocupadas</span>
-              </div>
-              <p className="text-2xl font-bold text-red-600">
-                {mesasOcupadas.length}
-              </p>
-            </CardBody>
-          </Card>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-sm font-medium">Ocupadas</span>
+            </div>
+            <p className="text-2xl font-bold text-red-600">
+              {mesasOcupadas.length}
+            </p>
+          </div>
 
-          <Card>
-            <CardBody className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                <span className="text-sm font-medium">Total</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-600">{mesas.length}</p>
-            </CardBody>
-          </Card>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+              <span className="text-sm font-medium">Total</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-600">{mesas.length}</p>
+          </div>
         </div>
       </div>
 
@@ -267,86 +257,83 @@ export default function MeseroMesasPage() {
       {misMesas.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-500" />
+            <Users className="w-5 h-5 text-primary" />
             Mis Mesas Activas ({misMesas.length})
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {misMesas.map((mesa) => (
-              <Card key={mesa.id} className="border-l-4 border-blue-500">
-                <CardBody className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold">
-                        Mesa {mesa.numero}
-                      </h3>
-                      <Chip size="sm" color="primary" variant="flat">
-                        Mi Mesa
-                      </Chip>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {mesa.capacidad} personas
-                    </div>
+              <div
+                key={mesa.id}
+                className="border-2 rounded-xl p-5 transition-all hover:shadow-lg bg-primary/10 border-primary/20 hover:border-primary/300"
+              >
+                {/* Header de la card */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                      Mesa {mesa.numero}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {sucursal?.nombre}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary ring-1 ring-primary/20">
+                    Mi Mesa
+                  </span>
+                </div>
+
+                {/* Información */}
+                <div className="space-y-2.5 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <Users className="text-gray-400" size={16} />
+                    <span className="font-medium">{mesa.capacidad}</span>
+                    <span className="text-gray-500">personas</span>
                   </div>
 
                   {mesa.ordenActual && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Orden:</span>
-                        <span className="font-medium">
-                          #
-                          {mesa.ordenActual.numeroOrden ||
-                            mesa.ordenActual.id.slice(-6)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Estado:</span>
-                        <Chip
-                          size="sm"
-                          color={
-                            mesa.ordenActual.estado === "PENDIENTE"
-                              ? "warning"
-                              : mesa.ordenActual.estado === "EN_PREPARACION"
-                                ? "primary"
-                                : mesa.ordenActual.estado === "LISTA"
-                                  ? "success"
-                                  : "default"
-                          }
-                          variant="flat"
-                        >
-                          {mesa.ordenActual.estado.replace("_", " ")}
-                        </Chip>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Hora:</span>
-                        <span className="text-sm">
-                          {new Date(
-                            mesa.ordenActual.creadoEn,
-                          ).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="pt-2">
-                        <Button
-                          size="sm"
-                          color="primary"
-                          variant="flat"
-                          fullWidth
-                          startContent={<Eye className="w-4 h-4" />}
-                          onPress={() => fetchDetallesMesa(mesa)}
-                        >
-                          Ver Detalles
-                        </Button>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Chip
+                        size="sm"
+                        color={
+                          mesa.ordenActual.estado === "PENDIENTE"
+                            ? "warning"
+                            : mesa.ordenActual.estado === "EN_PREPARACION"
+                              ? "primary"
+                              : mesa.ordenActual.estado === "LISTA"
+                                ? "success"
+                                : "default"
+                        }
+                        variant="flat"
+                      >
+                        {mesa.ordenActual.estado.replace("_", " ")}
+                      </Chip>
                     </div>
                   )}
-                </CardBody>
-              </Card>
+
+                  {mesa.ordenActual && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                      <span className="text-black font-medium">
+                        Total: {formatCOP(mesa.ordenActual.total)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Acciones */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="flat"
+                    className="flex-1 text-primary bg-primary/10"
+                    startContent={<Eye className="w-4 h-4" />}
+                    onPress={() => fetchDetallesMesa(mesa)}
+                  >
+                    Ver Detalles
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -360,33 +347,50 @@ export default function MeseroMesasPage() {
             Mesas Disponibles ({mesasDisponibles.length})
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {mesasDisponibles.map((mesa) => (
-              <Card key={mesa.id} className="border-l-4 border-green-500">
-                <CardBody className="p-4 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <h3 className="text-lg font-semibold">
+              <div
+                key={mesa.id}
+                className="border-2 rounded-xl p-5 transition-all hover:shadow-lg bg-green-50 border-green-200 hover:border-green-300"
+              >
+                {/* Header de la card */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-1">
                       Mesa {mesa.numero}
                     </h3>
-                    <Chip size="sm" color="success" variant="flat">
-                      Disponible
-                    </Chip>
-                    <p className="text-sm text-gray-500">
-                      {mesa.capacidad} personas
+                    <p className="text-sm text-gray-600">
+                      {sucursal?.nombre}
                     </p>
-                    <Button
-                      size="sm"
-                      color="success"
-                      variant="flat"
-                      fullWidth
-                      startContent={<Plus className="w-4 h-4" />}
-                      onPress={() => router.push(`/mesero/orden?mesa=${mesa.id}`)}
-                    >
-                      Tomar Mesa
-                    </Button>
                   </div>
-                </CardBody>
-              </Card>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 ring-1 ring-green-600/20">
+                    Disponible
+                  </span>
+                </div>
+
+                {/* Información */}
+                <div className="space-y-2.5 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <Users className="text-gray-400" size={16} />
+                    <span className="font-medium">{mesa.capacidad}</span>
+                    <span className="text-gray-500">personas</span>
+                  </div>
+                </div>
+
+                {/* Acciones */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    color="success"
+                    variant="flat"
+                    className="flex-1"
+                    startContent={<Plus className="w-4 h-4" />}
+                    onPress={() => router.push(`/mesero/orden?mesa=${mesa.id}`)}
+                  >
+                    Tomar Mesa
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -402,80 +406,57 @@ export default function MeseroMesasPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {mesasOcupadas.map((mesa) => (
-              <Card key={mesa.id} className="border-l-4 border-red-500">
-                <CardBody className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold">
-                        Mesa {mesa.numero}
-                      </h3>
-                      <Chip size="sm" color="danger" variant="flat">
-                        Ocupada
-                      </Chip>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {mesa.capacidad} personas
-                    </div>
+              <div
+                key={mesa.id}
+                className="border-2 rounded-xl p-5 transition-all hover:shadow-lg bg-red-50 border-red-200 hover:border-red-300"
+              >
+                {/* Header de la card */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                      Mesa {mesa.numero}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {sucursal?.nombre}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 ring-1 ring-red-600/20">
+                    Ocupada
+                  </span>
+                </div>
+
+                {/* Información */}
+                <div className="space-y-2.5 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <Users className="text-gray-400" size={16} />
+                    <span className="font-medium">{mesa.capacidad}</span>
+                    <span className="text-gray-500">personas</span>
                   </div>
 
                   {mesa.ordenActual && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Mesero:</span>
-                        <span className="text-sm font-medium">
-                          {mesa.ordenActual.mesero?.nombreCompleto
-                          ? `${mesa.ordenActual.mesero.nombreCompleto}${mesa.ordenActual.meseroId === user?.id ? " (Tú)" : ""}`
-                          : "Sin asignar"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Estado:</span>
-                        <Chip
-                          size="sm"
-                          color={
-                            mesa.ordenActual.estado === "PENDIENTE"
-                              ? "warning"
-                              : mesa.ordenActual.estado === "EN_PREPARACION"
-                                ? "primary"
-                                : mesa.ordenActual.estado === "LISTA"
-                                  ? "success"
-                                  : "default"
-                          }
-                          variant="flat"
-                        >
-                          {mesa.ordenActual.estado.replace("_", " ")}
-                        </Chip>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Hora:</span>
-                        <span className="text-sm">
-                          {new Date(
-                            mesa.ordenActual.creadoEn,
-                          ).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="pt-2">
-                        <Button
-                          size="sm"
-                          color="default"
-                          variant="flat"
-                          fullWidth
-                          startContent={<Eye className="w-4 h-4" />}
-                          onPress={() => fetchDetallesMesa(mesa)}
-                        >
-                          Ver Detalles
-                        </Button>
-                      </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <span className="text-gray-500">Mesero:</span>
+                      <span className="font-medium">
+                        {mesa.ordenActual.mesero?.nombreCompleto || "Sin mesero"}
+                      </span>
                     </div>
                   )}
-                </CardBody>
-              </Card>
+                </div>
+
+                {/* Acciones */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    color="default"
+                    variant="flat"
+                    className="flex-1"
+                    startContent={<Eye className="w-4 h-4" />}
+                    onPress={() => fetchDetallesMesa(mesa)}
+                  >
+                    Ver Detalles
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -642,10 +623,10 @@ export default function MeseroMesasPage() {
                         )}
 
                         {/* Total */}
-                        <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="bg-primary/20 p-4 rounded-lg">
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-gray-900">Total de la orden:</span>
-                            <span className="font-bold text-blue-600 text-lg">
+                            <span className="font-bold text-primary text-lg">
                               {formatCOP(mesaSeleccionada.ordenActual.total)}
                             </span>
                           </div>

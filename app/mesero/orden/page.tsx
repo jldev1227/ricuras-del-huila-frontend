@@ -87,20 +87,47 @@ export default function MeseroNuevaOrden() {
           const response = await fetch(`/api/mesas/${mesaId}`);
           const data = await response.json();
           if (data.success) {
+            // Verificar si la mesa tiene una orden activa
+            if (data.mesa.ordenActual) {
+              addToast({
+                title: "Mesa ocupada",
+                description: `La mesa ${data.mesa.numero} acaba de ser ocupada por otro mesero. Por favor selecciona otra mesa.`,
+                color: "danger"
+              });
+              // Limpiar parámetro de mesa de la URL
+              router.replace('/mesero/orden');
+              return;
+            }
+            
+            // Si la mesa está disponible, seleccionarla
             setMesaSeleccionada({
               id: data.mesa.id,
               numero: data.mesa.numero,
               capacidad: data.mesa.capacidad,
               disponible: data.mesa.disponible
             });
+          } else {
+            // Mesa no encontrada
+            addToast({
+              title: "Mesa no encontrada",
+              description: `La mesa solicitada no existe. Por favor selecciona otra mesa.`,
+              color: "danger"
+            });
+            router.replace('/mesero/orden');
           }
         } catch (error) {
           console.error("Error al cargar mesa:", error);
+          addToast({
+            title: "Error",
+            description: "Error al verificar la disponibilidad de la mesa. Por favor intenta nuevamente.",
+            color: "danger"
+          });
+          router.replace('/mesero/orden');
         }
       };
       fetchMesa();
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   // Cargar productos y categorías
   useEffect(() => {
@@ -269,8 +296,38 @@ export default function MeseroNuevaOrden() {
     }
   };
 
-  const onSelectMesa = (mesa: Mesa | null) => {
-    setMesaSeleccionada(mesa);
+  const onSelectMesa = async (mesa: Mesa | null) => {
+    if (mesa) {
+      // Verificar en tiempo real si la mesa sigue disponible
+      try {
+        const response = await fetch(`/api/mesas/${mesa.id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // Verificar si la mesa tiene una orden activa
+          if (data.mesa.ordenActual) {
+            addToast({
+              title: "Mesa ocupada",
+              description: `La mesa ${data.mesa.numero} acaba de ser ocupada por otro mesero. Por favor selecciona otra mesa.`,
+              color: "danger"
+            });
+            return;
+          }
+        }
+        
+        // Si la mesa está disponible, seleccionarla
+        setMesaSeleccionada(mesa);
+      } catch (error) {
+        console.error("Error al verificar mesa:", error);
+        addToast({
+          title: "Error",
+          description: "Error al verificar la disponibilidad de la mesa. Por favor intenta nuevamente.",
+          color: "danger"
+        });
+      }
+    } else {
+      setMesaSeleccionada(mesa);
+    }
   };
 
   return (
@@ -319,7 +376,7 @@ export default function MeseroNuevaOrden() {
                 placeholder="Buscar productos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 lg:pl-12 pr-10 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm lg:text-base"
+                className="w-full pl-10 lg:pl-12 pr-10 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine focus:border-wine transition-all text-sm lg:text-base"
               />
               {searchTerm && (
                 <button
@@ -338,7 +395,7 @@ export default function MeseroNuevaOrden() {
                 onClick={() => setCategoriaSeleccionada("")}
                 className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
                   !categoriaSeleccionada
-                    ? "bg-blue-600 text-white shadow-md"
+                    ? "bg-wine text-white shadow-md"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -355,7 +412,7 @@ export default function MeseroNuevaOrden() {
                   }
                   className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
                     categoriaSeleccionada === categoria.id
-                      ? "bg-blue-600 text-white shadow-md"
+                      ? "bg-wine text-white shadow-md"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
@@ -383,7 +440,7 @@ export default function MeseroNuevaOrden() {
               {carrito.length > 0 && (
                 <Button
                   onPress={() => setMostrarAside(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-3 lg:px-4 py-2 rounded-lg shadow-lg transition-all"
+                  className="flex items-center gap-2 bg-wine text-white px-3 lg:px-4 py-2 rounded-lg shadow-lg transition-all"
                 >
                   <ShoppingBag size={18} />
                   <span className="font-semibold">{carrito.length}</span>
@@ -403,7 +460,7 @@ export default function MeseroNuevaOrden() {
                     isPressable
                     key={producto.id}
                     onPress={() => agregarAlCarrito(producto)}
-                    className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:border-blue-500/20"
+                    className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:border-wine"
                   >
                     <div className="relative bg-gray-100 aspect-square overflow-hidden">
                       <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
@@ -425,9 +482,8 @@ export default function MeseroNuevaOrden() {
                         <div className="absolute top-2 left-2">
                           <Chip
                             size="sm"
-                            color="primary"
                             variant="flat"
-                            className="text-xs"
+                            className="text-xs text-wine"
                           >
                             {producto.categoria.nombre}
                           </Chip>
@@ -435,10 +491,10 @@ export default function MeseroNuevaOrden() {
                       )}
                     </div>
                     <div className="p-3 lg:p-4">
-                      <h3 className="font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors text-sm lg:text-base">
+                      <h3 className="font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-wine transition-colors text-sm lg:text-base">
                         {producto.nombre}
                       </h3>
-                      <p className="text-base lg:text-xl font-bold text-blue-600">
+                      <p className="text-base lg:text-xl font-bold text-wine">
                         {formatCOP(Number(producto.precio))}
                       </p>
                     </div>
@@ -464,7 +520,7 @@ export default function MeseroNuevaOrden() {
         }`}
       >
         {/* Header */}
-        <div className="p-4 lg:p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0">
+        <div className="p-4 lg:p-6 border-b bg-gradient-to-r from-wine to-wine-700 flex-shrink-0">
           <div className="flex items-center justify-between mb-3 lg:mb-4">
             <div className="flex items-center gap-2 lg:gap-3">
               <div className="flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -499,7 +555,7 @@ export default function MeseroNuevaOrden() {
                 onPress={() => setTipoOrden(tipo.value)}
                 className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all flex items-center gap-2 ${
                   tipoOrden === tipo.value
-                    ? "bg-white text-blue-600 shadow-lg scale-105"
+                    ? "bg-white text-wine shadow-lg scale-105"
                     : "bg-white/20 text-white hover:bg-white/30"
                 }`}
               >
@@ -545,7 +601,7 @@ export default function MeseroNuevaOrden() {
                       <h3 className="font-medium text-gray-900 line-clamp-1 text-sm lg:text-base">
                         {item.nombre}
                       </h3>
-                      <p className="text-sm lg:text-base font-bold text-blue-600 mt-1">
+                      <p className="text-sm lg:text-base font-bold text-wine mt-1">
                         {formatCOP(Number(item.precio))}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
@@ -612,8 +668,8 @@ export default function MeseroNuevaOrden() {
         {carrito.length > 0 && (
           <div className="border-t bg-white flex-shrink-0">
             <div className="p-4 lg:p-6 space-y-3 lg:space-y-4">
-              <div className="p-2.5 lg:p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <p className="text-xs lg:text-sm text-blue-800 font-medium">
+              <div className="p-2.5 lg:p-3 bg-wine-50 border border-wine-100 rounded-lg">
+                <p className="text-xs lg:text-sm text-wine font-medium">
                   {obtenerMensajeTipoOrden()}
                 </p>
               </div>
@@ -671,7 +727,7 @@ export default function MeseroNuevaOrden() {
                   <span className="font-bold text-base lg:text-lg text-gray-900">
                     Total
                   </span>
-                  <span className="font-bold text-xl lg:text-2xl text-blue-600">
+                  <span className="font-bold text-xl lg:text-2xl text-wine">
                     {formatCOP(calcularTotal())}
                   </span>
                 </div>
@@ -681,7 +737,7 @@ export default function MeseroNuevaOrden() {
                 size="lg"
                 onPress={crearOrden}
                 disabled={!validarOrden() || procesandoOrden}
-                className="w-full bg-blue-600 text-white py-3 lg:py-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
+                className="w-full bg-wine text-white py-3 lg:py-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
               >
                 {procesandoOrden ? (
                   <div className="flex items-center gap-2">
