@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  addToast,
   Button,
   Card,
   Chip,
@@ -9,13 +10,9 @@ import {
   SelectItem,
   Spinner,
   Textarea,
-  addToast,
 } from "@heroui/react";
 import {
   ArrowLeft,
-  Building2,
-  Calendar,
-  CheckCircle,
   ClipboardCheck,
   CreditCard,
   DollarSign,
@@ -27,7 +24,6 @@ import {
   Save,
   Search,
   ShoppingBag,
-  Trash2,
   User,
   Users,
   X,
@@ -36,7 +32,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
-import { useSucursal } from "@/hooks/useSucursal";
 import { formatCOP } from "@/utils/formatCOP";
 
 // Interfaces
@@ -124,7 +119,6 @@ export default function EditarOrdenPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
-  const { sucursal } = useSucursal();
   const [ordenId, setOrdenId] = useState<string>("");
 
   // Estados principales
@@ -176,17 +170,13 @@ export default function EditarOrdenPage({
 
       setLoading(true);
       try {
-        const [
-          ordenRes,
-          productosRes,
-          categoriasRes,
-          meserosRes,
-        ] = await Promise.all([
-          fetch(`/api/ordenes/${ordenId}`),
-          fetch("/api/productos"),
-          fetch("/api/categorias"),
-          fetch("/api/usuarios?rol=MESERO&activo=true"),
-        ]);
+        const [ordenRes, productosRes, categoriasRes, meserosRes] =
+          await Promise.all([
+            fetch(`/api/ordenes/${ordenId}`),
+            fetch("/api/productos"),
+            fetch("/api/categorias"),
+            fetch("/api/usuarios?rol=MESERO&activo=true"),
+          ]);
 
         // Cargar orden
         const ordenData = await ordenRes.json();
@@ -694,9 +684,7 @@ export default function EditarOrdenPage({
                           </Button>
                           <div className="ml-auto">
                             <p className="font-bold text-wine">
-                              {formatCOP(
-                                Number(item.precio) * item.cantidad,
-                              )}
+                              {formatCOP(Number(item.precio) * item.cantidad)}
                             </p>
                           </div>
                         </div>
@@ -890,15 +878,9 @@ export default function EditarOrdenPage({
                     setMetodoPago(metodo);
                   }}
                 >
-                  <SelectItem key="efectivo">
-                    Efectivo
-                  </SelectItem>
-                  <SelectItem key="tarjeta">
-                    Tarjeta
-                  </SelectItem>
-                  <SelectItem key="transferencia">
-                    Transferencia
-                  </SelectItem>
+                  <SelectItem key="efectivo">Efectivo</SelectItem>
+                  <SelectItem key="tarjeta">Tarjeta</SelectItem>
+                  <SelectItem key="transferencia">Transferencia</SelectItem>
                 </Select>
                 <Input
                   type="number"
@@ -949,9 +931,7 @@ export default function EditarOrdenPage({
               {costoEnvio > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-600">Costo de envío:</span>
-                  <span className="font-semibold">
-                    {formatCOP(costoEnvio)}
-                  </span>
+                  <span className="font-semibold">{formatCOP(costoEnvio)}</span>
                 </div>
               )}
               {descuento > 0 && (

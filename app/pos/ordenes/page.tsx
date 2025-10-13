@@ -25,8 +25,8 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import ModalActualizarOrden from "@/components/orden/ModalActualizarOrden";
 import ModalDetalleOrden from "@/components/orden/ModalDetalleOrden";
 import { formatCOP } from "@/utils/formatCOP";
@@ -93,18 +93,15 @@ export default function OrdenesPage() {
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<string | null>(
     null,
   );
-  const [ordenIdEditar, setOrdenIdEditar] = useState<string | null>(null);
+  const [ordenIdEditar, _setOrdenIdEditar] = useState<string | null>(null);
 
   const {
     isOpen: openDetalle,
     onOpen: abrirDetalle,
     onOpenChange: cerrarDetalle,
   } = useDisclosure();
-  const {
-    isOpen: isEditOpen,
-    onOpen: onEditOpen,
-    onOpenChange: onEditOpenChange,
-  } = useDisclosure();
+  const { isOpen: isEditOpen, onOpenChange: onEditOpenChange } =
+    useDisclosure();
 
   // Modales de confirmación
   const {
@@ -270,7 +267,11 @@ export default function OrdenesPage() {
         await fetchOrdenes();
         onEliminarClose();
 
-        addToast({ title: "Orden eliminada", description: "La orden ha sido eliminada exitosamente", color: "success" });
+        addToast({
+          title: "Orden eliminada",
+          description: "La orden ha sido eliminada exitosamente",
+          color: "success",
+        });
       } else {
         alert(`Error al eliminar orden: ${data.message}`);
       }

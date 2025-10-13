@@ -2,17 +2,17 @@
 
 import {
   Button,
-  Spinner,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  Checkbox,
   Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
   Select,
   SelectItem,
+  Spinner,
   Textarea,
-  Checkbox,
   useDisclosure,
 } from "@heroui/react";
 import { Edit, Filter, MapPin, Plus, Search, Users, X } from "lucide-react";
@@ -162,7 +162,7 @@ export default function MesasPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, mesas, editingMesa]);
+  }, [formData]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
@@ -555,240 +555,234 @@ export default function MesasPage() {
         scrollBehavior="inside"
       >
         <ModalContent>
-          <>
-            <ModalHeader>
-              <h3 className="text-xl font-semibold text-gray-900">
-                Nueva Mesa
-              </h3>
-            </ModalHeader>
-            <ModalBody className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Número de Mesa"
-                  type="number"
-                  min={1}
-                  value={formData.numero.toString()}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      numero: parseInt(value, 10) || 0,
-                    }))
-                  }
-                  isInvalid={!!errors.numero}
-                  errorMessage={errors.numero ? "Número de mesa requerido" : ""}
-                  isRequired
-                />
-
-                <Input
-                  label="Capacidad"
-                  type="number"
-                  value={formData.capacidad.toString()}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      capacidad: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  isInvalid={!!errors.capacidad}
-                  errorMessage={
-                    errors.capacidad
-                      ? "Capacidad requerida y debe ser mayor a 0"
-                      : ""
-                  }
-                  isRequired
-                />
-              </div>
-
-              <Select
-                label="Sucursal"
-                value={formData.sucursal_id}
-                onChange={(e) =>
+          <ModalHeader>
+            <h3 className="text-xl font-semibold text-gray-900">Nueva Mesa</h3>
+          </ModalHeader>
+          <ModalBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Número de Mesa"
+                type="number"
+                min={1}
+                value={formData.numero.toString()}
+                onValueChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    sucursal_id: e.target.value,
+                    numero: parseInt(value, 10) || 0,
                   }))
                 }
-                isInvalid={!!errors.sucursal_id}
-                placeholder="Selecciona una sucursal"
-                errorMessage={
-                  errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
-                }
+                isInvalid={!!errors.numero}
+                errorMessage={errors.numero ? "Número de mesa requerido" : ""}
                 isRequired
-              >
-                {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
-                ))}
-              </Select>
+              />
 
               <Input
-                label="Ubicación"
-                value={formData.ubicacion}
+                label="Capacidad"
+                type="number"
+                value={formData.capacidad.toString()}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    ubicacion: e.target.value,
+                    capacidad: parseInt(e.target.value, 10) || 0,
                   }))
                 }
-                placeholder="Ej: Terraza, Salón principal, etc."
-              />
-
-              <Textarea
-                label="Notas"
-                value={formData.notas}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notas: e.target.value }))
+                isInvalid={!!errors.capacidad}
+                errorMessage={
+                  errors.capacidad
+                    ? "Capacidad requerida y debe ser mayor a 0"
+                    : ""
                 }
-                placeholder="Notas adicionales sobre la mesa..."
-                minRows={3}
+                isRequired
               />
+            </div>
 
-              <Checkbox
-                isSelected={formData.disponible}
-                onValueChange={(checked) =>
-                  setFormData((prev) => ({ ...prev, disponible: checked }))
-                }
-              >
-                Mesa disponible
-              </Checkbox>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                variant="light"
-                onPress={onNewMesaClose}
-                isDisabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button
-                color="primary"
-                onPress={handleSubmit}
-                isLoading={isSubmitting}
-                className="bg-wine"
-              >
-                Crear Mesa
-              </Button>
-            </ModalFooter>
-          </>
+            <Select
+              label="Sucursal"
+              value={formData.sucursal_id}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  sucursal_id: e.target.value,
+                }))
+              }
+              isInvalid={!!errors.sucursal_id}
+              placeholder="Selecciona una sucursal"
+              errorMessage={
+                errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
+              }
+              isRequired
+            >
+              {sucursales.map((sucursal) => (
+                <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
+              ))}
+            </Select>
+
+            <Input
+              label="Ubicación"
+              value={formData.ubicacion}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  ubicacion: e.target.value,
+                }))
+              }
+              placeholder="Ej: Terraza, Salón principal, etc."
+            />
+
+            <Textarea
+              label="Notas"
+              value={formData.notas}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, notas: e.target.value }))
+              }
+              placeholder="Notas adicionales sobre la mesa..."
+              minRows={3}
+            />
+
+            <Checkbox
+              isSelected={formData.disponible}
+              onValueChange={(checked) =>
+                setFormData((prev) => ({ ...prev, disponible: checked }))
+              }
+            >
+              Mesa disponible
+            </Checkbox>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="light"
+              onPress={onNewMesaClose}
+              isDisabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              color="primary"
+              onPress={handleSubmit}
+              isLoading={isSubmitting}
+              className="bg-wine"
+            >
+              Crear Mesa
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* Modal Editar Mesa */}
       <Modal isOpen={isEditMesaOpen} onClose={onEditMesaClose} size="2xl">
         <ModalContent>
-          <>
-            <ModalHeader>
-              <h3 className="text-xl font-semibold text-gray-900">
-                Editar Mesa {editingMesa?.numero}
-              </h3>
-            </ModalHeader>
-            <ModalBody className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Número de Mesa"
-                  type="number"
-                  min={1}
-                  value={formData.numero.toString()}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      numero: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  isInvalid={!!errors.numero}
-                  errorMessage={errors.numero ? "Número de mesa requerido" : ""}
-                  isRequired
-                />
-
-                <Input
-                  label="Capacidad"
-                  type="number"
-                  value={formData.capacidad.toString()}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      capacidad: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  isInvalid={!!errors.capacidad}
-                  errorMessage={
-                    errors.capacidad
-                      ? "Capacidad requerida y debe ser mayor a 0"
-                      : ""
-                  }
-                  isRequired
-                />
-              </div>
-
-              <Select
-                label="Sucursal"
-                value={formData.sucursal_id}
+          <ModalHeader>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Editar Mesa {editingMesa?.numero}
+            </h3>
+          </ModalHeader>
+          <ModalBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Número de Mesa"
+                type="number"
+                min={1}
+                value={formData.numero.toString()}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    sucursal_id: e.target.value,
+                    numero: parseInt(e.target.value, 10) || 0,
                   }))
                 }
-                isInvalid={!!errors.sucursal_id}
-                errorMessage={
-                  errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
-                }
+                isInvalid={!!errors.numero}
+                errorMessage={errors.numero ? "Número de mesa requerido" : ""}
                 isRequired
-                defaultSelectedKeys={[formData.sucursal_id]}
-              >
-                {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
-                ))}
-              </Select>
+              />
 
               <Input
-                label="Ubicación"
-                value={formData.ubicacion}
+                label="Capacidad"
+                type="number"
+                value={formData.capacidad.toString()}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    ubicacion: e.target.value,
+                    capacidad: parseInt(e.target.value, 10) || 0,
                   }))
                 }
-                placeholder="Ej: Terraza, Salón principal, etc."
-              />
-
-              <Textarea
-                label="Notas"
-                value={formData.notas}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notas: e.target.value }))
+                isInvalid={!!errors.capacidad}
+                errorMessage={
+                  errors.capacidad
+                    ? "Capacidad requerida y debe ser mayor a 0"
+                    : ""
                 }
-                placeholder="Notas adicionales sobre la mesa..."
-                minRows={3}
+                isRequired
               />
+            </div>
 
-              <Checkbox
-                isSelected={formData.disponible}
-                onValueChange={(checked) =>
-                  setFormData((prev) => ({ ...prev, disponible: checked }))
-                }
-              >
-                Mesa disponible
-              </Checkbox>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                variant="light"
-                onPress={onEditMesaClose}
-                isDisabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button
-                color="primary"
-                onPress={handleSubmit}
-                isLoading={isSubmitting}
-                className="bg-wine"
-              >
-                Actualizar Mesa
-              </Button>
-            </ModalFooter>
-          </>
+            <Select
+              label="Sucursal"
+              value={formData.sucursal_id}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  sucursal_id: e.target.value,
+                }))
+              }
+              isInvalid={!!errors.sucursal_id}
+              errorMessage={
+                errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
+              }
+              isRequired
+              defaultSelectedKeys={[formData.sucursal_id]}
+            >
+              {sucursales.map((sucursal) => (
+                <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
+              ))}
+            </Select>
+
+            <Input
+              label="Ubicación"
+              value={formData.ubicacion}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  ubicacion: e.target.value,
+                }))
+              }
+              placeholder="Ej: Terraza, Salón principal, etc."
+            />
+
+            <Textarea
+              label="Notas"
+              value={formData.notas}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, notas: e.target.value }))
+              }
+              placeholder="Notas adicionales sobre la mesa..."
+              minRows={3}
+            />
+
+            <Checkbox
+              isSelected={formData.disponible}
+              onValueChange={(checked) =>
+                setFormData((prev) => ({ ...prev, disponible: checked }))
+              }
+            >
+              Mesa disponible
+            </Checkbox>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="light"
+              onPress={onEditMesaClose}
+              isDisabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              color="primary"
+              onPress={handleSubmit}
+              isLoading={isSubmitting}
+              className="bg-wine"
+            >
+              Actualizar Mesa
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </div>

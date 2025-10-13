@@ -48,6 +48,19 @@ type OrdenCompleta = Prisma.ordenesGetPayload<{
   };
 }>;
 
+type OrdenItem = {
+  id: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  notas?: string;
+  productos: {
+    id: string;
+    nombre: string;
+    precio: number;
+  };
+};
+
 interface ModalDetalleOrdenProps {
   ordenId: string | null;
   isOpen: boolean;
@@ -447,7 +460,7 @@ export default function ModalDetalleOrden({
                       <div className="font-bold">PRODUCTOS</div>
                       <div className="border-t border-dashed border-gray-400 my-1"></div>
 
-                      {orden.orden_items.map((item: any, _index: number) => (
+                      {orden.orden_items.map((item: OrdenItem, _index: number) => (
                         <div key={item.id as string} className="mb-2">
                           <div>{item.productos.nombre.substring(0, 38)}</div>
                           <div className="flex justify-between">
@@ -743,7 +756,7 @@ export default function ModalDetalleOrden({
                       Productos ({orden.orden_items.length})
                     </h3>
                     <div className="space-y-3">
-                      {orden.orden_items.map((item: any) => (
+                      {orden.orden_items.map((item: OrdenItem) => (
                         <div
                           key={item.id}
                           className="flex gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"

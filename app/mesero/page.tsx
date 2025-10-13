@@ -24,8 +24,9 @@ import {
   Package,
   Plus,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 import { formatCOP } from "@/utils/formatCOP";
@@ -95,7 +96,7 @@ export default function MeseroPage() {
   const [_loadingDetalles, setLoadingDetalles] = useState(false);
 
   // Obtener órdenes del mesero
-  const fetchOrdenesDelMesero = async () => {
+  const fetchOrdenesDelMesero = useCallback(async () => {
     try {
       if (!user?.id || !sucursal?.id) return;
 
@@ -135,7 +136,7 @@ export default function MeseroPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, sucursal?.id]);
 
   useEffect(() => {
     fetchOrdenesDelMesero();
@@ -615,9 +616,11 @@ export default function MeseroPage() {
                               >
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                   {item.producto.imagen ? (
-                                    <img
+                                    <Image
                                       src={item.producto.imagen}
                                       alt={item.producto.nombre}
+                                      width={48}
+                                      height={48}
                                       className="w-full h-full object-cover rounded-lg"
                                     />
                                   ) : (

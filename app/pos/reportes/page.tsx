@@ -1,21 +1,20 @@
 "use client";
 
 import {
+  BarChart3,
   Calendar,
   ChevronDown,
+  Clock,
   DollarSign,
   Download,
   Filter,
   Loader2,
   MapPin,
   ShoppingBag,
+  Star,
+  Target,
   TrendingUp,
   Users,
-  Clock,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Target,
-  Star,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -26,14 +25,14 @@ import {
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  LineChart,
-  Line,
 } from "recharts";
 
 const COLORS = {
@@ -62,7 +61,7 @@ interface TransformedOrder {
 }
 
 export default function ReportsPage() {
-  const [allOrders, setAllOrders] = useState<any[]>([]);
+  const [allOrders, setAllOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("mes-actual");
   const [startDate, setStartDate] = useState("");
@@ -308,7 +307,7 @@ export default function ReportsPage() {
     const grouped: { [key: string]: DiaVentas } = {};
     filteredOrders.forEach((order) => {
       // Use 'fecha' if present, otherwise fallback to 'creadoEn'
-      const orderDate = (order as any).fecha ?? (order as any).creadoEn;
+      const orderDate = (order as OrderData).fecha ?? (order as OrderData).creadoEn;
       const dateObj =
         typeof orderDate === "string" ? new Date(orderDate) : orderDate;
       const dateKey = dateObj.toISOString().split("T")[0];
@@ -434,8 +433,8 @@ export default function ReportsPage() {
     });
 
     return Object.values(horasVentas).sort((a, b) => {
-      const horaA = parseInt(a.hora.split(":")[0]);
-      const horaB = parseInt(b.hora.split(":")[0]);
+      const horaA = parseInt(a.hora.split(":")[0], 10);
+      const horaB = parseInt(b.hora.split(":")[0], 10);
       return horaA - horaB;
     });
   }, [filteredOrders]);

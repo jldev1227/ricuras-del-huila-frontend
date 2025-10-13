@@ -155,7 +155,7 @@ const UsuariosPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchText, selectedEstado, selectedRol, selectedSucursal]);
 
   // Cargar sucursales
   const cargarSucursales = useCallback(async () => {
@@ -971,6 +971,8 @@ const UsuariosPage = () => {
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
+                            aria-label="correo"
+                            role="img"
                           >
                             <path
                               strokeLinecap="round"
@@ -996,6 +998,8 @@ const UsuariosPage = () => {
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
+                            aria-label="teléfono"
+                            role="img"
                           >
                             <path
                               strokeLinecap="round"

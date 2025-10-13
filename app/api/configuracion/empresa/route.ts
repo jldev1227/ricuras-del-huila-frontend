@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET - Obtener configuración de empresa
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: "ID de usuario requerido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -20,14 +20,14 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         rol: true,
-        activo: true
-      }
+        activo: true,
+      },
     });
 
     if (!usuario || !usuario.activo) {
       return NextResponse.json(
         { error: "Usuario no encontrado o inactivo" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -35,14 +35,14 @@ export async function GET(request: NextRequest) {
     if (usuario.rol !== "ADMINISTRADOR") {
       return NextResponse.json(
         { error: "No tienes permisos para acceder a esta información" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const configuracion = await prisma.configuracion_empresa.findFirst({
       where: {
-        activo: true
-      }
+        activo: true,
+      },
     });
 
     return NextResponse.json(configuracion);
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     console.error("Error obteniendo configuración de empresa:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: "ID de usuario requerido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -74,14 +74,14 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         rol: true,
-        activo: true
-      }
+        activo: true,
+      },
     });
 
     if (!usuario || !usuario.activo) {
       return NextResponse.json(
         { error: "Usuario no encontrado o inactivo" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     if (usuario.rol !== "ADMINISTRADOR") {
       return NextResponse.json(
         { error: "No tienes permisos para realizar esta acción" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -112,26 +112,26 @@ export async function POST(request: NextRequest) {
       prefijo_factura,
       consecutivo_actual,
       logo_url,
-      sitio_web
+      sitio_web,
     } = datosEmpresa;
 
     // Validaciones básicas
     if (!nit || !razon_social) {
       return NextResponse.json(
         { error: "NIT y razón social son obligatorios" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Verificar si ya existe una configuración activa
     const existeConfiguracion = await prisma.configuracion_empresa.findFirst({
-      where: { activo: true }
+      where: { activo: true },
     });
 
     if (existeConfiguracion) {
       return NextResponse.json(
         { error: "Ya existe una configuración de empresa activa" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -156,8 +156,8 @@ export async function POST(request: NextRequest) {
         consecutivo_actual: consecutivo_actual || 1,
         logo_url,
         sitio_web,
-        creado_por: usuario.id
-      }
+        creado_por: usuario.id,
+      },
     });
 
     return NextResponse.json(nuevaConfiguracion, { status: 201 });
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     console.error("Error creando configuración de empresa:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -179,7 +179,7 @@ export async function PUT(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: "ID de usuario requerido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -189,14 +189,14 @@ export async function PUT(request: NextRequest) {
       select: {
         id: true,
         rol: true,
-        activo: true
-      }
+        activo: true,
+      },
     });
 
     if (!usuario || !usuario.activo) {
       return NextResponse.json(
         { error: "Usuario no encontrado o inactivo" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -204,7 +204,7 @@ export async function PUT(request: NextRequest) {
     if (usuario.rol !== "ADMINISTRADOR") {
       return NextResponse.json(
         { error: "No tienes permisos para realizar esta acción" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -228,25 +228,26 @@ export async function PUT(request: NextRequest) {
       prefijo_factura,
       consecutivo_actual,
       logo_url,
-      sitio_web
+      sitio_web,
     } = datosEmpresa;
 
     if (!id) {
       return NextResponse.json(
         { error: "ID de configuración es obligatorio" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Verificar que existe la configuración
-    const configuracionExistente = await prisma.configuracion_empresa.findUnique({
-      where: { id }
-    });
+    const configuracionExistente =
+      await prisma.configuracion_empresa.findUnique({
+        where: { id },
+      });
 
     if (!configuracionExistente) {
       return NextResponse.json(
         { error: "Configuración no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -271,8 +272,8 @@ export async function PUT(request: NextRequest) {
         prefijo_factura,
         consecutivo_actual,
         logo_url,
-        sitio_web
-      }
+        sitio_web,
+      },
     });
 
     return NextResponse.json(configuracionActualizada);
@@ -280,7 +281,7 @@ export async function PUT(request: NextRequest) {
     console.error("Error actualizando configuración de empresa:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

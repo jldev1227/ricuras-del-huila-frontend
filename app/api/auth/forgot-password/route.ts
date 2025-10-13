@@ -1,7 +1,7 @@
+import crypto from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { sendOTPEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
 
 const _SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET || "dev-secret-change-in-production",

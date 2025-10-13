@@ -642,9 +642,9 @@ export async function DELETE(
     // Verificar que la orden existe
     const ordenExistente = await prisma.ordenes.findUnique({
       where: { id },
-      include: { 
+      include: {
         orden_items: true,
-        mesas: true 
+        mesas: true,
       },
     });
 

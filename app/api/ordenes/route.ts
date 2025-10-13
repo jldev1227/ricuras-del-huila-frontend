@@ -1,9 +1,9 @@
 // app/api/ordenes/route.ts
 
+import crypto from "node:crypto";
 import type { $Enums, Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
 
 // Tipos para los items de orden
 interface OrderItem {
@@ -126,7 +126,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log("📥 Datos recibidos en POST /api/ordenes:", JSON.stringify(body, null, 2));
+    console.log(
+      "📥 Datos recibidos en POST /api/ordenes:",
+      JSON.stringify(body, null, 2),
+    );
 
     const {
       sucursalId,
@@ -180,10 +183,11 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       if (!item.producto_id || !item.precio_unitario || !item.cantidad) {
         return NextResponse.json(
-          { 
-            success: false, 
-            message: "Todos los items deben tener producto_id, precio_unitario y cantidad",
-            item: item
+          {
+            success: false,
+            message:
+              "Todos los items deben tener producto_id, precio_unitario y cantidad",
+            item: item,
           },
           { status: 400 },
         );

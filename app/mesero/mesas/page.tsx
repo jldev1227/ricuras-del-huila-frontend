@@ -21,6 +21,7 @@ import {
   Users,
   UtensilsCrossed,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -620,9 +621,11 @@ export default function MeseroMesasPage() {
                                     >
                                       <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                         {item.producto.imagen ? (
-                                          <img
+                                          <Image
                                             src={item.producto.imagen}
                                             alt={item.producto.nombre}
+                                            width={48}
+                                            height={48}
                                             className="w-full h-full object-cover rounded-lg"
                                           />
                                         ) : (

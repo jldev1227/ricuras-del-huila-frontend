@@ -147,7 +147,10 @@ async function main() {
     },
   });
 
-  console.log("✅ Configuración de empresa creada:", configEmpresa.razon_social);
+  console.log(
+    "✅ Configuración de empresa creada:",
+    configEmpresa.razon_social,
+  );
 
   // 4. Crear mesas para Sucursal Centro
   const mesasCentro = [];
@@ -200,27 +203,27 @@ async function main() {
 
   // 7. Crear categorías
   const platosTipicos = await prisma.categorias.create({
-    data: { nombre: "Platos Típicos", icono: "🍖", orden: 1 }
+    data: { nombre: "Platos Típicos", icono: "🍖", orden: 1 },
   });
 
   const entradas = await prisma.categorias.create({
-    data: { nombre: "Entradas", icono: "🥟", orden: 2 }
+    data: { nombre: "Entradas", icono: "🥟", orden: 2 },
   });
 
   const bebidasCalientes = await prisma.categorias.create({
-    data: { nombre: "Bebidas Calientes", icono: "☕", orden: 3 }
+    data: { nombre: "Bebidas Calientes", icono: "☕", orden: 3 },
   });
 
   const bebidasFrias = await prisma.categorias.create({
-    data: { nombre: "Bebidas Frías", icono: "🥤", orden: 4 }
+    data: { nombre: "Bebidas Frías", icono: "🥤", orden: 4 },
   });
 
   const postres = await prisma.categorias.create({
-    data: { nombre: "Postres", icono: "🍰", orden: 5 }
+    data: { nombre: "Postres", icono: "🍰", orden: 5 },
   });
 
   const desayunos = await prisma.categorias.create({
-    data: { nombre: "Desayunos", icono: "🍳", orden: 6 }
+    data: { nombre: "Desayunos", icono: "🍳", orden: 6 },
   });
 
   console.log("✅ Categorías creadas: 6 categorías");
@@ -259,7 +262,7 @@ async function main() {
         costo_produccion: 11000,
         categoria_id: platosTipicos.id,
       },
-      
+
       // Entradas
       {
         nombre: "Empanadas Huilenses",
@@ -398,13 +401,13 @@ async function main() {
   console.log("- Mesas: 24 (10 Centro + 8 Norte + 6 Sur)");
   console.log("- Categorías: 6");
   console.log("- Productos: 20");
-  
+
   console.log("\n🔐 Credenciales de prueba:");
   console.log("👨‍💼 Administrador:");
   console.log("   Usuario: 1234567890");
   console.log("   Contraseña: admin123");
   console.log("   ID: 550e8400-e29b-41d4-a716-446655440100");
-  
+
   console.log("\n👨‍🍳 Meseros:");
   console.log("   Centro - Juan: 0987654321 / mesero123");
   console.log("   Norte - María: 1122334455 / mesero123");

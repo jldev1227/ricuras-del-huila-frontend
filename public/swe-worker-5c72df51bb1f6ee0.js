@@ -27,14 +27,14 @@
             for (const [s, r] of e.matchAll(/<link.*?href=['"](.*?)['"].*?>/g))
               /rel=['"]stylesheet['"]/.test(s) &&
                 t.push(
-                  a.match(r).then((e) => (e ? Promise.resolve() : a.add(r))),
+                  a.match(r).then((e) => (e ? Promise.resolve() : a.add(r)))
                 );
             for (const [, a] of e.matchAll(
               /<script.*?src=['"](.*?)['"].*?>/g,
             )) {
               const e = /\/_next\/static.+\.js$/i.test(a) ? r : c;
               t.push(
-                e.match(a).then((t) => (t ? Promise.resolve() : e.add(a))),
+                e.match(a).then((t) => (t ? Promise.resolve() : e.add(a)))
               );
             }
             return await Promise.all(t);

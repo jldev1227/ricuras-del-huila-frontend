@@ -67,6 +67,8 @@ const MENU_ITEMS: MenuItem[] = [
         width="24"
         height="24"
         fill="currentColor"
+        aria-label="mesas"
+        role="img"
       >
         <rect x="64" y="120" width="392" height="48" rx="8" />
         <rect x="96" y="152" width="48" height="240" rx="6" />
@@ -295,9 +297,16 @@ function MobileSidebar({
     <>
       {/* Overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden border-0 cursor-default"
           onClick={onClose}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              onClose();
+            }
+          }}
+          aria-label="Cerrar menú"
         />
       )}
 
@@ -473,11 +482,7 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="flex flex-col items-center gap-4">
-          <div
-            className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-wine"
-            role="status"
-            aria-label="Cargando"
-          />
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-wine" />
           <p className="text-sm text-gray-600">Cargando...</p>
         </div>
       </div>
@@ -579,12 +584,12 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
               size="sm"
               variant="light"
               className="p-2 hover:bg-gray-100 rounded-lg relative"
-              aria-label="Notificaciones"
+              aria-label="Notificaciones - Tienes notificaciones nuevas"
             >
               <Bell size={20} className="lg:w-6 lg:h-6" />
               <span
                 className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
-                aria-label="Tienes notificaciones nuevas"
+                aria-hidden="true"
               />
             </Button>
           </div>

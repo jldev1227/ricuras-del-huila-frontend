@@ -1,25 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import {
-  Tabs,
-  Tab,
-  Card,
-  Input,
+  addToast,
   Button,
-  Textarea,
-  Chip,
-  Spinner,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  Card,
   Checkbox,
+  Chip,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Spinner,
+  Tab,
+  Tabs,
+  Textarea,
   useDisclosure,
-  addToast
 } from "@heroui/react";
-import { User, Building, Settings, Plus, Edit, Trash2, Save } from "lucide-react";
+import {
+  Building,
+  Edit,
+  Plus,
+  Save,
+  Settings,
+  Trash2,
+  User,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 // Interfaces
 interface UsuarioProfile {
@@ -60,36 +68,42 @@ interface ConfiguracionEmpresa {
 const ConfiguracionPage = () => {
   // Estados principales
   const [selectedTab, setSelectedTab] = useState("perfil");
-  
+
   // Estados para usuario/perfil
   const [usuario, setUsuario] = useState<UsuarioProfile | null>(null);
   const [cargandoUsuario, setCargandoUsuario] = useState(true);
-  
+
   // Estados para sucursales
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [cargandoSucursales, setCargandoSucursales] = useState(false);
   const [guardandoSucursal, setGuardandoSucursal] = useState(false);
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<Sucursal | null>(null);
+  const [sucursalSeleccionada, setSucursalSeleccionada] =
+    useState<Sucursal | null>(null);
   const [formSucursal, setFormSucursal] = useState({
     nombre: "",
     direccion: "",
     telefono: null as string | null,
     activo: true,
   });
-  
+
   // Estados para empresa
-  const [configuracionEmpresa, setConfiguracionEmpresa] = useState<ConfiguracionEmpresa>({
-    nit: "",
-    razon_social: "Ricuras Del Huila",
-    telefono: "",
-    correo: null,
-    direccion: null,
-  });
+  const [configuracionEmpresa, setConfiguracionEmpresa] =
+    useState<ConfiguracionEmpresa>({
+      nit: "",
+      razon_social: "Ricuras Del Huila",
+      telefono: "",
+      correo: null,
+      direccion: null,
+    });
   const [cargandoEmpresa, setCargandoEmpresa] = useState(false);
   const [guardandoEmpresa, setGuardandoEmpresa] = useState(false);
-  
+
   // Modal controls
-  const { isOpen: modalSucursalAbierto, onOpen: abrirModalSucursal, onClose: cerrarModalSucursal } = useDisclosure();
+  const {
+    isOpen: modalSucursalAbierto,
+    onOpen: abrirModalSucursal,
+    onClose: cerrarModalSucursal,
+  } = useDisclosure();
 
   // Función para determinar las pestañas disponibles según el rol
   const getAvailableTabs = () => {
@@ -112,7 +126,7 @@ const ConfiguracionPage = () => {
           key: "empresa",
           title: "Empresa",
           icon: <Settings className="w-4 h-4" />,
-        }
+        },
       );
     }
 
@@ -145,7 +159,9 @@ const ConfiguracionPage = () => {
         return;
       }
 
-      const response = await fetch(`/api/usuarios/profile?userId=${currentUserId}`);
+      const response = await fetch(
+        `/api/usuarios/profile?userId=${currentUserId}`,
+      );
       if (!response.ok) throw new Error("Error al cargar usuario");
 
       const result = await response.json();
@@ -167,7 +183,7 @@ const ConfiguracionPage = () => {
   }, []);
 
   // Cargar sucursales
-  const cargarSucursales = async () => {
+  const cargarSucursales = useCallback(async () => {
     try {
       setCargandoSucursales(true);
       const response = await fetch("/api/sucursales");
@@ -185,13 +201,13 @@ const ConfiguracionPage = () => {
     } finally {
       setCargandoSucursales(false);
     }
-  };
+  }, []);
 
   // Cargar configuración de empresa
-  const cargarConfiguracionEmpresa = async () => {
+  const cargarConfiguracionEmpresa = useCallback(async () => {
     try {
       setCargandoEmpresa(true);
-      
+
       // Obtener el userId
       let currentUserId = null;
       try {
@@ -213,7 +229,9 @@ const ConfiguracionPage = () => {
         return;
       }
 
-      const response = await fetch(`/api/configuracion/empresa?userId=${currentUserId}`);
+      const response = await fetch(
+        `/api/configuracion/empresa?userId=${currentUserId}`,
+      );
       if (!response.ok) throw new Error("Error al cargar configuración");
 
       const data = await response.json();
@@ -234,10 +252,21 @@ const ConfiguracionPage = () => {
     } finally {
       setCargandoEmpresa(false);
     }
-  };
+  }, []);
+
+  // Función auxiliar para resetear el formulario de sucursal
+  const resetFormSucursal = useCallback(() => {
+    setFormSucursal({
+      nombre: "",
+      direccion: "",
+      telefono: null,
+      activo: true,
+    });
+    setSucursalSeleccionada(null);
+  }, []);
 
   // Guardar sucursal
-  const guardarSucursal = async () => {
+  const guardarSucursal = useCallback(async () => {
     try {
       setGuardandoSucursal(true);
 
@@ -250,10 +279,10 @@ const ConfiguracionPage = () => {
         return;
       }
 
-      const url = sucursalSeleccionada 
+      const url = sucursalSeleccionada
         ? `/api/sucursales/${sucursalSeleccionada.id}`
         : "/api/sucursales";
-      
+
       const method = sucursalSeleccionada ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -282,40 +311,53 @@ const ConfiguracionPage = () => {
     } finally {
       setGuardandoSucursal(false);
     }
-  };
+  }, [
+    cargarSucursales,
+    cerrarModalSucursal,
+    formSucursal,
+    resetFormSucursal,
+    sucursalSeleccionada,
+  ]);
 
   // Eliminar sucursal
-  const eliminarSucursal = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar esta sucursal?")) return;
+  const eliminarSucursal = useCallback(
+    async (id: string) => {
+      if (!confirm("¿Estás seguro de eliminar esta sucursal?")) return;
 
-    try {
-      const response = await fetch(`/api/sucursales/${id}`, {
-        method: "DELETE",
-      });
+      try {
+        const response = await fetch(`/api/sucursales/${id}`, {
+          method: "DELETE",
+        });
 
-      if (!response.ok) throw new Error("Error al eliminar sucursal");
+        if (!response.ok) throw new Error("Error al eliminar sucursal");
 
-      await cargarSucursales();
-      addToast({
-        title: "Éxito",
-        description: "Sucursal eliminada correctamente",
-      });
-    } catch (error) {
-      console.error("Error al eliminar sucursal:", error);
-      addToast({
-        title: "Error",
-        description: "No se pudo eliminar la sucursal",
-        color: "danger",
-      });
-    }
-  };
+        await cargarSucursales();
+        addToast({
+          title: "Éxito",
+          description: "Sucursal eliminada correctamente",
+        });
+      } catch (error) {
+        console.error("Error al eliminar sucursal:", error);
+        addToast({
+          title: "Error",
+          description: "No se pudo eliminar la sucursal",
+          color: "danger",
+        });
+      }
+    },
+    [cargarSucursales],
+  );
 
   // Guardar configuración de empresa
-  const guardarConfiguracionEmpresa = async () => {
+  const guardarConfiguracionEmpresa = useCallback(async () => {
     try {
       setGuardandoEmpresa(true);
 
-      if (!configuracionEmpresa.nit || !configuracionEmpresa.razon_social || !configuracionEmpresa.telefono) {
+      if (
+        !configuracionEmpresa.nit ||
+        !configuracionEmpresa.razon_social ||
+        !configuracionEmpresa.telefono
+      ) {
         addToast({
           title: "Error",
           description: "NIT, razón social y teléfono son obligatorios",
@@ -350,7 +392,7 @@ const ConfiguracionPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...configuracionEmpresa,
-          userId: currentUserId
+          userId: currentUserId,
         }),
       });
 
@@ -370,19 +412,9 @@ const ConfiguracionPage = () => {
     } finally {
       setGuardandoEmpresa(false);
     }
-  };
+  }, [configuracionEmpresa]);
 
   // Funciones auxiliares
-  const resetFormSucursal = () => {
-    setFormSucursal({
-      nombre: "",
-      direccion: "",
-      telefono: null,
-      activo: true,
-    });
-    setSucursalSeleccionada(null);
-  };
-
   const abrirModalEditar = (sucursal: Sucursal) => {
     setSucursalSeleccionada(sucursal);
     setFormSucursal({
@@ -402,7 +434,7 @@ const ConfiguracionPage = () => {
   // useEffect hooks
   useEffect(() => {
     cargarUsuario();
-  }, []);
+  }, [cargarUsuario]);
 
   useEffect(() => {
     if (usuario?.rol === "ADMINISTRADOR") {
@@ -412,17 +444,19 @@ const ConfiguracionPage = () => {
         cargarConfiguracionEmpresa();
       }
     }
-  }, [selectedTab, usuario?.rol]);
+  }, [selectedTab, usuario?.rol, cargarConfiguracionEmpresa, cargarSucursales]);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Configuración</h1>
-        <p className="text-gray-600 mt-2">Gestiona la configuración del sistema</p>
+        <p className="text-gray-600 mt-2">
+          Gestiona la configuración del sistema
+        </p>
       </div>
 
-      <Tabs 
-        aria-label="Configuración" 
+      <Tabs
+        aria-label="Configuración"
         selectedKey={selectedTab}
         onSelectionChange={(key) => setSelectedTab(key as string)}
         className="w-full"
@@ -430,8 +464,8 @@ const ConfiguracionPage = () => {
         variant="underlined"
       >
         {getAvailableTabs().map((tab) => (
-          <Tab 
-            key={tab.key} 
+          <Tab
+            key={tab.key}
             title={
               <div className="flex items-center space-x-2">
                 {tab.icon}
@@ -440,11 +474,11 @@ const ConfiguracionPage = () => {
             }
           >
             <div className="py-6">
-              {tab.key === 'perfil' && (
+              {tab.key === "perfil" && (
                 <Card className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-semibold">Mi Perfil</h2>
-                    <Chip 
+                    <Chip
                       color={usuario?.activo ? "success" : "danger"}
                       variant="flat"
                     >
@@ -460,51 +494,75 @@ const ConfiguracionPage = () => {
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="nombre-completo"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Nombre Completo
                           </label>
                           <Input
+                            id="nombre-completo"
                             value={usuario.nombre_completo}
                             isReadOnly
                             variant="bordered"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="identificacion"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Identificación
                           </label>
                           <Input
+                            id="identificacion"
                             value={usuario.identificacion}
                             isReadOnly
                             variant="bordered"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="correo"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Correo Electrónico
                           </label>
                           <Input
-                            value={usuario.correo || 'No especificado'}
+                            id="correo"
+                            value={usuario.correo || "No especificado"}
                             isReadOnly
                             variant="bordered"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="telefono"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Teléfono
                           </label>
                           <Input
-                            value={usuario.telefono || 'No especificado'}
+                            id="telefono"
+                            value={usuario.telefono || "No especificado"}
                             isReadOnly
                             variant="bordered"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="rol"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Rol
                           </label>
-                          <Chip 
-                            color={usuario.rol === 'ADMINISTRADOR' ? "primary" : "secondary"}
+                          <Chip
+                            id="rol"
+                            color={
+                              usuario.rol === "ADMINISTRADOR"
+                                ? "primary"
+                                : "secondary"
+                            }
                             className="text-primary"
                             variant="flat"
                             size="lg"
@@ -514,10 +572,14 @@ const ConfiguracionPage = () => {
                         </div>
                         {usuario.sucursales && (
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label
+                              htmlFor="sucursal"
+                              className="block text-sm font-medium text-gray-700 mb-2"
+                            >
                               Sucursal Asignada
                             </label>
                             <Input
+                              id="sucursal"
                               value={usuario.sucursales.nombre}
                               isReadOnly
                               variant="bordered"
@@ -525,30 +587,37 @@ const ConfiguracionPage = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="border-t pt-6">
-                        <h3 className="text-lg font-medium mb-4">Información de Cuenta</h3>
+                        <h3 className="text-lg font-medium mb-4">
+                          Información de Cuenta
+                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
                           <div>
                             <strong>Fecha de Creación:</strong>
                             <br />
-                            {new Date(usuario.creado_en).toLocaleDateString('es-CO', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {new Date(usuario.creado_en).toLocaleDateString(
+                              "es-CO",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </div>
                           <div>
                             <strong>Última Actualización:</strong>
                             <br />
-                            {new Date(usuario.actualizado_en).toLocaleDateString('es-CO', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
+                            {new Date(
+                              usuario.actualizado_en,
+                            ).toLocaleDateString("es-CO", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </div>
                         </div>
@@ -562,11 +631,13 @@ const ConfiguracionPage = () => {
                 </Card>
               )}
 
-              {tab.key === 'sucursales' && (
+              {tab.key === "sucursales" && (
                 <div className="space-y-6">
                   <Card className="p-6">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                      <h2 className="text-2xl font-semibold">Gestión de Sucursales</h2>
+                      <h2 className="text-2xl font-semibold">
+                        Gestión de Sucursales
+                      </h2>
                       <Button
                         color="primary"
                         startContent={<Plus className="w-4 h-4" />}
@@ -585,8 +656,10 @@ const ConfiguracionPage = () => {
                         {sucursales.map((sucursal) => (
                           <Card key={sucursal.id} className="p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h3 className="font-semibold">{sucursal.nombre}</h3>
-                              <Chip 
+                              <h3 className="font-semibold">
+                                {sucursal.nombre}
+                              </h3>
+                              <Chip
                                 color={sucursal.activo ? "success" : "danger"}
                                 size="sm"
                                 variant="flat"
@@ -595,9 +668,17 @@ const ConfiguracionPage = () => {
                               </Chip>
                             </div>
                             <div className="space-y-2 text-sm text-gray-600">
-                              <p><strong>Dirección:</strong> {sucursal.direccion}</p>
-                              <p><strong>Teléfono:</strong> {sucursal.telefono || 'No especificado'}</p>
-                              <p><strong>Mesas:</strong> {sucursal._count?.mesas || 0}</p>
+                              <p>
+                                <strong>Dirección:</strong> {sucursal.direccion}
+                              </p>
+                              <p>
+                                <strong>Teléfono:</strong>{" "}
+                                {sucursal.telefono || "No especificado"}
+                              </p>
+                              <p>
+                                <strong>Mesas:</strong>{" "}
+                                {sucursal._count?.mesas || 0}
+                              </p>
                             </div>
                             <div className="flex gap-2 mt-4">
                               <Button
@@ -633,13 +714,17 @@ const ConfiguracionPage = () => {
                 </div>
               )}
 
-              {tab.key === 'empresa' && (
+              {tab.key === "empresa" && (
                 <Card className="p-6">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                    <h2 className="text-2xl font-semibold">Configuración de Empresa</h2>
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                    <h2 className="text-2xl font-semibold">
+                      Configuración de Empresa
+                    </h2>
                     <div className="flex items-center gap-2">
                       <Settings className="w-5 h-5 text-gray-500" />
-                      <span className="text-sm text-gray-500">Ricuras Del Huila</span>
+                      <span className="text-sm text-gray-500">
+                        Ricuras Del Huila
+                      </span>
                     </div>
                   </div>
 
@@ -648,83 +733,116 @@ const ConfiguracionPage = () => {
                       <Spinner size="lg" />
                     </div>
                   ) : (
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      guardarConfiguracionEmpresa();
-                    }} className="space-y-6">
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        guardarConfiguracionEmpresa();
+                      }}
+                      className="space-y-6"
+                    >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="nit-empresa"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             NIT de la Empresa *
                           </label>
                           <Input
+                            id="nit-empresa"
                             value={configuracionEmpresa.nit}
-                            onChange={(e) => setConfiguracionEmpresa(prev => ({
-                              ...prev,
-                              nit: e.target.value
-                            }))}
+                            onChange={(e) =>
+                              setConfiguracionEmpresa((prev) => ({
+                                ...prev,
+                                nit: e.target.value,
+                              }))
+                            }
                             placeholder="Ej: 900123456-7"
                             variant="bordered"
                             isRequired
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="razon-social"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Razón Social *
                           </label>
                           <Input
+                            id="razon-social"
                             value={configuracionEmpresa.razon_social}
-                            onChange={(e) => setConfiguracionEmpresa(prev => ({
-                              ...prev,
-                              razon_social: e.target.value
-                            }))}
+                            onChange={(e) =>
+                              setConfiguracionEmpresa((prev) => ({
+                                ...prev,
+                                razon_social: e.target.value,
+                              }))
+                            }
                             placeholder="Ej: Ricuras Del Huila S.A.S."
                             variant="bordered"
                             isRequired
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="telefono-empresa"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Teléfono Principal *
                           </label>
                           <Input
+                            id="telefono-empresa"
                             value={configuracionEmpresa.telefono}
-                            onChange={(e) => setConfiguracionEmpresa(prev => ({
-                              ...prev,
-                              telefono: e.target.value
-                            }))}
+                            onChange={(e) =>
+                              setConfiguracionEmpresa((prev) => ({
+                                ...prev,
+                                telefono: e.target.value,
+                              }))
+                            }
                             placeholder="Ej: +57 300 123 4567"
                             variant="bordered"
                             isRequired
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label
+                            htmlFor="correo-empresa"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
                             Correo Electrónico
                           </label>
                           <Input
-                            value={configuracionEmpresa.correo || ''}
-                            onChange={(e) => setConfiguracionEmpresa(prev => ({
-                              ...prev,
-                              correo: e.target.value || null
-                            }))}
+                            id="correo-empresa"
+                            value={configuracionEmpresa.correo || ""}
+                            onChange={(e) =>
+                              setConfiguracionEmpresa((prev) => ({
+                                ...prev,
+                                correo: e.target.value || null,
+                              }))
+                            }
                             placeholder="Ej: info@ricurasdelhuila.com"
                             type="email"
                             variant="bordered"
                           />
                         </div>
                       </div>
-                      
+
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label
+                          htmlFor="direccion"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
                           Dirección Principal
                         </label>
                         <Textarea
-                          value={configuracionEmpresa.direccion || ''}
-                          onChange={(e) => setConfiguracionEmpresa(prev => ({
-                            ...prev,
-                            direccion: e.target.value || null
-                          }))}
+                          id="direccion"
+                          value={configuracionEmpresa.direccion || ""}
+                          onChange={(e) =>
+                            setConfiguracionEmpresa((prev) => ({
+                              ...prev,
+                              direccion: e.target.value || null,
+                            }))
+                          }
                           placeholder="Dirección completa de la empresa"
                           variant="bordered"
                           minRows={2}
@@ -736,9 +854,15 @@ const ConfiguracionPage = () => {
                           type="submit"
                           color="primary"
                           isLoading={guardandoEmpresa}
-                          startContent={guardandoEmpresa ? null : <Save className="w-4 h-4" />}
+                          startContent={
+                            guardandoEmpresa ? null : (
+                              <Save className="w-4 h-4" />
+                            )
+                          }
                         >
-                          {guardandoEmpresa ? 'Guardando...' : 'Guardar Configuración'}
+                          {guardandoEmpresa
+                            ? "Guardando..."
+                            : "Guardar Configuración"}
                         </Button>
                       </div>
                     </form>
@@ -766,38 +890,53 @@ const ConfiguracionPage = () => {
           {(onClose) => (
             <>
               <ModalHeader>
-                {sucursalSeleccionada ? 'Editar Sucursal' : 'Nueva Sucursal'}
+                {sucursalSeleccionada ? "Editar Sucursal" : "Nueva Sucursal"}
               </ModalHeader>
               <ModalBody>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  guardarSucursal();
-                }} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    guardarSucursal();
+                  }}
+                  className="space-y-4"
+                >
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="nombre"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Nombre de la Sucursal *
                     </label>
                     <Input
+                      id="nombre"
                       value={formSucursal.nombre}
-                      onChange={(e) => setFormSucursal(prev => ({
-                        ...prev,
-                        nombre: e.target.value
-                      }))}
+                      onChange={(e) =>
+                        setFormSucursal((prev) => ({
+                          ...prev,
+                          nombre: e.target.value,
+                        }))
+                      }
                       placeholder="Ej: Sucursal Centro"
                       variant="bordered"
                       isRequired
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="direccion"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Dirección *
                     </label>
                     <Textarea
+                      id="direccion"
                       value={formSucursal.direccion}
-                      onChange={(e) => setFormSucursal(prev => ({
-                        ...prev,
-                        direccion: e.target.value
-                      }))}
+                      onChange={(e) =>
+                        setFormSucursal((prev) => ({
+                          ...prev,
+                          direccion: e.target.value,
+                        }))
+                      }
                       placeholder="Dirección completa de la sucursal"
                       variant="bordered"
                       minRows={2}
@@ -805,15 +944,21 @@ const ConfiguracionPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="telefono"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Teléfono
                     </label>
                     <Input
-                      value={formSucursal.telefono || ''}
-                      onChange={(e) => setFormSucursal(prev => ({
-                        ...prev,
-                        telefono: e.target.value || null
-                      }))}
+                      id="telefono"
+                      value={formSucursal.telefono || ""}
+                      onChange={(e) =>
+                        setFormSucursal((prev) => ({
+                          ...prev,
+                          telefono: e.target.value || null,
+                        }))
+                      }
                       placeholder="Ej: +57 300 123 4567"
                       variant="bordered"
                     />
@@ -821,10 +966,12 @@ const ConfiguracionPage = () => {
                   <div className="flex items-center gap-2">
                     <Checkbox
                       isSelected={formSucursal.activo}
-                      onValueChange={(checked) => setFormSucursal(prev => ({
-                        ...prev,
-                        activo: checked
-                      }))}
+                      onValueChange={(checked) =>
+                        setFormSucursal((prev) => ({
+                          ...prev,
+                          activo: checked,
+                        }))
+                      }
                     >
                       Sucursal activa
                     </Checkbox>
@@ -835,12 +982,12 @@ const ConfiguracionPage = () => {
                 <Button variant="light" onPress={onClose}>
                   Cancelar
                 </Button>
-                <Button 
-                  color="primary" 
+                <Button
+                  color="primary"
                   onPress={guardarSucursal}
                   isLoading={guardandoSucursal}
                 >
-                  {guardandoSucursal ? 'Guardando...' : 'Guardar'}
+                  {guardandoSucursal ? "Guardando..." : "Guardar"}
                 </Button>
               </ModalFooter>
             </>
