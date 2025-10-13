@@ -1,22 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 // GET - Obtener configuración de empresa
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
       return NextResponse.json(
-        { error: "No autorizado" },
+        { error: "ID de usuario requerido" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el usuario existe y obtener su rol
+    const usuario = await prisma.usuarios.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        rol: true,
+        activo: true
+      }
+    });
+
+    if (!usuario || !usuario.activo) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado o inactivo" },
         { status: 401 }
       );
     }
 
     // Solo administradores pueden ver la configuración de empresa
-    if (session.user.rol !== "ADMINISTRADOR") {
+    if (usuario.rol !== "ADMINISTRADOR") {
       return NextResponse.json(
         { error: "No tienes permisos para acceder a esta información" },
         { status: 403 }
@@ -42,24 +58,41 @@ export async function GET() {
 // POST - Crear configuración de empresa
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const body = await request.json();
+    const { userId, ...datosEmpresa } = body;
+
+    if (!userId) {
       return NextResponse.json(
-        { error: "No autorizado" },
+        { error: "ID de usuario requerido" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el usuario existe y obtener su rol
+    const usuario = await prisma.usuarios.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        rol: true,
+        activo: true
+      }
+    });
+
+    if (!usuario || !usuario.activo) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado o inactivo" },
         { status: 401 }
       );
     }
 
     // Solo administradores pueden crear configuración de empresa
-    if (session.user.rol !== "ADMINISTRADOR") {
+    if (usuario.rol !== "ADMINISTRADOR") {
       return NextResponse.json(
         { error: "No tienes permisos para realizar esta acción" },
         { status: 403 }
       );
     }
 
-    const body = await request.json();
     const {
       nit,
       razon_social,
@@ -80,7 +113,7 @@ export async function POST(request: NextRequest) {
       consecutivo_actual,
       logo_url,
       sitio_web
-    } = body;
+    } = datosEmpresa;
 
     // Validaciones básicas
     if (!nit || !razon_social) {
@@ -123,7 +156,7 @@ export async function POST(request: NextRequest) {
         consecutivo_actual: consecutivo_actual || 1,
         logo_url,
         sitio_web,
-        creado_por: session.user.id
+        creado_por: usuario.id
       }
     });
 
@@ -140,24 +173,41 @@ export async function POST(request: NextRequest) {
 // PUT - Actualizar configuración de empresa
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const body = await request.json();
+    const { userId, ...datosEmpresa } = body;
+
+    if (!userId) {
       return NextResponse.json(
-        { error: "No autorizado" },
+        { error: "ID de usuario requerido" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el usuario existe y obtener su rol
+    const usuario = await prisma.usuarios.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        rol: true,
+        activo: true
+      }
+    });
+
+    if (!usuario || !usuario.activo) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado o inactivo" },
         { status: 401 }
       );
     }
 
     // Solo administradores pueden actualizar configuración de empresa
-    if (session.user.rol !== "ADMINISTRADOR") {
+    if (usuario.rol !== "ADMINISTRADOR") {
       return NextResponse.json(
         { error: "No tienes permisos para realizar esta acción" },
         { status: 403 }
       );
     }
 
-    const body = await request.json();
     const {
       id,
       nit,
@@ -179,7 +229,7 @@ export async function PUT(request: NextRequest) {
       consecutivo_actual,
       logo_url,
       sitio_web
-    } = body;
+    } = datosEmpresa;
 
     if (!id) {
       return NextResponse.json(

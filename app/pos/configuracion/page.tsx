@@ -120,7 +120,7 @@ const ConfiguracionPage = () => {
   };
 
   // Cargar perfil del usuario
-  const cargarUsuario = async () => {
+  const cargarUsuario = useCallback(async () => {
     try {
       setCargandoUsuario(true);
 
@@ -164,7 +164,7 @@ const ConfiguracionPage = () => {
     } finally {
       setCargandoUsuario(false);
     }
-  };
+  }, []);
 
   // Cargar sucursales
   const cargarSucursales = async () => {
@@ -174,7 +174,7 @@ const ConfiguracionPage = () => {
       if (!response.ok) throw new Error("Error al cargar sucursales");
 
       const data = await response.json();
-      setSucursales(data);
+      setSucursales(data.sucursales);
     } catch (error) {
       console.error("Error al cargar sucursales:", error);
       addToast({
@@ -191,7 +191,29 @@ const ConfiguracionPage = () => {
   const cargarConfiguracionEmpresa = async () => {
     try {
       setCargandoEmpresa(true);
-      const response = await fetch("/api/configuracion/empresa");
+      
+      // Obtener el userId
+      let currentUserId = null;
+      try {
+        const authStorage = localStorage.getItem("auth-storage");
+        if (authStorage) {
+          const authData = JSON.parse(authStorage);
+          currentUserId = authData?.state?.user?.id;
+        }
+      } catch (error) {
+        console.warn("No se pudo obtener el usuario autenticado:", error);
+      }
+
+      if (!currentUserId) {
+        addToast({
+          title: "Error",
+          description: "No hay sesión activa. Por favor inicia sesión.",
+          color: "danger",
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/configuracion/empresa?userId=${currentUserId}`);
       if (!response.ok) throw new Error("Error al cargar configuración");
 
       const data = await response.json();
@@ -302,10 +324,34 @@ const ConfiguracionPage = () => {
         return;
       }
 
+      // Obtener el userId
+      let currentUserId = null;
+      try {
+        const authStorage = localStorage.getItem("auth-storage");
+        if (authStorage) {
+          const authData = JSON.parse(authStorage);
+          currentUserId = authData?.state?.user?.id;
+        }
+      } catch (error) {
+        console.warn("No se pudo obtener el usuario autenticado:", error);
+      }
+
+      if (!currentUserId) {
+        addToast({
+          title: "Error",
+          description: "No hay sesión activa. Por favor inicia sesión.",
+          color: "danger",
+        });
+        return;
+      }
+
       const response = await fetch("/api/configuracion/empresa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(configuracionEmpresa),
+        body: JSON.stringify({
+          ...configuracionEmpresa,
+          userId: currentUserId
+        }),
       });
 
       if (!response.ok) throw new Error("Error al guardar configuración");
@@ -459,6 +505,7 @@ const ConfiguracionPage = () => {
                           </label>
                           <Chip 
                             color={usuario.rol === 'ADMINISTRADOR' ? "primary" : "secondary"}
+                            className="text-primary"
                             variant="flat"
                             size="lg"
                           >
@@ -518,7 +565,7 @@ const ConfiguracionPage = () => {
               {tab.key === 'sucursales' && (
                 <div className="space-y-6">
                   <Card className="p-6">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                       <h2 className="text-2xl font-semibold">Gestión de Sucursales</h2>
                       <Button
                         color="primary"
@@ -557,6 +604,7 @@ const ConfiguracionPage = () => {
                                 size="sm"
                                 color="primary"
                                 variant="flat"
+                                className="text-primary"
                                 startContent={<Edit className="w-3 h-3" />}
                                 onPress={() => abrirModalEditar(sucursal)}
                               >
@@ -587,7 +635,7 @@ const ConfiguracionPage = () => {
 
               {tab.key === 'empresa' && (
                 <Card className="p-6">
-                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                     <h2 className="text-2xl font-semibold">Configuración de Empresa</h2>
                     <div className="flex items-center gap-2">
                       <Settings className="w-5 h-5 text-gray-500" />
