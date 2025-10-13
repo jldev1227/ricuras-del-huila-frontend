@@ -574,6 +574,58 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, hasHydrated, logout } = useAuth();
   const { hasPermission: isAdmin } = useRoleGuard(["ADMINISTRADOR"]);
 
+  // Estado para verificación de usuario
+  const [isVerifyingUser, setIsVerifyingUser] = useState(false);
+
+  // Función para verificar que el usuario existe en la base de datos
+  const verifyUserExists = useCallback(async () => {
+    if (!user?.id || isVerifyingUser) return;
+
+    try {
+      setIsVerifyingUser(true);
+      const response = await fetch(`/api/usuarios/profile?userId=${user.id}`);
+      
+      if (!response.ok) {
+        console.warn("Usuario no encontrado en la base de datos, limpiando sesión");
+        
+        // Limpiar todo el localStorage relacionado con auth
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("sucursal-actual");
+        
+        // Hacer logout y redirigir al login
+        await logout();
+        router.push("/auth/login");
+        return;
+      }
+
+      const result = await response.json();
+      if (!result.success || !result.data) {
+        console.warn("Datos de usuario inválidos, limpiando sesión");
+        
+        // Limpiar localStorage
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("sucursal-actual");
+        
+        // Hacer logout y redirigir
+        await logout();
+        router.push("/auth/login");
+      }
+    } catch (error) {
+      console.error("Error verificando usuario:", error);
+      // En caso de error de red, no limpiar la sesión automáticamente
+      // Solo loggear el error para investigación
+    } finally {
+      setIsVerifyingUser(false);
+    }
+  }, [user?.id, isVerifyingUser, logout, router]);
+
+  // Verificar usuario al cargar y cuando cambie el usuario
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated && user) {
+      verifyUserExists();
+    }
+  }, [hasHydrated, isAuthenticated, user, verifyUserExists]);
+
   // Validar acceso - solo administradores pueden acceder al POS
   useEffect(() => {
     if (

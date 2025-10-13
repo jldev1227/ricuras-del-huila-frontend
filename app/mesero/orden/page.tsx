@@ -255,9 +255,9 @@ export default function MeseroNuevaOrden() {
         mesaId: tipoOrden === "local" ? mesaSeleccionada?.id : null,
         nombreCliente: tipoOrden === "llevar" ? nombreCliente : null,
         items: carrito.map((item) => ({
-          productoId: item.id,
+          producto_id: item.id,
           cantidad: item.cantidad,
-          precioUnitario: item.precio,
+          precio_unitario: item.precio,
         })),
         subtotal: calcularTotal(),
         total: calcularTotal(),

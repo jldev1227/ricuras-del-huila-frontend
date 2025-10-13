@@ -233,10 +233,10 @@ export async function PUT(
             orden_items: {
               create: items.map((item: OrderItem) => ({
                 id: crypto.randomUUID(),
-                producto_id: item.productoId,
+                producto_id: item.producto_id,
                 cantidad: item.cantidad,
-                precio_unitario: Number(item.precioUnitario),
-                subtotal: Number(item.precioUnitario) * item.cantidad,
+                precio_unitario: Number(item.precio_unitario),
+                subtotal: Number(item.precio_unitario) * item.cantidad,
                 notas: item.notas,
               })),
             },
@@ -629,4 +629,73 @@ async function actualizarNotas(ordenId: string, datos: NotasUpdateData) {
       clientes: true,
     },
   });
+}
+
+// DELETE - Eliminar orden
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    // Verificar que la orden existe
+    const ordenExistente = await prisma.ordenes.findUnique({
+      where: { id },
+      include: { 
+        orden_items: true,
+        mesas: true 
+      },
+    });
+
+    if (!ordenExistente) {
+      return NextResponse.json(
+        { success: false, message: "Orden no encontrada" },
+        { status: 404 },
+      );
+    }
+
+    // Solo permitir eliminar órdenes en estado PENDIENTE
+    if (ordenExistente.estado !== "PENDIENTE") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Solo se pueden eliminar órdenes en estado PENDIENTE",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Eliminar la orden con transacción
+    await prisma.$transaction(async (tx) => {
+      // Primero eliminar los items de la orden
+      await tx.orden_items.deleteMany({
+        where: { orden_id: id },
+      });
+
+      // Liberar la mesa si estaba ocupada
+      if (ordenExistente.mesa_id) {
+        await tx.mesas.update({
+          where: { id: ordenExistente.mesa_id },
+          data: { disponible: true },
+        });
+      }
+
+      // Finalmente eliminar la orden
+      await tx.ordenes.delete({
+        where: { id },
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Orden eliminada exitosamente",
+    });
+  } catch (error) {
+    console.error("Error al eliminar orden:", error);
+    return NextResponse.json(
+      { success: false, message: "Error al eliminar orden" },
+      { status: 500 },
+    );
+  }
 }

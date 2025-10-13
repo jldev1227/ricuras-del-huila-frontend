@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
 
+    console.log(userId, "Usuario")
+
     if (!userId) {
       return NextResponse.json(
         { success: false, message: "ID de usuario requerido" },

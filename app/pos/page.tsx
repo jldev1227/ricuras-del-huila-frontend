@@ -245,9 +245,9 @@ export default function OrderDashboard() {
         direccionEntrega: tipoOrden === "domicilio" ? direccionEntrega : null,
         costoAdicional: costoAdicional || null,
         items: carrito.map((item) => ({
-          productoId: item.id,
+          producto_id: item.id,
           cantidad: item.cantidad,
-          precioUnitario: item.precio,
+          precio_unitario: item.precio,
         })),
         subtotal: calcularSubtotal(),
         descuento,

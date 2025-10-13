@@ -172,6 +172,7 @@ model usuarios {
   ordenes         ordenes[]
   password_resets password_resets[]
   sesiones        sesiones[]
+  configuracion_empresa configuracion_empresa[]
   sucursales      sucursales        @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
@@ -213,4 +214,32 @@ enum tipos_orden {
 enum tipos_persona {
   NATURAL
   JURIDICA
+}
+
+model configuracion_empresa {
+  id                     String               @id @db.Uuid @default(uuid())
+  nit                    String               @unique
+  razon_social           String
+  nombre_comercial       String?
+  telefono               String?
+  correo                 String?
+  direccion              String?
+  ciudad                 String?
+  departamento           String?
+  codigo_postal          String?
+  regimen_fiscal         regimenes_fiscales?
+  tipo_persona           tipos_persona        @default(JURIDICA)
+  numero_resolucion      String?
+  fecha_resolucion       DateTime?
+  numeracion_desde       String?
+  numeracion_hasta       String?
+  prefijo_factura        String?
+  consecutivo_actual     Int                  @default(1)
+  logo_url               String?
+  sitio_web              String?
+  activo                 Boolean              @default(true)
+  creado_en              DateTime             @default(now())
+  actualizado_en         DateTime             @updatedAt
+  creado_por             String?              @db.Uuid
+  usuarios               usuarios?            @relation(fields: [creado_por], references: [id])
 }

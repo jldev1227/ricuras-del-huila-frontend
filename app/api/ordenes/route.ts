@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log("📥 Datos recibidos en POST /api/ordenes:", JSON.stringify(body, null, 2));
 
     const {
       sucursalId,
@@ -175,6 +176,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validar que todos los items tengan los campos requeridos
+    for (const item of items) {
+      if (!item.producto_id || !item.precio_unitario || !item.cantidad) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: "Todos los items deben tener producto_id, precio_unitario y cantidad",
+            item: item
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Validación específica por tipo de orden
     if (tipoOrden === "LOCAL" && !mesaId) {
       return NextResponse.json(
@@ -195,13 +210,15 @@ export async function POST(request: NextRequest) {
 
     // Calcular subtotal
     const subtotal = items.reduce((total: number, item: OrderItem) => {
-      return total + item.precio_unitario * item.cantidad;
+      const precio = Number(item.precio_unitario) || 0;
+      const cantidad = Number(item.cantidad) || 0;
+      return total + precio * cantidad;
     }, 0);
 
     // Calcular total
-    let total = subtotal - descuento;
-    if (costoEnvio) total += parseFloat(costoEnvio);
-    if (costoAdicional) total += parseFloat(costoAdicional);
+    let total = subtotal - (Number(descuento) || 0);
+    if (costoEnvio) total += Number(costoEnvio) || 0;
+    if (costoAdicional) total += Number(costoAdicional) || 0;
 
     // Crear la orden con transacción
     const orden = await prisma.$transaction(async (tx) => {
@@ -226,11 +243,11 @@ export async function POST(request: NextRequest) {
           telefono_cliente: telefonoCliente || null,
           direccion_entrega: direccionEntrega || null,
           indicaciones_entrega: indicacionesEntrega || null,
-          costo_envio: costoEnvio ? parseFloat(costoEnvio) : null,
-          costo_adicional: costoAdicional ? parseFloat(costoAdicional) : null,
+          costo_envio: costoEnvio ? Number(costoEnvio) : null,
+          costo_adicional: costoAdicional ? Number(costoAdicional) : null,
           hora_recogida: horaRecogida ? new Date(horaRecogida) : null,
           subtotal,
-          descuento,
+          descuento: Number(descuento) || 0,
           total,
           notas,
           especificaciones,
@@ -241,9 +258,9 @@ export async function POST(request: NextRequest) {
             create: items.map((item: OrderItem) => ({
               id: crypto.randomUUID(),
               producto_id: item.producto_id,
-              cantidad: item.cantidad,
-              precio_unitario: item.precio_unitario,
-              subtotal: item.precio_unitario * item.cantidad,
+              cantidad: Number(item.cantidad),
+              precio_unitario: Number(item.precio_unitario),
+              subtotal: Number(item.precio_unitario) * Number(item.cantidad),
               notas: item.notas,
             })),
           },
@@ -256,6 +273,7 @@ export async function POST(request: NextRequest) {
           },
           mesas: true,
           clientes: true,
+          sucursales: true,
           usuarios: {
             select: {
               id: true,

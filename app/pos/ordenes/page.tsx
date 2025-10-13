@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  addToast,
   Button,
   Chip,
   Modal,
@@ -25,6 +26,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import ModalActualizarOrden from "@/components/orden/ModalActualizarOrden";
 import ModalDetalleOrden from "@/components/orden/ModalDetalleOrden";
 import { formatCOP } from "@/utils/formatCOP";
@@ -41,7 +43,7 @@ interface Orden {
   total: number;
   subtotal: number;
   descuento: number;
-  creadoEn: string;
+  creado_en: string;
   mesa?: {
     numero: number;
     ubicacion: string;
@@ -69,6 +71,7 @@ interface Orden {
 }
 
 export default function OrdenesPage() {
+  const router = useRouter();
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [loading, setLoading] = useState(true);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -266,6 +269,8 @@ export default function OrdenesPage() {
       if (data.success) {
         await fetchOrdenes();
         onEliminarClose();
+
+        addToast({ title: "Orden eliminada", description: "La orden ha sido eliminada exitosamente", color: "success" });
       } else {
         alert(`Error al eliminar orden: ${data.message}`);
       }
@@ -630,8 +635,8 @@ export default function OrdenesPage() {
                         Mesero: {orden.mesero?.nombre_completo || "Sin asignar"}
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {orden._count?.items ?? 0} producto
-                        {orden._count?.items !== 1 ? "s" : ""}
+                        {orden._count?.orden_items ?? 0} producto
+                        {orden._count?.orden_items !== 1 ? "s" : ""}
                       </p>
                       <p className="font-bold text-wine">
                         {formatCOP(orden.total)}
@@ -642,7 +647,7 @@ export default function OrdenesPage() {
                         </p>
                       )}
                       <p className="text-sm text-gray-600">
-                        {formatearFecha(orden.creadoEn)}
+                        {formatearFecha(orden.creado_en)}
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-2">
@@ -663,8 +668,7 @@ export default function OrdenesPage() {
                         color="secondary"
                         startContent={<Edit size={16} />}
                         onPress={() => {
-                          setOrdenIdEditar(orden.id);
-                          onEditOpen();
+                          router.push(`/pos/ordenes/${orden.id}/editar`);
                         }}
                         title="Editar orden"
                         className="text-secondary bg-secondary/10"
@@ -806,8 +810,8 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <p className="text-sm font-semibold text-gray-900">
-                            {orden._count?.items ?? 0} producto
-                            {orden._count?.items !== 1 ? "s" : ""}
+                            {orden._count?.orden_items ?? 0} producto
+                            {orden._count?.orden_items !== 1 ? "s" : ""}
                           </p>
                         </td>
                         <td className="py-4">
@@ -831,7 +835,7 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <p className="text-sm text-gray-600">
-                            {formatearFecha(orden.creadoEn)}
+                            {formatearFecha(orden.creado_en)}
                           </p>
                         </td>
                         <td className="py-4">
@@ -852,8 +856,7 @@ export default function OrdenesPage() {
                               variant="flat"
                               color="secondary"
                               onPress={() => {
-                                setOrdenIdEditar(orden.id);
-                                onEditOpen();
+                                router.push(`/pos/ordenes/${orden.id}/editar`);
                               }}
                               isIconOnly
                               title="Editar orden"
@@ -1131,11 +1134,11 @@ export default function OrdenesPage() {
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Fecha:</span>{" "}
-                      {formatearFecha(ordenAccion.creadoEn)}
+                      {formatearFecha(ordenAccion.creado_en)}
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Items:</span>{" "}
-                      {ordenAccion._count?.items ?? 0}
+                      {ordenAccion._count?.orden_items ?? 0}
                     </p>
                   </div>
                 )}
@@ -1165,7 +1168,7 @@ export default function OrdenesPage() {
                   isLoading={actionLoading}
                   startContent={!actionLoading && <Trash2 size={16} />}
                 >
-                  Sí, Eliminar Permanentemente
+                  Sí, Eliminar
                 </Button>
               </ModalFooter>
             </>
