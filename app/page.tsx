@@ -43,6 +43,7 @@ export default function Home() {
     try {
       const response = await fetch("/api/sucursales");
       const data = await response.json();
+
       if (data.success) {
         setSucursales(data.sucursales);
       }
@@ -59,13 +60,14 @@ export default function Home() {
       try {
         const authStorage = localStorage.getItem("auth-storage");
         if (!authStorage) {
-          router.push("/auth/login");
+          setAuthLoading(false);
           return;
         }
 
         const authData: AuthState = JSON.parse(authStorage);
 
         if (!authData.state.token || !authData.state.user) {
+          setAuthLoading(false);
           return;
         }
 
@@ -81,11 +83,12 @@ export default function Home() {
           return;
         }
 
+        setAuthLoading(false);
+
         // Solo si la autenticación es válida, cargar sucursales
         fetchSucursales();
       } catch (error) {
         console.error("Error al verificar autenticación:", error);
-      } finally {
         setAuthLoading(false);
       }
     };
@@ -150,20 +153,42 @@ export default function Home() {
             <p className="text-secondary mt-4">Verificando autenticación...</p>
           </div>
         ) : !authUser ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-6 rounded mb-8 text-center">
-            <p className="font-semibold text-lg mb-2">Error de autenticación</p>
-            <p className="text-sm mb-4">
-              No se pudo verificar tu sesión. Por favor inicia sesión
-              nuevamente.
+          // Landing page para usuarios no autenticados
+          <div className="text-center">
+            {/* Logo o icono principal */}
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-wine rounded-full mb-8 shadow-lg">
+              <MapPin className="text-white" size={48} />
+            </div>
+
+            {/* Título y descripción */}
+            <h1 className="text-5xl font-bold text-wine mb-4">
+              Ricuras del Huila
+            </h1>
+            <p className="text-secondary text-xl mb-8 max-w-md mx-auto">
+              Sistema de gestión para restaurantes. Accede para comenzar a
+              gestionar tu establecimiento.
             </p>
+
+            {/* Botón de login */}
             <button
               type="button"
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              onClick={() => router.push("/auth/login")}
+              className="inline-flex items-center gap-3 px-8 py-4 text-lg bg-wine text-white rounded-lg hover:bg-wine/90 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
             >
-              <LogOut size={16} />
-              Ir a iniciar sesión
+              <LogOut size={20} />
+              Iniciar Sesión
             </button>
+
+            {/* Información adicional */}
+            <div className="mt-12 p-6 bg-white/50 rounded-lg backdrop-blur-sm">
+              <h3 className="text-lg font-semibold text-wine mb-2">
+                ¿Necesitas ayuda?
+              </h3>
+              <p className="text-secondary text-sm">
+                Contacta al administrador del sistema para obtener tus
+                credenciales de acceso.
+              </p>
+            </div>
           </div>
         ) : (
           <>

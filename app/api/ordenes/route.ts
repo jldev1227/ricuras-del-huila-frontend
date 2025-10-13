@@ -1,6 +1,6 @@
 // app/api/ordenes/route.ts
 
-import type { Prisma, $Enums } from "@prisma/client";
+import type { $Enums, Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -61,37 +61,37 @@ export async function GET(request: NextRequest) {
         where,
         select: {
           id: true,
-          tipoOrden: true,
+          tipo_orden: true,
           estado: true,
           total: true,
           descuento: true,
-          creadoEn: true,
-          sucursal: {
+          creado_en: true,
+          sucursales: {
             select: {
               id: true,
               nombre: true,
               direccion: true,
             },
           },
-          mesa: {
+          mesas: {
             select: {
               numero: true,
               ubicacion: true,
             },
           },
-          mesero: {
+          usuarios: {
             select: {
               nombre_completo: true,
             },
           },
-          cliente: {
+          clientes: {
             select: {
               nombre: true,
             },
           },
           _count: {
             select: {
-              items: true,
+              orden_items: true,
             },
           },
         },
@@ -215,6 +215,7 @@ export async function POST(request: NextRequest) {
       // Crear la orden
       const nuevaOrden = await tx.ordenes.create({
         data: {
+          id: crypto.randomUUID(),
           sucursal_id: sucursalId,
           tipo_orden: tipoOrden,
           mesa_id: tipoOrden === "LOCAL" ? mesaId : null,
@@ -234,29 +235,31 @@ export async function POST(request: NextRequest) {
           especificaciones,
           creado_offline: creadoOffline,
           sincronizado: !creadoOffline,
+          actualizado_en: new Date(),
           orden_items: {
-        create: items.map((item: OrderItem) => ({
-          producto_id: item.productoId,
-          cantidad: item.cantidad,
-          precio_unitario: item.precioUnitario,
-          subtotal: item.precioUnitario * item.cantidad,
-          notas: item.notas,
-        })),
+            create: items.map((item: OrderItem) => ({
+              id: crypto.randomUUID(),
+              producto_id: item.productoId,
+              cantidad: item.cantidad,
+              precio_unitario: item.precioUnitario,
+              subtotal: item.precioUnitario * item.cantidad,
+              notas: item.notas,
+            })),
           },
         },
         include: {
           orden_items: {
-        include: {
-          productos: true,
-        },
+            include: {
+              productos: true,
+            },
           },
           mesas: true,
           clientes: true,
-          meseros: {
-        select: {
-          id: true,
-          nombre_completo: true,
-        },
+          usuarios: {
+            select: {
+              id: true,
+              nombre_completo: true,
+            },
           },
         },
       });

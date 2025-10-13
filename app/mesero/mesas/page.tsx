@@ -1,18 +1,26 @@
 "use client";
 
 import {
+  addToast,
   Button,
   Chip,
-  Spinner,
   Modal,
-  ModalContent,
-  ModalHeader,
   ModalBody,
+  ModalContent,
   ModalFooter,
+  ModalHeader,
+  Spinner,
   useDisclosure,
-  addToast
 } from "@heroui/react";
-import { Users, CheckCircle, AlertCircle, Plus, Eye, X, Package, UtensilsCrossed } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Eye,
+  Package,
+  Plus,
+  Users,
+  UtensilsCrossed,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,8 +67,8 @@ export default function MeseroMesasPage() {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
-  const [loadingDetalles, setLoadingDetalles] = useState(false);
-  const [liberandoMesa, setLiberandoMesa] = useState(false);
+  const [_loadingDetalles, setLoadingDetalles] = useState(false);
+  const [_liberandoMesa, setLiberandoMesa] = useState(false);
 
   // Obtener mesas de la sucursal
   const fetchMesas = useCallback(async () => {
@@ -99,8 +107,8 @@ export default function MeseroMesasPage() {
                 ...mesa.ordenActual,
                 items: data.orden.items || [],
                 subtotal: data.orden.subtotal,
-                especificaciones: data.orden.especificaciones
-              }
+                especificaciones: data.orden.especificaciones,
+              },
             });
           }
         }
@@ -120,13 +128,13 @@ export default function MeseroMesasPage() {
     setLiberandoMesa(true);
     try {
       const response = await fetch(`/api/mesas/${mesaId}/liberar`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          meseroId: user?.id
-        })
+          meseroId: user?.id,
+        }),
       });
 
       const data = await response.json();
@@ -218,9 +226,7 @@ export default function MeseroMesasPage() {
               <div className="w-3 h-3 bg-primary rounded-full"></div>
               <span className="text-sm font-medium">Mis Mesas</span>
             </div>
-            <p className="text-2xl font-bold text-primary">
-              {misMesas.length}
-            </p>
+            <p className="text-2xl font-bold text-primary">{misMesas.length}</p>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
@@ -273,9 +279,7 @@ export default function MeseroMesasPage() {
                     <h3 className="text-2xl font-bold text-gray-900 mb-1">
                       Mesa {mesa.numero}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {sucursal?.nombre}
-                    </p>
+                    <p className="text-sm text-gray-600">{sucursal?.nombre}</p>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary ring-1 ring-primary/20">
                     Mi Mesa
@@ -359,9 +363,7 @@ export default function MeseroMesasPage() {
                     <h3 className="text-2xl font-bold text-gray-900 mb-1">
                       Mesa {mesa.numero}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {sucursal?.nombre}
-                    </p>
+                    <p className="text-sm text-gray-600">{sucursal?.nombre}</p>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 ring-1 ring-green-600/20">
                     Disponible
@@ -416,9 +418,7 @@ export default function MeseroMesasPage() {
                     <h3 className="text-2xl font-bold text-gray-900 mb-1">
                       Mesa {mesa.numero}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {sucursal?.nombre}
-                    </p>
+                    <p className="text-sm text-gray-600">{sucursal?.nombre}</p>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 ring-1 ring-red-600/20">
                     Ocupada
@@ -437,7 +437,8 @@ export default function MeseroMesasPage() {
                     <div className="flex items-center gap-2 text-sm text-gray-700">
                       <span className="text-gray-500">Mesero:</span>
                       <span className="font-medium">
-                        {mesa.ordenActual.mesero?.nombre_completo || "Sin mesero"}
+                        {mesa.ordenActual.mesero?.nombre_completo ||
+                          "Sin mesero"}
                       </span>
                     </div>
                   )}
@@ -509,8 +510,7 @@ export default function MeseroMesasPage() {
                         >
                           {mesaSeleccionada.ordenActual.meseroId === user?.id
                             ? "Mi Mesa"
-                            : "Ocupada"
-                          }
+                            : "Ocupada"}
                         </Chip>
                       )}
                     </div>
@@ -524,53 +524,80 @@ export default function MeseroMesasPage() {
                       <>
                         {/* Información de la orden */}
                         <div className="bg-gray-50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-gray-900 mb-3">Información de la Orden</h4>
+                          <h4 className="font-semibold text-gray-900 mb-3">
+                            Información de la Orden
+                          </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <span className="text-sm text-gray-500">Número de orden:</span>
+                              <span className="text-sm text-gray-500">
+                                Número de orden:
+                              </span>
                               <p className="font-medium">
-                                #{mesaSeleccionada.ordenActual.numeroOrden || mesaSeleccionada.ordenActual.id.slice(-6)}
+                                #
+                                {mesaSeleccionada.ordenActual.numeroOrden ||
+                                  mesaSeleccionada.ordenActual.id.slice(-6)}
                               </p>
                             </div>
 
                             <div>
-                              <span className="text-sm text-gray-500">Estado:</span>
+                              <span className="text-sm text-gray-500">
+                                Estado:
+                              </span>
                               <div className="mt-1">
                                 <Chip
                                   size="sm"
                                   color={
-                                    mesaSeleccionada.ordenActual.estado === "PENDIENTE"
+                                    mesaSeleccionada.ordenActual.estado ===
+                                    "PENDIENTE"
                                       ? "warning"
-                                      : mesaSeleccionada.ordenActual.estado === "EN_PREPARACION"
+                                      : mesaSeleccionada.ordenActual.estado ===
+                                          "EN_PREPARACION"
                                         ? "primary"
-                                        : mesaSeleccionada.ordenActual.estado === "LISTA"
+                                        : mesaSeleccionada.ordenActual
+                                              .estado === "LISTA"
                                           ? "success"
                                           : "default"
                                   }
                                   variant="flat"
                                 >
-                                  {mesaSeleccionada.ordenActual.estado.replace("_", " ")}
+                                  {mesaSeleccionada.ordenActual.estado.replace(
+                                    "_",
+                                    " ",
+                                  )}
                                 </Chip>
                               </div>
                             </div>
 
                             <div>
-                              <span className="text-sm text-gray-500">Mesero:</span>
+                              <span className="text-sm text-gray-500">
+                                Mesero:
+                              </span>
                               <p className="font-medium">
                                 {mesaSeleccionada.ordenActual.mesero
-                                  ? mesaSeleccionada.ordenActual.mesero.nombre_completo +
-                                    (mesaSeleccionada.ordenActual.meseroId === user?.id ? " (Tú)" : "")
+                                  ? mesaSeleccionada.ordenActual.mesero
+                                      .nombre_completo +
+                                    (mesaSeleccionada.ordenActual.meseroId ===
+                                    user?.id
+                                      ? " (Tú)"
+                                      : "")
                                   : "Sin asignar"}
                               </p>
                             </div>
 
                             <div>
-                              <span className="text-sm text-gray-500">Hora de inicio:</span>
+                              <span className="text-sm text-gray-500">
+                                Hora de inicio:
+                              </span>
                               <p className="font-medium">
-                                {new Date(mesaSeleccionada.ordenActual.creadoEn).toLocaleDateString()} - {" "}
-                                {new Date(mesaSeleccionada.ordenActual.creadoEn).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
+                                {new Date(
+                                  mesaSeleccionada.ordenActual.creadoEn,
+                                ).toLocaleDateString()}{" "}
+                                -{" "}
+                                {new Date(
+                                  mesaSeleccionada.ordenActual.creadoEn,
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
                                 })}
                               </p>
                             </div>
@@ -578,44 +605,59 @@ export default function MeseroMesasPage() {
                         </div>
 
                         {/* Productos de la orden */}
-                        {mesaSeleccionada.ordenActual.items && mesaSeleccionada.ordenActual.items.length > 0 && (
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-3">Productos Ordenados</h4>
-                            <div className="space-y-3">
-                              {mesaSeleccionada.ordenActual.items.map((item) => (
-                                <div key={item.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    {item.producto.imagen ? (
-                                      <img
-                                        src={item.producto.imagen}
-                                        alt={item.producto.nombre}
-                                        className="w-full h-full object-cover rounded-lg"
-                                      />
-                                    ) : (
-                                      <Package className="w-6 h-6 text-gray-400" />
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h5 className="font-medium text-gray-900">{item.producto.nombre}</h5>
-                                    <p className="text-sm text-gray-500">
-                                      {formatCOP(item.precioUnitario)} x {item.cantidad}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-semibold text-gray-900">
-                                      {formatCOP(item.precioUnitario * item.cantidad)}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
+                        {mesaSeleccionada.ordenActual.items &&
+                          mesaSeleccionada.ordenActual.items.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-3">
+                                Productos Ordenados
+                              </h4>
+                              <div className="space-y-3">
+                                {mesaSeleccionada.ordenActual.items.map(
+                                  (item) => (
+                                    <div
+                                      key={item.id}
+                                      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"
+                                    >
+                                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        {item.producto.imagen ? (
+                                          <img
+                                            src={item.producto.imagen}
+                                            alt={item.producto.nombre}
+                                            className="w-full h-full object-cover rounded-lg"
+                                          />
+                                        ) : (
+                                          <Package className="w-6 h-6 text-gray-400" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <h5 className="font-medium text-gray-900">
+                                          {item.producto.nombre}
+                                        </h5>
+                                        <p className="text-sm text-gray-500">
+                                          {formatCOP(item.precioUnitario)} x{" "}
+                                          {item.cantidad}
+                                        </p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-gray-900">
+                                          {formatCOP(
+                                            item.precioUnitario * item.cantidad,
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
                         {/* Especificaciones */}
                         {mesaSeleccionada.ordenActual.especificaciones && (
                           <div>
-                            <h4 className="font-semibold text-gray-900 mb-3">Especificaciones</h4>
+                            <h4 className="font-semibold text-gray-900 mb-3">
+                              Especificaciones
+                            </h4>
                             <p className="text-gray-700 p-3 bg-gray-50 rounded-lg">
                               {mesaSeleccionada.ordenActual.especificaciones}
                             </p>
@@ -625,7 +667,9 @@ export default function MeseroMesasPage() {
                         {/* Total */}
                         <div className="bg-primary/20 p-4 rounded-lg">
                           <div className="flex justify-between items-center">
-                            <span className="font-bold text-gray-900">Total de la orden:</span>
+                            <span className="font-bold text-gray-900">
+                              Total de la orden:
+                            </span>
                             <span className="font-bold text-primary text-lg">
                               {formatCOP(mesaSeleccionada.ordenActual.total)}
                             </span>
@@ -635,7 +679,9 @@ export default function MeseroMesasPage() {
                     ) : (
                       <div className="text-center py-8">
                         <UtensilsCrossed className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h4 className="text-lg font-medium text-gray-900 mb-2">Mesa disponible</h4>
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">
+                          Mesa disponible
+                        </h4>
                         <p className="text-gray-500">
                           Esta mesa está libre y lista para recibir clientes.
                         </p>
@@ -649,7 +695,9 @@ export default function MeseroMesasPage() {
                   <Button
                     color="danger"
                     variant="light"
-                    onPress={() => mesaSeleccionada && liberarMesa(mesaSeleccionada.id)}
+                    onPress={() =>
+                      mesaSeleccionada && liberarMesa(mesaSeleccionada.id)
+                    }
                   >
                     Liberar Mesa
                   </Button>

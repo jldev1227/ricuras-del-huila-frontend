@@ -1,34 +1,32 @@
 "use client";
 
 import {
+  addToast,
   Button,
   Card,
   Chip,
-  Spinner,
   Input,
-  Select,
-  SelectItem,
+  Spinner,
   Textarea,
-  addToast,
 } from "@heroui/react";
 import {
-  Search,
-  X,
-  ShoppingBag,
-  ClipboardCheck,
   ArrowLeft,
-  Plus,
+  ClipboardCheck,
   Minus,
   Package,
+  Plus,
+  Search,
+  ShoppingBag,
   UtensilsCrossed,
+  X,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 import { formatCOP } from "@/utils/formatCOP";
-import Image from "next/image";
-import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 
 interface Producto {
   id: string;
@@ -80,7 +78,7 @@ export default function MeseroNuevaOrden() {
 
   // Cargar mesa desde parámetro URL si existe
   useEffect(() => {
-    const mesaId = searchParams.get('mesa');
+    const mesaId = searchParams.get("mesa");
     if (mesaId) {
       const fetchMesa = async () => {
         try {
@@ -92,37 +90,38 @@ export default function MeseroNuevaOrden() {
               addToast({
                 title: "Mesa ocupada",
                 description: `La mesa ${data.mesa.numero} acaba de ser ocupada por otro mesero. Por favor selecciona otra mesa.`,
-                color: "danger"
+                color: "danger",
               });
               // Limpiar parámetro de mesa de la URL
-              router.replace('/mesero/orden');
+              router.replace("/mesero/orden");
               return;
             }
-            
+
             // Si la mesa está disponible, seleccionarla
             setMesaSeleccionada({
               id: data.mesa.id,
               numero: data.mesa.numero,
               capacidad: data.mesa.capacidad,
-              disponible: data.mesa.disponible
+              disponible: data.mesa.disponible,
             });
           } else {
             // Mesa no encontrada
             addToast({
               title: "Mesa no encontrada",
               description: `La mesa solicitada no existe. Por favor selecciona otra mesa.`,
-              color: "danger"
+              color: "danger",
             });
-            router.replace('/mesero/orden');
+            router.replace("/mesero/orden");
           }
         } catch (error) {
           console.error("Error al cargar mesa:", error);
           addToast({
             title: "Error",
-            description: "Error al verificar la disponibilidad de la mesa. Por favor intenta nuevamente.",
-            color: "danger"
+            description:
+              "Error al verificar la disponibilidad de la mesa. Por favor intenta nuevamente.",
+            color: "danger",
           });
-          router.replace('/mesero/orden');
+          router.replace("/mesero/orden");
         }
       };
       fetchMesa();
@@ -144,7 +143,8 @@ export default function MeseroNuevaOrden() {
         // Productos
         const params = new URLSearchParams();
         if (searchTerm) params.append("nombre", searchTerm);
-        if (categoriaSeleccionada) params.append("categoriaId", categoriaSeleccionada);
+        if (categoriaSeleccionada)
+          params.append("categoriaId", categoriaSeleccionada);
 
         const resProductos = await fetch(`/api/productos?${params}`);
         const dataProductos = await resProductos.json();
@@ -179,8 +179,8 @@ export default function MeseroNuevaOrden() {
         carrito.map((item) =>
           item.id === producto.id
             ? { ...item, cantidad: item.cantidad + 1 }
-            : item
-        )
+            : item,
+        ),
       );
     } else {
       setCarrito([...carrito, { ...producto, cantidad: 1 }]);
@@ -191,8 +191,8 @@ export default function MeseroNuevaOrden() {
   const incrementarCantidad = (id: string) => {
     setCarrito(
       carrito.map((item) =>
-        item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item
-      )
+        item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item,
+      ),
     );
   };
 
@@ -200,7 +200,7 @@ export default function MeseroNuevaOrden() {
     setCarrito((prevCarrito) => {
       return prevCarrito
         .map((item) =>
-          item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
+          item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item,
         )
         .filter((item) => item.cantidad > 0);
     });
@@ -213,7 +213,7 @@ export default function MeseroNuevaOrden() {
   const calcularTotal = () => {
     return carrito.reduce(
       (total, item) => total + Number(item.precio) * item.cantidad,
-      0
+      0,
     );
   };
 
@@ -302,27 +302,28 @@ export default function MeseroNuevaOrden() {
       try {
         const response = await fetch(`/api/mesas/${mesa.id}`);
         const data = await response.json();
-        
+
         if (data.success) {
           // Verificar si la mesa tiene una orden activa
           if (data.mesa.ordenActual) {
             addToast({
               title: "Mesa ocupada",
               description: `La mesa ${data.mesa.numero} acaba de ser ocupada por otro mesero. Por favor selecciona otra mesa.`,
-              color: "danger"
+              color: "danger",
             });
             return;
           }
         }
-        
+
         // Si la mesa está disponible, seleccionarla
         setMesaSeleccionada(mesa);
       } catch (error) {
         console.error("Error al verificar mesa:", error);
         addToast({
           title: "Error",
-          description: "Error al verificar la disponibilidad de la mesa. Por favor intenta nuevamente.",
-          color: "danger"
+          description:
+            "Error al verificar la disponibilidad de la mesa. Por favor intenta nuevamente.",
+          color: "danger",
         });
       }
     } else {
@@ -407,7 +408,9 @@ export default function MeseroNuevaOrden() {
                   type="button"
                   onClick={() =>
                     setCategoriaSeleccionada(
-                      categoria.id === categoriaSeleccionada ? "" : categoria.id
+                      categoria.id === categoriaSeleccionada
+                        ? ""
+                        : categoria.id,
                     )
                   }
                   className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
@@ -451,7 +454,9 @@ export default function MeseroNuevaOrden() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Spinner size="lg" color="primary" />
-                <p className="mt-4 text-gray-500 text-sm">Cargando productos...</p>
+                <p className="mt-4 text-gray-500 text-sm">
+                  Cargando productos...
+                </p>
               </div>
             ) : productosFiltrados.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-5">

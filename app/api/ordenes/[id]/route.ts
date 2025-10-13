@@ -376,11 +376,7 @@ export async function PATCH(
 
     switch (accion) {
       case "cambiar_estado":
-        ordenActualizada = await cambiarEstado(
-          id,
-          datos,
-          ordenExistente,
-        );
+        ordenActualizada = await cambiarEstado(id, datos, ordenExistente);
         break;
 
       case "cancelar":
@@ -475,7 +471,12 @@ async function cambiarEstado(
     return await tx.orden.update({
       where: { id: ordenId },
       data: {
-        estado: nuevoEstado as "PENDIENTE" | "EN_PREPARACION" | "LISTA" | "ENTREGADA" | "CANCELADA",
+        estado: nuevoEstado as
+          | "PENDIENTE"
+          | "EN_PREPARACION"
+          | "LISTA"
+          | "ENTREGADA"
+          | "CANCELADA",
         notas: (razon
           ? `${ordenExistente.notas || ""}\n[Cambio de estado]: ${razon}`.trim()
           : ordenExistente.notas) as string | null,

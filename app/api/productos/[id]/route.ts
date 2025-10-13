@@ -1,9 +1,9 @@
+import { existsSync } from "node:fs";
+import { unlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
-import { unlink, writeFile } from "fs/promises";
-import { join, basename } from "path";
-import { existsSync } from "fs";
-import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Procesa la imagen según el formato recibido:
@@ -148,12 +148,12 @@ export async function DELETE(
     // Si el producto tenía imagen, eliminarla del sistema de archivos
     if (producto.imagen) {
       try {
-        const imagePath = join(process.cwd(), 'public', producto.imagen);
+        const imagePath = join(process.cwd(), "public", producto.imagen);
         if (existsSync(imagePath)) {
           await unlink(imagePath);
         }
       } catch (imageError) {
-        console.error('Error al eliminar imagen del producto:', imageError);
+        console.error("Error al eliminar imagen del producto:", imageError);
         // No fallar la eliminación del producto si hay error al eliminar la imagen
       }
     }

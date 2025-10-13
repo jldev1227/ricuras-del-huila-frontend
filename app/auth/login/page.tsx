@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Checkbox } from "@heroui/react";
+import { Button } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Page() {
-  const router = useRouter();
+  const _router = useRouter();
   const { login, isOnline, error, clearError, isLoading } = useAuth();
 
   const [identificacion, setIdentificacion] = useState("");
@@ -25,8 +25,8 @@ export default function Page() {
       const isAdmin =
         typeof rol === "string" && rol.toUpperCase() === "ADMINISTRADOR";
 
-      router.push(isAdmin ? "/pos" : "/mesero");
-      router.refresh();
+      console.log(isAdmin);
+      window.location.href = isAdmin ? "/pos" : "/mesero";
     } catch (err) {
       // El error ya está siendo manejado por el hook useAuth
       console.log("Error de login manejado por useAuth:", err);

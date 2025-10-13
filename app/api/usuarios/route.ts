@@ -1,10 +1,10 @@
 // app/api/usuarios/route.ts
 import type { Prisma } from "@prisma/client";
 import { roles } from "@prisma/client";
-import { type NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const excludeUserId = searchParams.get("excludeUserId"); // ID del usuario autenticado a excluir
 
-    console.log(excludeUserId, "USUARIOO EXCLUIDO")
+    console.log(excludeUserId, "USUARIOO EXCLUIDO");
     // Construir filtros
     const where: Prisma.usuariosWhereInput = {};
 
@@ -212,16 +212,16 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { 
+    const {
       id,
-      nombre_completo, 
-      identificacion, 
-      correo, 
-      telefono, 
+      nombre_completo,
+      identificacion,
+      correo,
+      telefono,
       password,
-      rol, 
-      sucursal_id, 
-      activo 
+      rol,
+      sucursal_id,
+      activo,
     } = body;
 
     // Validar datos requeridos (sin id en el body para update)
@@ -304,12 +304,12 @@ export async function PUT(request: Request) {
     }
 
     // Preparar datos para actualizar
-    const datosActualizacion: any = {
+    const datosActualizacion: Prisma.usuariosUncheckedUpdateInput = {
       nombre_completo,
       identificacion,
       correo,
       telefono,
-      rol,
+      rol: rol as roles,
       sucursal_id,
       activo: activo !== undefined ? activo : true,
       actualizado_en: new Date(),
@@ -393,9 +393,10 @@ export async function DELETE(request: Request) {
 
     if (ordenesAsociadas) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "No se puede eliminar el usuario porque tiene órdenes asociadas. Desactívelo en su lugar." 
+        {
+          success: false,
+          message:
+            "No se puede eliminar el usuario porque tiene órdenes asociadas. Desactívelo en su lugar.",
         },
         { status: 400 },
       );

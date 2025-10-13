@@ -401,7 +401,9 @@ export default function ModalDetalleOrden({
                       </div>
                       <div>Fecha: {fecha}</div>
                       <div>Tipo: {orden.tipoOrden}</div>
-                      <div>Mesero: {orden.mesero?.nombre_completo || "N/A"}</div>
+                      <div>
+                        Mesero: {orden.mesero?.nombre_completo || "N/A"}
+                      </div>
 
                       {/* Mesa */}
                       {orden.tipoOrden === "LOCAL" && orden.mesa && (

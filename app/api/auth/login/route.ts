@@ -3,8 +3,8 @@
 import bcrypt from "bcrypt";
 import { SignJWT } from "jose";
 import { type NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
 
 const SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET || "dev-secret-change-in-production",
@@ -97,14 +97,14 @@ export async function POST(request: NextRequest) {
 
     await prisma.sesiones.create({
       data: {
-      id: sessionId,
-      usuario_id: usuario.id,
-      token,
-      refresh_token: refreshToken,
-      expira_en: expiraEn,
-      dispositivo_id: request.headers.get("x-device-id") || undefined,
-      ip_address: ipAddress,
-      user_agent: request.headers.get("user-agent") || undefined,
+        id: sessionId,
+        usuario_id: usuario.id,
+        token,
+        refresh_token: refreshToken,
+        expira_en: expiraEn,
+        dispositivo_id: request.headers.get("x-device-id") || undefined,
+        ip_address: ipAddress,
+        user_agent: request.headers.get("user-agent") || undefined,
       },
     });
 

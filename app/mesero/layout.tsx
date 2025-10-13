@@ -16,22 +16,17 @@ import {
 import {
   Bell,
   ChevronRight,
+  ClipboardList,
   Home,
   LogOut,
   MapPin,
   Menu,
-  ClipboardList,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useAuth, useRoleGuard } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 
@@ -65,11 +60,19 @@ const MENU_ITEMS: MenuItem[] = [
   {
     name: "Mesas",
     href: "/mesero/mesas",
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="24" height="24" fill="currentColor">
-      <rect x="64" y="120" width="392" height="48" rx="8" />
-      <rect x="96" y="152" width="48" height="240" rx="6" />
-      <rect x="392" y="152" width="48" height="240" rx="6" />
-    </svg>
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 512 512"
+        width="24"
+        height="24"
+        fill="currentColor"
+      >
+        <rect x="64" y="120" width="392" height="48" rx="8" />
+        <rect x="96" y="152" width="48" height="240" rx="6" />
+        <rect x="392" y="152" width="48" height="240" rx="6" />
+      </svg>
+    ),
   },
   {
     name: "Nueva Orden",
@@ -100,15 +103,17 @@ function NavItem({
     <Link
       href={item.href}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${isActive
+      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${
+        isActive
           ? "bg-wine text-white shadow-md"
           : "text-gray-700 hover:bg-gray-100"
-        }`}
+      }`}
     >
       <span className="flex-shrink-0">{item.icon}</span>
       <span
-        className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
-          }`}
+        className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${
+          isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+        }`}
       >
         {item.name}
       </span>
@@ -178,8 +183,9 @@ function UserMenu({
             {user.nombre_completo.charAt(0).toUpperCase()}
           </div>
           <div
-            className={`transition-all duration-300 overflow-hidden text-left ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
-              }`}
+            className={`transition-all duration-300 overflow-hidden text-left ${
+              isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+            }`}
           >
             <p className="text-sm font-medium text-gray-700">
               {user.nombre_completo}
@@ -222,8 +228,9 @@ function DesktopSidebar({
 }) {
   return (
     <aside
-      className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${isHovered ? "w-64" : "w-20"
-        }`}
+      className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${
+        isHovered ? "w-64" : "w-20"
+      }`}
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
     >
@@ -296,8 +303,9 @@ function MobileSidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         {/* Header */}
         <div className="h-20 flex items-center justify-between px-4 border-b border-gray-200">
@@ -327,10 +335,11 @@ function MobileSidebar({
                 <Link
                   href={item.href}
                   onClick={onClose}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${pathname === item.href
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${
+                    pathname === item.href
                       ? "bg-wine text-white shadow-md"
                       : "text-gray-700 hover:bg-gray-100"
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="flex-shrink-0">{item.icon}</span>
@@ -399,15 +408,15 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
 
   // Validar acceso - solo meseros pueden acceder
   useEffect(() => {
-    if (hasHydrated && isAuthenticated && user && user.rol !== "MESERO") {
-      // Si el usuario no es mesero, redirigir a su área correspondiente
-      if (user.rol === "ADMINISTRADOR") {
+    if (hasHydrated && isAuthenticated && !hasPermission) {
+      // Si el usuario no tiene permisos de mesero, redirigir a su área correspondiente
+      if (user?.rol === "ADMINISTRADOR") {
         router.push("/pos");
       } else {
         router.push("/auth/login");
       }
     }
-  }, [hasHydrated, isAuthenticated, user, router]);
+  }, [hasHydrated, isAuthenticated, user, router, hasPermission]);
 
   // Sucursal hook
   const { sucursal, loading: isLoadingSucursal } = useSucursal();
@@ -490,10 +499,7 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
             <Button color="danger" variant="light" onPress={onClose}>
               Cancelar
             </Button>
-            <Button
-              className="bg-wine text-white"
-              onPress={handleLogout}
-            >
+            <Button className="bg-wine text-white" onPress={handleLogout}>
               Cerrar sesión
             </Button>
           </ModalFooter>

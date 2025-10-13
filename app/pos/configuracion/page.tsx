@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
+  addToast,
   Button,
+  Chip,
   Input,
   Modal,
-  ModalContent,
-  ModalHeader,
   ModalBody,
+  ModalContent,
   ModalFooter,
-  Chip,
-  useDisclosure,
+  ModalHeader,
   Spinner,
-  addToast,
+  useDisclosure,
 } from "@heroui/react";
 import {
-  UserIcon,
-  EyeIcon,
   EyeClosed,
+  EyeIcon,
   SaveIcon,
   ShieldCheckIcon,
+  UserIcon,
 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 interface UsuarioProfile {
   id: string;
@@ -52,8 +52,12 @@ const ConfiguracionPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  
-  const { isOpen: isOpenConfirm, onOpen: onOpenConfirm, onClose: onCloseConfirm } = useDisclosure();
+
+  const {
+    isOpen: isOpenConfirm,
+    onOpen: onOpenConfirm,
+    onClose: onCloseConfirm,
+  } = useDisclosure();
 
   const [formData, setFormData] = useState<FormProfile>({
     nombre_completo: "",
@@ -72,7 +76,7 @@ const ConfiguracionPage = () => {
   });
 
   // Obtener usuario autenticado del localStorage
-  const getCurrentUser = () => {
+  const getCurrentUser = useCallback(() => {
     try {
       const authStorage = localStorage.getItem("auth-storage");
       if (authStorage) {
@@ -83,14 +87,14 @@ const ConfiguracionPage = () => {
       console.error("Error al obtener usuario autenticado:", error);
     }
     return null;
-  };
+  }, []);
 
   // Cargar perfil del usuario
-  const cargarPerfil = async () => {
+  const cargarPerfil = useCallback(async () => {
     try {
       setLoading(true);
       const currentUser = getCurrentUser();
-      
+
       if (!currentUser?.id) {
         addToast({
           title: "Error de autenticación",
@@ -100,7 +104,9 @@ const ConfiguracionPage = () => {
         return;
       }
 
-      const response = await fetch(`/api/usuarios/profile?userId=${currentUser.id}`);
+      const response = await fetch(
+        `/api/usuarios/profile?userId=${currentUser.id}`,
+      );
       const result = await response.json();
 
       if (result.success) {
@@ -131,23 +137,24 @@ const ConfiguracionPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getCurrentUser]);
 
   useEffect(() => {
     cargarPerfil();
-  }, []);
+  }, [cargarPerfil]);
 
   // Detectar cambios en el formulario
   useEffect(() => {
-    const dataChanged = JSON.stringify(formData) !== JSON.stringify(originalData);
+    const dataChanged =
+      JSON.stringify(formData) !== JSON.stringify(originalData);
     setHasChanges(dataChanged);
   }, [formData, originalData]);
 
   // Manejar cambios en el formulario
   const handleInputChange = (field: keyof FormProfile, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -156,7 +163,7 @@ const ConfiguracionPage = () => {
     try {
       setSubmitting(true);
       const currentUser = getCurrentUser();
-      
+
       if (!currentUser?.id) {
         addToast({
           title: "Error de autenticación",
@@ -185,7 +192,7 @@ const ConfiguracionPage = () => {
           description: "Tu información ha sido actualizada exitosamente",
           color: "success",
         });
-        
+
         // Actualizar el localStorage con la nueva información
         try {
           const authStorage = localStorage.getItem("auth-storage");
@@ -281,9 +288,7 @@ const ConfiguracionPage = () => {
       <div className="p-8 space-y-6">
         <div className="flex flex-col items-center justify-center py-20">
           <Spinner size="lg" color="primary" />
-          <p className="mt-4 text-gray-500 text-sm">
-            Cargando perfil...
-          </p>
+          <p className="mt-4 text-gray-500 text-sm">Cargando perfil...</p>
         </div>
       </div>
     );
@@ -398,16 +403,20 @@ const ConfiguracionPage = () => {
                 label="Nombre completo"
                 placeholder="Ej: Juan Pérez"
                 value={formData.nombre_completo}
-                onChange={(e) => handleInputChange("nombre_completo", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("nombre_completo", e.target.value)
+                }
                 isRequired
                 startContent={<UserIcon className="h-4 w-4 text-gray-400" />}
               />
-              
+
               <Input
                 label="Identificación"
                 placeholder="Ej: 12345678"
                 value={formData.identificacion}
-                onChange={(e) => handleInputChange("identificacion", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("identificacion", e.target.value)
+                }
                 isRequired
               />
 
@@ -432,7 +441,9 @@ const ConfiguracionPage = () => {
                   placeholder="••••••••"
                   type={mostrarPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
                   description="Dejar en blanco para mantener la contraseña actual"
                   endContent={
                     <button
@@ -456,7 +467,8 @@ const ConfiguracionPage = () => {
                 <div className="flex items-center gap-2">
                   <SaveIcon className="h-5 w-5 text-yellow-600" />
                   <p className="text-sm text-yellow-800">
-                    Tienes cambios sin guardar. No olvides guardar tus modificaciones.
+                    Tienes cambios sin guardar. No olvides guardar tus
+                    modificaciones.
                   </p>
                 </div>
               </div>
@@ -485,8 +497,8 @@ const ConfiguracionPage = () => {
             <Button color="default" variant="light" onPress={onCloseConfirm}>
               Cancelar
             </Button>
-            <Button 
-              color="primary" 
+            <Button
+              color="primary"
               onPress={handleUpdateProfile}
               isLoading={submitting}
               startContent={<SaveIcon className="h-4 w-4" />}

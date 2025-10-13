@@ -8,9 +8,9 @@ import {
   ModalHeader,
 } from "@heroui/modal";
 import { Button } from "@heroui/react";
-import { useCallback, useEffect, useState } from "react";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import type { ProductoConCategoria } from "@/types/producto";
 
 interface Categoria {
@@ -84,7 +84,7 @@ export default function ModalFormProducto({
     const file = e.target.files?.[0];
     if (file) {
       // Validar tipo de archivo
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
       if (!validTypes.includes(file.type)) {
         setError("Tipo de archivo no válido. Solo se permiten JPG, PNG y WebP");
         return;
@@ -112,16 +112,16 @@ export default function ModalFormProducto({
   // Función para subir imagen
   const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
-    const response = await fetch('/api/productos/upload-image', {
-      method: 'POST',
-      body: formData
+    const response = await fetch("/api/productos/upload-image", {
+      method: "POST",
+      body: formData,
     });
 
     const data = await response.json();
     if (!data.success) {
-      throw new Error(data.error || 'Error al subir imagen');
+      throw new Error(data.error || "Error al subir imagen");
     }
 
     return data.imagePath;
@@ -130,11 +130,14 @@ export default function ModalFormProducto({
   // Función para eliminar imagen
   const deleteImage = async (imagePath: string) => {
     try {
-      await fetch(`/api/productos/upload-image?path=${encodeURIComponent(imagePath)}`, {
-        method: 'DELETE'
-      });
+      await fetch(
+        `/api/productos/upload-image?path=${encodeURIComponent(imagePath)}`,
+        {
+          method: "DELETE",
+        },
+      );
     } catch (error) {
-      console.error('Error al eliminar imagen:', error);
+      console.error("Error al eliminar imagen:", error);
     }
   };
 
@@ -142,7 +145,7 @@ export default function ModalFormProducto({
   const clearImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    setFormData(prev => ({ ...prev, imagen: "" }));
+    setFormData((prev) => ({ ...prev, imagen: "" }));
   };
 
   useEffect(() => {
@@ -174,7 +177,7 @@ export default function ModalFormProducto({
         disponible: producto.disponible,
         destacado: producto.destacado,
       });
-      
+
       // Si el producto tiene imagen, establecer preview
       if (producto.imagen) {
         setImagePreview(producto.imagen);
@@ -193,8 +196,11 @@ export default function ModalFormProducto({
     // Validaciones de campos requeridos
     const nombreValido = formData.nombre.trim().length > 0;
     const categoriaValida = formData.categoriaId.trim().length > 0;
-    const precioValido = typeof formData.precio === "number" && formData.precio > 0;
-    const costoValido = typeof formData.costo_produccion === "number" && formData.costo_produccion > 0;
+    const precioValido =
+      typeof formData.precio === "number" && formData.precio > 0;
+    const costoValido =
+      typeof formData.costo_produccion === "number" &&
+      formData.costo_produccion > 0;
 
     if (!nombreValido) {
       setError("El nombre del producto es obligatorio.");
@@ -216,22 +222,24 @@ export default function ModalFormProducto({
     setLoading(true);
 
     try {
-      let finalFormData = { ...formData };
+      const finalFormData = { ...formData };
 
       // Si hay una nueva imagen seleccionada, subirla primero
       if (imageFile) {
         setUploadingImage(true);
         try {
           const imagePath = await uploadImage(imageFile);
-          
+
           // Si estamos editando y tenía imagen anterior, eliminarla
           if (producto?.imagen && producto.imagen !== imagePath) {
             await deleteImage(producto.imagen);
           }
-          
+
           finalFormData.imagen = imagePath;
         } catch (imageError) {
-          throw new Error(`Error al subir imagen: ${imageError instanceof Error ? imageError.message : 'Error desconocido'}`);
+          throw new Error(
+            `Error al subir imagen: ${imageError instanceof Error ? imageError.message : "Error desconocido"}`,
+          );
         } finally {
           setUploadingImage(false);
         }
@@ -273,7 +281,12 @@ export default function ModalFormProducto({
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl" scrollBehavior="inside">
+    <Modal
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      size="2xl"
+      scrollBehavior="inside"
+    >
       <ModalContent>
         {(onClose) => (
           <>
@@ -357,14 +370,15 @@ export default function ModalFormProducto({
 
                   {/* Imagen */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="imagen" className="block text-sm font-medium text-gray-700 mb-2">
                       Imagen del producto
                     </label>
-                    
+
                     {/* Preview de imagen */}
                     {imagePreview && (
                       <div className="mb-4 relative inline-block">
                         <Image
+                          id="imagen"
                           src={imagePreview}
                           alt="Preview"
                           width={200}
@@ -380,7 +394,7 @@ export default function ModalFormProducto({
                         </button>
                       </div>
                     )}
-                    
+
                     {/* Input de archivo */}
                     <div className="mt-2">
                       <input
@@ -395,7 +409,7 @@ export default function ModalFormProducto({
                         className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                       >
                         <Upload className="w-4 h-4" />
-                        {imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
+                        {imagePreview ? "Cambiar imagen" : "Subir imagen"}
                       </label>
                       <p className="text-xs text-gray-500 mt-1">
                         JPG, PNG o WebP. Máximo 5MB.
@@ -535,18 +549,17 @@ export default function ModalFormProducto({
               >
                 Cancelar
               </Button>
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 onPress={handleSubmit}
                 isLoading={loading || uploadingImage}
                 isDisabled={loading || uploadingImage}
               >
-                {uploadingImage 
-                  ? "Subiendo imagen..." 
-                  : loading 
-                    ? "Guardando..." 
-                    : `${producto?.id ? "Actualizar" : "Crear"} Producto`
-                }
+                {uploadingImage
+                  ? "Subiendo imagen..."
+                  : loading
+                    ? "Guardando..."
+                    : `${producto?.id ? "Actualizar" : "Crear"} Producto`}
               </Button>
             </ModalFooter>
           </>

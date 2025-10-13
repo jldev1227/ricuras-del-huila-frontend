@@ -1,8 +1,8 @@
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import { join } from "path";
-import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Procesa la imagen según el formato recibido:
@@ -109,74 +109,74 @@ export async function POST(request: NextRequest) {
     // 🔍 Validaciones mejoradas
     if (!nombre || typeof nombre !== "string" || nombre.trim().length === 0) {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          message: "El nombre del producto es requerido" 
+          message: "El nombre del producto es requerido",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!categoriaId || typeof categoriaId !== "string") {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          message: "La categoría es requerida" 
+          message: "La categoría es requerida",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!precio || precio <= 0) {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          message: "El precio debe ser mayor a 0" 
+          message: "El precio debe ser mayor a 0",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (costo_produccion < 0) {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          message: "El costo de producción no puede ser negativo" 
+          message: "El costo de producción no puede ser negativo",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 🔍 Verificar que la categoría existe
     const categoriaExiste = await prisma.categorias.findUnique({
-      where: { id: categoriaId }
+      where: { id: categoriaId },
     });
 
     if (!categoriaExiste) {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          message: "La categoría especificada no existe" 
+          message: "La categoría especificada no existe",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // 🔍 Verificar si ya existe un producto con el mismo nombre
     const productoExistente = await prisma.productos.findFirst({
-      where: { 
+      where: {
         nombre: nombre.trim(),
-        disponible: true 
-      }
+        disponible: true,
+      },
     });
 
     if (productoExistente) {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          message: "Ya existe un producto con este nombre" 
+          message: "Ya existe un producto con este nombre",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -185,13 +185,14 @@ export async function POST(request: NextRequest) {
     if (imagen && imagen.trim() !== "") {
       try {
         imagenProcesada = await procesarImagen(imagen);
-      } catch (error) {
+      } catch (_error) {
         return NextResponse.json(
-          { 
+          {
             success: false,
-            message: "Error al procesar la imagen. Verifica que sea un formato válido." 
+            message:
+              "Error al procesar la imagen. Verifica que sea un formato válido.",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -227,29 +228,28 @@ export async function POST(request: NextRequest) {
       producto,
       message: "Producto creado exitosamente",
     });
-
   } catch (error) {
     console.error("Error al crear producto:", error);
-    
+
     // Manejo específico de errores de Prisma
     if (error instanceof Error) {
       if (error.message.includes("Foreign key constraint")) {
         return NextResponse.json(
-          { 
+          {
             success: false,
-            message: "La categoría especificada no es válida" 
+            message: "La categoría especificada no es válida",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
 
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: "Error interno del servidor al crear el producto" 
+        message: "Error interno del servidor al crear el producto",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

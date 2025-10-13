@@ -32,7 +32,7 @@ export default function ModalDetallesProducto({
   const formatDate = (date?: string | Date | null) => {
     if (!date) return "Sin fecha disponible";
     const dateObj = typeof date === "string" ? new Date(date) : date;
-    if (isNaN(dateObj.getTime())) return "Fecha inválida";
+    if (Number.isNaN(dateObj.getTime())) return "Fecha inválida";
     return dateObj.toLocaleDateString("es-CO", {
       year: "numeric",
       month: "long",
@@ -50,7 +50,12 @@ export default function ModalDetallesProducto({
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl" scrollBehavior="inside">
+    <Modal
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      size="2xl"
+      scrollBehavior="inside"
+    >
       <ModalContent>
         {(onClose) => (
           <>

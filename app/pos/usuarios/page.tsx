@@ -1,31 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
+  addToast,
   Button,
+  Chip,
   Input,
   Modal,
-  ModalContent,
-  ModalHeader,
   ModalBody,
+  ModalContent,
   ModalFooter,
-  Chip,
-  Tooltip,
-  useDisclosure,
+  ModalHeader,
   Select,
   SelectItem,
-  Spinner,
-  addToast,
+  useDisclosure,
 } from "@heroui/react";
 import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
-  EyeIcon,
   EyeClosed,
+  EyeIcon,
+  PencilIcon,
+  PlusIcon,
   UserIcon,
 } from "lucide-react";
-import { Card, CardBody } from "@heroui/react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Usuario {
   id: string;
@@ -69,7 +65,8 @@ const UsuariosPage = () => {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] =
+    useState<Usuario | null>(null);
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
   // Estados para filtros
@@ -78,10 +75,26 @@ const UsuariosPage = () => {
   const [selectedSucursal, setSelectedSucursal] = useState("");
   const [selectedEstado, setSelectedEstado] = useState("");
 
-  const { isOpen: isOpenCreate, onOpen: onOpenCreate, onClose: onCloseCreate } = useDisclosure();
-  const { isOpen: isOpenEdit, onOpen: onOpenEdit, onClose: onCloseEdit } = useDisclosure();
-  const { isOpen: isOpenDelete, onOpen: onOpenDelete, onClose: onCloseDelete } = useDisclosure();
-  const { isOpen: isOpenDetail, onOpen: onOpenDetail, onClose: onCloseDetail } = useDisclosure();
+  const {
+    isOpen: isOpenCreate,
+    onOpen: onOpenCreate,
+    onClose: onCloseCreate,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenEdit,
+    onOpen: onOpenEdit,
+    onClose: onCloseEdit,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenDelete,
+    onOpen: onOpenDelete,
+    onClose: onCloseDelete,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenDetail,
+    onOpen: onOpenDetail,
+    onClose: onCloseDetail,
+  } = useDisclosure();
 
   const [formData, setFormData] = useState<FormUsuario>({
     nombre_completo: "",
@@ -95,10 +108,10 @@ const UsuariosPage = () => {
   });
 
   // Cargar usuarios con filtros
-  const cargarUsuarios = async () => {
+  const cargarUsuarios = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Obtener el usuario autenticado del localStorage
       let currentUserId = null;
       try {
@@ -118,7 +131,7 @@ const UsuariosPage = () => {
       if (selectedSucursal) params.append("sucursal_id", selectedSucursal);
       if (selectedEstado) params.append("activo", selectedEstado);
       if (currentUserId) params.append("excludeUserId", currentUserId); // Excluir usuario autenticado
-      
+
       const response = await fetch(`/api/usuarios?${params}`);
       const result = await response.json();
 
@@ -142,10 +155,10 @@ const UsuariosPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Cargar sucursales
-  const cargarSucursales = async () => {
+  const cargarSucursales = useCallback(async () => {
     try {
       const response = await fetch("/api/sucursales");
       const result = await response.json();
@@ -167,12 +180,12 @@ const UsuariosPage = () => {
         color: "danger",
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     cargarUsuarios();
     cargarSucursales();
-  }, []);
+  }, [cargarSucursales, cargarUsuarios]);
 
   // Efecto para filtros en tiempo real
   useEffect(() => {
@@ -182,7 +195,7 @@ const UsuariosPage = () => {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText, selectedRol, selectedSucursal, selectedEstado]);
+  }, [cargarUsuarios]);
 
   // Manejar envío del formulario
   const handleSubmit = async (isEdit = false) => {
@@ -244,9 +257,12 @@ const UsuariosPage = () => {
 
     try {
       setSubmitting(true);
-      const response = await fetch(`/api/usuarios?id=${usuarioSeleccionado.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/usuarios?id=${usuarioSeleccionado.id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       const result = await response.json();
 
@@ -324,7 +340,7 @@ const UsuariosPage = () => {
   };
 
   // Abrir modal de eliminación
-  const openDeleteModal = (usuario: Usuario) => {
+  const _openDeleteModal = (usuario: Usuario) => {
     setUsuarioSeleccionado(usuario);
     onOpenDelete();
   };
@@ -538,7 +554,8 @@ const UsuariosPage = () => {
                         size="sm"
                         className="text-xs"
                       >
-                        {rolesOptions.find(r => r.key === usuario.rol)?.label || usuario.rol}
+                        {rolesOptions.find((r) => r.key === usuario.rol)
+                          ?.label || usuario.rol}
                       </Chip>
                       <Chip
                         color={usuario.activo ? "success" : "danger"}
@@ -693,9 +710,7 @@ const UsuariosPage = () => {
                 isRequired
               >
                 {rolesOptions.map((rol) => (
-                  <SelectItem key={rol.key}>
-                    {rol.label}
-                  </SelectItem>
+                  <SelectItem key={rol.key}>{rol.label}</SelectItem>
                 ))}
               </Select>
               <Select
@@ -708,9 +723,7 @@ const UsuariosPage = () => {
                 isRequired
               >
                 {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id}>
-                    {sucursal.nombre}
-                  </SelectItem>
+                  <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
                 ))}
               </Select>
             </div>
@@ -920,7 +933,9 @@ const UsuariosPage = () => {
                       size="lg"
                       className="mt-2"
                     >
-                      {rolesOptions.find(r => r.key === usuarioSeleccionado.rol)?.label || usuarioSeleccionado.rol}
+                      {rolesOptions.find(
+                        (r) => r.key === usuarioSeleccionado.rol,
+                      )?.label || usuarioSeleccionado.rol}
                     </Chip>
                     <Chip
                       color={usuarioSeleccionado.activo ? "success" : "danger"}
@@ -941,29 +956,59 @@ const UsuariosPage = () => {
                       <div className="flex items-center gap-3">
                         <UserIcon className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="text-sm text-gray-500">Identificación</p>
-                          <p className="font-medium">{usuarioSeleccionado.identificacion}</p>
+                          <p className="text-sm text-gray-500">
+                            Identificación
+                          </p>
+                          <p className="font-medium">
+                            {usuarioSeleccionado.identificacion}
+                          </p>
                         </div>
                       </div>
                       {usuarioSeleccionado.correo && (
                         <div className="flex items-center gap-3">
-                          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                          <svg
+                            className="h-5 w-5 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
+                            />
                           </svg>
                           <div>
-                            <p className="text-sm text-gray-500">Correo electrónico</p>
-                            <p className="font-medium">{usuarioSeleccionado.correo}</p>
+                            <p className="text-sm text-gray-500">
+                              Correo electrónico
+                            </p>
+                            <p className="font-medium">
+                              {usuarioSeleccionado.correo}
+                            </p>
                           </div>
                         </div>
                       )}
                       {usuarioSeleccionado.telefono && (
                         <div className="flex items-center gap-3">
-                          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          <svg
+                            className="h-5 w-5 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                            />
                           </svg>
                           <div>
                             <p className="text-sm text-gray-500">Teléfono</p>
-                            <p className="font-medium">{usuarioSeleccionado.telefono}</p>
+                            <p className="font-medium">
+                              {usuarioSeleccionado.telefono}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -979,16 +1024,21 @@ const UsuariosPage = () => {
                     </h4>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-sm text-gray-500 mb-1">Sucursal asignada</p>
+                        <p className="text-sm text-gray-500 mb-1">
+                          Sucursal asignada
+                        </p>
                         <div className="p-3 bg-blue-50 rounded-lg">
                           <p className="font-medium text-blue-900">
-                            {usuarioSeleccionado.sucursales?.nombre || "No asignada"}
+                            {usuarioSeleccionado.sucursales?.nombre ||
+                              "No asignada"}
                           </p>
                         </div>
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500 mb-1">ID del usuario</p>
+                        <p className="text-sm text-gray-500 mb-1">
+                          ID del usuario
+                        </p>
                         <div className="p-3 bg-gray-50 rounded-lg">
                           <p className="font-mono text-sm text-gray-700">
                             {usuarioSeleccionado.id}
@@ -998,13 +1048,17 @@ const UsuariosPage = () => {
 
                       <div className="grid grid-cols-1 gap-3">
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">Fecha de creación</p>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Fecha de creación
+                          </p>
                           <p className="font-medium">
                             {formatearFecha(usuarioSeleccionado.creado_en)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">Última actualización</p>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Última actualización
+                          </p>
                           <p className="font-medium">
                             {formatearFecha(usuarioSeleccionado.actualizado_en)}
                           </p>

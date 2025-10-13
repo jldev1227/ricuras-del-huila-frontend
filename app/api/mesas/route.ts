@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const numero = searchParams.get("numero");
-    const sucursalId = searchParams.get("sucursalId");
+    const sucursal_id = searchParams.get("sucursal_id");
     const ubicacion = searchParams.get("ubicacion");
     const disponible = searchParams.get("disponible");
 
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       where.numero = parseInt(numero, 10);
     }
 
-    if (sucursalId) {
-      where.sucursal_id = sucursalId;
+    if (sucursal_id) {
+      where.sucursal_id = sucursal_id;
     }
 
     if (ubicacion) {
@@ -42,60 +42,38 @@ export async function GET(request: NextRequest) {
     const mesas = await prisma.mesas.findMany({
       where,
       include: {
-        sucursal: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
+        sucursales: true,
         ordenes: {
-          where: {
-            estado: {
-              in: ["PENDIENTE", "EN_PREPARACION", "LISTA"]
-            }
-          },
           include: {
-            mesero: {
-              select: {
-                id: true,
-                nombre_completo: true,
-              }
-            },
+            usuarios: true,
             _count: {
               select: {
-                items: true,
+                orden_items: true
               }
             }
-          },
-          orderBy: {
-            creado_en: 'desc'
-          },
-          take: 1
-        },
-        _count: {
-          select: {
-            ordenes: true,
-          },
-        },
-      },
-      orderBy: [{ sucursal_id: "asc" }, { numero: "asc" }],
+          }
+        }
+      }
     });
 
     // Transformar los datos para incluir ordenActual
-    const mesasConOrdenActual = mesas.map(mesa => ({
+    const mesasConOrdenActual = mesas.map((mesa) => ({
       ...mesa,
-      ordenActual: mesa.ordenes.length > 0 ? {
-        id: mesa.ordenes[0].id,
-        numeroOrden: mesa.ordenes[0].id.slice(-6), // Assuming numeroOrden is derived from id
-        estado: mesa.ordenes[0].estado,
-        total: mesa.ordenes[0].total,
-        creadoEn: mesa.ordenes[0].creado_en,
-        meseroId: mesa.ordenes[0].mesero_id,
-        mesero: mesa.ordenes[0].mesero,
-        _count: mesa.ordenes[0]._count
-      } : null,
+      ordenActual:
+        mesa.ordenes.length > 0
+          ? {
+              id: mesa.ordenes[0].id,
+              numeroOrden: mesa.ordenes[0].id.slice(-6), // Assuming numeroOrden is derived from id
+              estado: mesa.ordenes[0].estado,
+              total: mesa.ordenes[0].total,
+              creadoEn: mesa.ordenes[0].creado_en,
+              meseroId: mesa.ordenes[0].mesero_id,
+              mesero: mesa.ordenes[0].usuarios,
+              _count: mesa.ordenes[0]._count,
+            }
+          : null,
       ordenes: undefined, // Remove the ordenes array from response
-      activa: mesa.disponible && mesa.ordenes.length === 0 // Mesa is active if available and no active orders
+      activa: mesa.disponible && mesa.ordenes.length === 0, // Mesa is active if available and no active orders
     }));
 
     return NextResponse.json({
@@ -108,6 +86,68 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { message: "Error al obtener mesas" },
       { status: 500 },
+    );
+  }
+}
+
+// POST - Crear nueva mesa
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { numero, capacidad, sucursal_id, ubicacion, notas, disponible } = body;
+
+    console.log(body)
+
+    // Validar datos requeridos 
+    if (!numero || !sucursal_id) {
+      return NextResponse.json(
+        { success: false, message: "Número y sucursal son requeridos" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que no exista otra mesa con el mismo número en la misma sucursal
+    const mesaExistente = await prisma.mesas.findFirst({
+      where: {
+        numero: parseInt(numero),
+        sucursal_id: sucursal_id
+      }
+    });
+
+    if (mesaExistente) {
+      return NextResponse.json(
+        { success: false, message: "Ya existe una mesa con ese número en esta sucursal" },
+        { status: 400 }
+      );
+    }
+
+    // Crear la mesa
+    const nuevaMesa = await prisma.mesas.create({
+      data: {
+        id: crypto.randomUUID(),
+        numero: parseInt(numero),
+        capacidad: parseInt(capacidad) || 4,
+        sucursal_id,
+        ubicacion: ubicacion || null,
+        notas: notas || null,
+        disponible: disponible !== false,
+        actualizado_en: new Date()
+      },
+      include: {
+        sucursales: true
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Mesa creada exitosamente",
+      mesa: nuevaMesa
+    });
+  } catch (error) {
+    console.error("Error al crear mesa:", error);
+    return NextResponse.json(
+      { success: false, message: "Error al crear mesa" },
+      { status: 500 }
     );
   }
 }

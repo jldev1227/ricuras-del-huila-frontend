@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: { id: string } },
 ) {
   try {
     const { params } = await context;
@@ -17,7 +17,7 @@ export async function PUT(
           success: false,
           message: "Mesa ID y Mesero ID son requeridos",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -28,16 +28,16 @@ export async function PUT(
         ordenes: {
           where: {
             estado: {
-              in: ["PENDIENTE", "EN_PREPARACION", "LISTA"]
-            }
+              in: ["PENDIENTE", "EN_PREPARACION", "LISTA"],
+            },
           },
           include: {
             mesero: true,
           },
           orderBy: {
-            creadoEn: 'desc'
+            creadoEn: "desc",
           },
-          take: 1
+          take: 1,
         },
       },
     });
@@ -48,7 +48,7 @@ export async function PUT(
           success: false,
           message: "Mesa no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -60,7 +60,7 @@ export async function PUT(
           success: false,
           message: "La mesa no tiene una orden activa",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -71,7 +71,7 @@ export async function PUT(
           success: false,
           message: "Solo el mesero asignado puede liberar esta mesa",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -80,9 +80,10 @@ export async function PUT(
       return NextResponse.json(
         {
           success: false,
-          message: "Solo se pueden liberar mesas con órdenes entregadas o canceladas",
+          message:
+            "Solo se pueden liberar mesas con órdenes entregadas o canceladas",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -95,7 +96,6 @@ export async function PUT(
       success: true,
       message: "Mesa liberada exitosamente",
     });
-
   } catch (error) {
     console.error("Error al liberar mesa:", error);
     return NextResponse.json(
@@ -103,7 +103,7 @@ export async function PUT(
         success: false,
         message: "Error interno del servidor",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -44,39 +44,39 @@ export async function POST(request: NextRequest) {
     // Validaciones básicas
     if (!nombre || typeof nombre !== "string" || nombre.trim().length === 0) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "El nombre de la categoría es requerido" 
+        {
+          success: false,
+          message: "El nombre de la categoría es requerido",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (nombre.trim().length > 100) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "El nombre de la categoría no puede exceder 100 caracteres" 
+        {
+          success: false,
+          message: "El nombre de la categoría no puede exceder 100 caracteres",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Verificar si ya existe una categoría con el mismo nombre
     const categoriaExistente = await prisma.categorias.findFirst({
-      where: { 
+      where: {
         nombre: nombre.trim(),
-        activo: true 
-      }
+        activo: true,
+      },
     });
 
     if (categoriaExistente) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "Ya existe una categoría con este nombre" 
+        {
+          success: false,
+          message: "Ya existe una categoría con este nombre",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (!ordenFinal || typeof ordenFinal !== "number") {
       const ultimaCategoria = await prisma.categorias.findFirst({
         orderBy: { orden: "desc" },
-        select: { orden: true }
+        select: { orden: true },
       });
       ordenFinal = ultimaCategoria ? ultimaCategoria.orden + 1 : 1;
     }
@@ -122,15 +122,14 @@ export async function POST(request: NextRequest) {
       message: "Categoría creada exitosamente",
       categoria: nuevaCategoria,
     });
-
   } catch (error) {
     console.error("Error al crear categoría:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: "Error interno del servidor al crear la categoría" 
+      {
+        success: false,
+        message: "Error interno del servidor al crear la categoría",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

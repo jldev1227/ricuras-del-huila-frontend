@@ -1,8 +1,8 @@
 // app/api/usuarios/profile/route.ts
+
 import type { Prisma } from "@prisma/client";
-import { roles } from "@prisma/client";
-import { type NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET - Obtener perfil del usuario autenticado
@@ -63,13 +63,13 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
+    const {
       userId,
-      nombre_completo, 
-      identificacion, 
-      correo, 
-      telefono, 
-      password
+      nombre_completo,
+      identificacion,
+      correo,
+      telefono,
+      password,
     } = body;
 
     // Validar datos requeridos
@@ -82,7 +82,10 @@ export async function PUT(request: NextRequest) {
 
     if (!nombre_completo || !identificacion) {
       return NextResponse.json(
-        { success: false, message: "Nombre completo e identificación son requeridos" },
+        {
+          success: false,
+          message: "Nombre completo e identificación son requeridos",
+        },
         { status: 400 },
       );
     }
@@ -132,7 +135,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Preparar datos para actualizar (sin rol)
-    const datosActualizacion: any = {
+    const datosActualizacion: Prisma.usuariosUncheckedUpdateInput = {
       nombre_completo,
       identificacion,
       correo: correo || null,

@@ -1,20 +1,53 @@
 "use client";
 
-import { Button, Spinner } from "@heroui/react";
-import type { Mesa } from "@prisma/client";
+import { 
+  Button, 
+  Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  Select,
+  SelectItem,
+  Textarea,
+  Checkbox,
+  useDisclosure
+} from "@heroui/react";
 import { Edit, Filter, MapPin, Plus, Search, Users, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Sucursal {
   id: string;
   nombre: string;
 }
 
-interface MesaConRelaciones extends Mesa {
+interface MesaConRelaciones {
+  id: string;
+  numero: number;
+  capacidad: number;
+  disponible: boolean;
+  ubicacion: string | null;
+  notas: string | null;
+  sucursal_id: string;
+  creado_en: Date;
+  actualizado_en: Date;
+  ultima_limpieza: Date | null;
   sucursal: Sucursal;
   _count: {
     ordenes: number;
   };
+}
+
+// Interfaces para formularios
+interface FormMesa {
+  numero: number;
+  capacidad: number;
+  disponible: boolean;
+  ubicacion: string;
+  notas: string;
+  sucursal_id: string;
 }
 
 export default function MesasPage() {
@@ -27,6 +60,23 @@ export default function MesasPage() {
   const [selectedSucursal, setSelectedSucursal] = useState("");
   const [selectedUbicacion, setSelectedUbicacion] = useState("");
   const [selectedDisponible, setSelectedDisponible] = useState("");
+
+  // Estados para modales
+  const { isOpen: isNewMesaOpen, onOpen: onNewMesaOpen, onClose: onNewMesaClose } = useDisclosure();
+  const { isOpen: isEditMesaOpen, onOpen: onEditMesaOpen, onClose: onEditMesaClose } = useDisclosure();
+  
+  // Estados para formularios
+  const [formData, setFormData] = useState<FormMesa>({
+    numero: 0,
+    capacidad: 4,
+    disponible: true,
+    ubicacion: "",
+    notas: "",
+    sucursal_id: ""
+  });
+  const [editingMesa, setEditingMesa] = useState<MesaConRelaciones | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Partial<FormMesa>>({});
 
   useEffect(() => {
     // Cargar sucursales y mesas al montar y cuando cambien los filtros
@@ -61,6 +111,108 @@ export default function MesasPage() {
 
     fetchAll();
   }, [searchNumero, selectedSucursal, selectedUbicacion, selectedDisponible]);
+
+  // Inicializar sucursal por defecto
+  useEffect(() => {
+    if (sucursales.length > 0 && !formData.sucursal_id) {
+      setFormData(prev => ({ ...prev, sucursal_id: sucursales[0].id }));
+    }
+  }, [sucursales, formData.sucursal_id]);
+
+  // Funciones para manejar formularios
+  const resetForm = useCallback(() => {
+    setFormData({
+      numero: 0,
+      capacidad: 4,
+      disponible: true,
+      ubicacion: "",
+      notas: "",
+      sucursal_id: sucursales.length > 0 ? sucursales[0].id : ""
+    });
+    setErrors({});
+    setEditingMesa(null);
+  }, [sucursales]);
+
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Partial<FormMesa> = {};
+
+    if (!formData.numero || formData.numero <= 0) {
+      newErrors.numero = 1; // Usar number como mock de error
+    }
+
+    if (!formData.capacidad || formData.capacidad <= 0) {
+      newErrors.capacidad = 1;
+    }
+
+    if (!formData.sucursal_id) {
+      newErrors.sucursal_id = "";
+    }
+
+    console.log(newErrors)
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData, mesas, editingMesa]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      const url = editingMesa ? `/api/mesas/${editingMesa.id}` : '/api/mesas';
+      const method = editingMesa ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Recargar mesas
+        const mesasRes = await fetch(`/api/mesas`);
+        const mesasData = await mesasRes.json();
+        if (mesasData.success) {
+          setMesas(mesasData.mesas);
+        }
+
+        // Cerrar modal y resetear form
+        if (editingMesa) {
+          onEditMesaClose();
+        } else {
+          onNewMesaClose();
+        }
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error al guardar mesa:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [formData, editingMesa, validateForm, onEditMesaClose, onNewMesaClose, resetForm]);
+
+  const handleEdit = useCallback((mesa: MesaConRelaciones) => {
+    setEditingMesa(mesa);
+    setFormData({
+      numero: mesa.numero,
+      capacidad: mesa.capacidad,
+      disponible: mesa.disponible,
+      ubicacion: mesa.ubicacion || "",
+      notas: mesa.notas || "",
+      sucursal_id: mesa.sucursal_id
+    });
+    setErrors({});
+    onEditMesaOpen();
+  }, [onEditMesaOpen]);
+
+  const handleNewMesa = useCallback(() => {
+    resetForm();
+    onNewMesaOpen();
+  }, [resetForm, onNewMesaOpen]);
 
   const limpiarFiltros = () => {
     setSearchNumero("");
@@ -102,6 +254,7 @@ export default function MesasPage() {
               color="primary"
               className="bg-wine shadow-lg hover:shadow-xl transition-all"
               startContent={<Plus size={18} />}
+              onPress={handleNewMesa}
             >
               Nueva Mesa
             </Button>
@@ -136,6 +289,7 @@ export default function MesasPage() {
                   <input
                     id="numeroMesa"
                     type="number"
+                    min={1}
                     value={searchNumero}
                     onChange={(e) => setSearchNumero(e.target.value)}
                     placeholder="Buscar..."
@@ -211,7 +365,7 @@ export default function MesasPage() {
               {/* Botón limpiar */}
               <div className="flex items-end">
                 <Button
-                  onClick={limpiarFiltros}
+                  onPress={limpiarFiltros}
                   variant="bordered"
                   className="w-full border-gray-300 hover:bg-gray-50"
                   isDisabled={!tieneFiltrosActivos}
@@ -226,7 +380,7 @@ export default function MesasPage() {
 
         {/* Resultados */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
                 {loading
@@ -286,6 +440,7 @@ export default function MesasPage() {
               ) : (
                 <Button
                   color="primary"
+                  onPress={handleNewMesa}
                   className="bg-wine"
                   startContent={<Plus size={16} />}
                 >
@@ -307,7 +462,7 @@ export default function MesasPage() {
                         Mesa {mesa.numero}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {mesa.sucursal.nombre}
+                        {mesa.sucursales.nombre}
                       </p>
                     </div>
                     <span
@@ -332,7 +487,7 @@ export default function MesasPage() {
                       </div>
                     )}
 
-                    {mesa._count.ordenes > 0 && (
+                    {/* {mesa._count.ordenes > 0 && (
                       <div className="flex items-center gap-2 text-sm">
                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         <span className="text-blue-600 font-medium">
@@ -341,7 +496,7 @@ export default function MesasPage() {
                           {mesa._count.ordenes !== 1 ? "s" : ""}
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
 
                   {/* Notas si existen */}
@@ -360,15 +515,9 @@ export default function MesasPage() {
                       variant="bordered"
                       className="flex-1 border-gray-300 hover:bg-gray-50"
                       startContent={<Edit size={14} />}
+                      onPress={() => handleEdit(mesa)}
                     >
                       Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      color={mesa.disponible ? "primary" : "success"}
-                      className={mesa.disponible ? "flex-1 bg-wine" : "flex-1"}
-                    >
-                      {mesa.disponible ? "Asignar" : "Liberar"}
                     </Button>
                   </div>
                 </div>
@@ -377,6 +526,188 @@ export default function MesasPage() {
           )}
         </div>
       </div>
+
+      {/* Modal Nueva Mesa */}
+      <Modal isOpen={isNewMesaOpen} onClose={onNewMesaClose} size="2xl" scrollBehavior="inside">
+        <ModalContent>
+          <>
+            <ModalHeader>
+              <h3 className="text-xl font-semibold text-gray-900">Nueva Mesa</h3>
+            </ModalHeader>
+            <ModalBody className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Número de Mesa"
+                  type="number"
+                  min={1}
+                  value={formData.numero.toString()}
+                  onChange={(e) => setFormData(prev => ({ ...prev, numero: parseInt(e.target.value) || 0 }))}
+                  isInvalid={!!errors.numero}
+                  errorMessage={errors.numero ? "Número de mesa requerido" : ""}
+                  isRequired
+                />
+                
+                <Input
+                  label="Capacidad"
+                  type="number"
+                  value={formData.capacidad.toString()}
+                  onChange={(e) => setFormData(prev => ({ ...prev, capacidad: parseInt(e.target.value) || 0 }))}
+                  isInvalid={!!errors.capacidad}
+                  errorMessage={errors.capacidad ? "Capacidad requerida y debe ser mayor a 0" : ""}
+                  isRequired
+                />
+              </div>
+
+              <Select
+                label="Sucursal"
+                value={formData.sucursal_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, sucursal_id: e.target.value }))}
+                isInvalid={!!errors.sucursal_id}
+                placeholder="Selecciona una sucursal"
+                errorMessage={errors.sucursal_id !== undefined ? "Sucursal requerida" : ""}
+                isRequired
+              >
+                {sucursales.map((sucursal) => (
+                  <SelectItem key={sucursal.id}>
+                    {sucursal.nombre}
+                  </SelectItem>
+                ))}
+              </Select>
+
+              <Input
+                label="Ubicación"
+                value={formData.ubicacion}
+                onChange={(e) => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
+                placeholder="Ej: Terraza, Salón principal, etc."
+              />
+
+              <Textarea
+                label="Notas"
+                value={formData.notas}
+                onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
+                placeholder="Notas adicionales sobre la mesa..."
+                minRows={3}
+              />
+
+              <Checkbox
+                isSelected={formData.disponible}
+                onValueChange={(checked) => setFormData(prev => ({ ...prev, disponible: checked }))}
+              >
+                Mesa disponible
+              </Checkbox>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={onNewMesaClose}
+                isDisabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                color="primary"
+                onPress={handleSubmit}
+                isLoading={isSubmitting}
+                className="bg-wine"
+              >
+                Crear Mesa
+              </Button>
+            </ModalFooter>
+          </>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal Editar Mesa */}
+      <Modal isOpen={isEditMesaOpen} onClose={onEditMesaClose} size="2xl">
+        <ModalContent>
+          <>
+            <ModalHeader>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Editar Mesa {editingMesa?.numero}
+              </h3>
+            </ModalHeader>
+            <ModalBody className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Número de Mesa"
+                  type="number"
+                  min={1}
+                  value={formData.numero.toString()}
+                  onChange={(e) => setFormData(prev => ({ ...prev, numero: parseInt(e.target.value) || 0 }))}
+                  isInvalid={!!errors.numero}
+                  errorMessage={errors.numero ? "Número de mesa requerido" : ""}
+                  isRequired
+                />
+                
+                <Input
+                  label="Capacidad"
+                  type="number"
+                  value={formData.capacidad.toString()}
+                  onChange={(e) => setFormData(prev => ({ ...prev, capacidad: parseInt(e.target.value) || 0 }))}
+                  isInvalid={!!errors.capacidad}
+                  errorMessage={errors.capacidad ? "Capacidad requerida y debe ser mayor a 0" : ""}
+                  isRequired
+                />
+              </div>
+
+              <Select
+                label="Sucursal"
+                value={formData.sucursal_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, sucursal_id: e.target.value }))}
+                isInvalid={!!errors.sucursal_id}
+                errorMessage={errors.sucursal_id !== undefined ? "Sucursal requerida" : ""}
+                isRequired
+                defaultSelectedKeys={[formData.sucursal_id]}
+              >
+                {sucursales.map((sucursal) => (
+                  <SelectItem key={sucursal.id}>
+                    {sucursal.nombre}
+                  </SelectItem>
+                ))}
+              </Select>
+
+              <Input
+                label="Ubicación"
+                value={formData.ubicacion}
+                onChange={(e) => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
+                placeholder="Ej: Terraza, Salón principal, etc."
+              />
+
+              <Textarea
+                label="Notas"
+                value={formData.notas}
+                onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
+                placeholder="Notas adicionales sobre la mesa..."
+                minRows={3}
+              />
+
+              <Checkbox
+                isSelected={formData.disponible}
+                onValueChange={(checked) => setFormData(prev => ({ ...prev, disponible: checked }))}
+              >
+                Mesa disponible
+              </Checkbox>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={onEditMesaClose}
+                isDisabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                color="primary"
+                onPress={handleSubmit}
+                isLoading={isSubmitting}
+                className="bg-wine"
+              >
+                Actualizar Mesa
+              </Button>
+            </ModalFooter>
+          </>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

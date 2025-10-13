@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -302,12 +302,7 @@ export function useAuth() {
   // Login mejorado con mejor tipado
   const handleLogin = useCallback(
     async (identificacion: string, password: string) => {
-      try {
-        return await login(identificacion, password);
-      } catch (error) {
-        // El error ya está en el store, solo lo propagamos
-        throw error;
-      }
+      return await login(identificacion, password);
     },
     [login],
   );

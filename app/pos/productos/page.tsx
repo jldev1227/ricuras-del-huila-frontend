@@ -1,12 +1,12 @@
 "use client";
 
 import { Button, useDisclosure } from "@heroui/react";
+import { PlusIcon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import ModalDetallesProducto from "@/components/productos/ModalDetallesProducto";
 import ModalFormProducto from "@/components/productos/ModalFormProducto";
 import type { ProductoConCategoria } from "@/types/producto";
-import { PlusIcon } from "lucide-react";
 
 interface Categoria {
   id: string;
@@ -80,7 +80,7 @@ export default function ProductosPage() {
 
         const productosRes = await fetch(`/api/productos?${params}`);
         const productosData = await productosRes.json();
-        console.log(productosData)
+        console.log(productosData);
         if (productosData.success) {
           setProductos(productosData.productos);
         }
@@ -106,7 +106,7 @@ export default function ProductosPage() {
       const response = await fetch(`/api/productos?${params}`);
       const data = await response.json();
 
-      console.log(data)
+      console.log(data);
 
       if (data.success) {
         setProductos(data.productos);
@@ -146,8 +146,11 @@ export default function ProductosPage() {
             </p>
           </div>
 
-          <Button color="primary" startContent={<PlusIcon size={18} />}
-            onPress={handleCreate}>
+          <Button
+            color="primary"
+            startContent={<PlusIcon size={18} />}
+            onPress={handleCreate}
+          >
             Nuevo Producto
           </Button>
         </div>
@@ -296,10 +299,11 @@ export default function ProductosPage() {
                         </span>
                       )}
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${producto.disponible
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          producto.disponible
                             ? "bg-green-500 text-white"
                             : "bg-red-500 text-white"
-                          }`}
+                        }`}
                       >
                         {producto.disponible ? "Disponible" : "Agotado"}
                       </span>
@@ -314,7 +318,8 @@ export default function ProductosPage() {
                           {producto.nombre}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          {producto.categorias.icono} {producto.categorias.nombre}
+                          {producto.categorias.icono}{" "}
+                          {producto.categorias.nombre}
                         </p>
                       </div>
                     </div>
