@@ -313,7 +313,7 @@ export default function MesasPage() {
                     value={searchNumero}
                     onChange={(e) => setSearchNumero(e.target.value)}
                     placeholder="Buscar..."
-                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-black"
                   />
                 </div>
               </div>

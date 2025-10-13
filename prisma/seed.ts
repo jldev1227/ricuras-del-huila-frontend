@@ -28,7 +28,6 @@ async function main() {
       nombre: "Ricuras Centro",
       direccion: "Calle 5 #10-20, Centro, Neiva",
       telefono: "3001234567",
-      activo: true,
     },
   });
 
@@ -38,7 +37,6 @@ async function main() {
       nombre: "Ricuras Norte",
       direccion: "Carrera 15 #25-30, Norte, Neiva",
       telefono: "3009876543",
-      activo: true,
     },
   });
 
@@ -48,7 +46,6 @@ async function main() {
       nombre: "Ricuras Sur",
       direccion: "Avenida 26 #12-45, Sur, Neiva",
       telefono: "3005556677",
-      activo: true,
     },
   });
 

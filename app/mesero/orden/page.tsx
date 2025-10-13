@@ -377,7 +377,7 @@ export default function MeseroNuevaOrden() {
                 placeholder="Buscar productos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 lg:pl-12 pr-10 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine focus:border-wine transition-all text-sm lg:text-base"
+                className="w-full pl-10 lg:pl-12 pr-10 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine focus:border-wine transition-all text-sm lg:text-base text-black"
               />
               {searchTerm && (
                 <button

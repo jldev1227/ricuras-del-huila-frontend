@@ -92,7 +92,7 @@ export default function Page() {
                 }}
                 required
                 disabled={isLoading}
-                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
+                className="text-black w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                 placeholder="Ej: 1234567890"
               />
             </div>
@@ -114,7 +114,7 @@ export default function Page() {
                 }}
                 required
                 disabled={isLoading}
-                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
+                className="text-black w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                 placeholder="••••••••"
               />
             </div>

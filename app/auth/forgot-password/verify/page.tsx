@@ -132,7 +132,7 @@ export default function Page() {
               <InputOtp
                 className="mx-auto"
                 classNames={{
-                  segmentWrapper: "gap-x-2",
+                  segmentWrapper: "gap-x-2 text-black",
                 }}
                 size="lg"
                 length={6}

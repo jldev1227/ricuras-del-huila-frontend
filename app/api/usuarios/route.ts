@@ -13,11 +13,9 @@ export async function GET(request: NextRequest) {
     // Filtros
     const rol = searchParams.get("rol");
     const activo = searchParams.get("activo");
-    const sucursal_id = searchParams.get("sucursal_id");
     const search = searchParams.get("search");
     const excludeUserId = searchParams.get("excludeUserId"); // ID del usuario autenticado a excluir
 
-    console.log(excludeUserId, "USUARIOO EXCLUIDO");
     // Construir filtros
     const where: Prisma.usuariosWhereInput = {};
 
@@ -34,10 +32,6 @@ export async function GET(request: NextRequest) {
     // ✅ FIX: Verificar que activo no sea null antes de comparar
     if (activo !== null && activo !== undefined && activo !== "") {
       where.activo = activo === "true";
-    }
-
-    if (sucursal_id) {
-      where.sucursal_id = sucursal_id;
     }
 
     if (search) {
@@ -58,12 +52,6 @@ export async function GET(request: NextRequest) {
         telefono: true,
         rol: true,
         activo: true,
-        sucursales: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
         creado_en: true,
         actualizado_en: true,
       },
@@ -95,11 +83,10 @@ export async function POST(request: NextRequest) {
       telefono,
       password,
       rol = "MESERO",
-      sucursalId,
     } = body;
 
     // Validaciones básicas
-    if (!nombre_completo || !identificacion || !password || !sucursalId) {
+    if (!nombre_completo || !identificacion || !password) {
       return NextResponse.json(
         { success: false, message: "Faltan campos requeridos" },
         { status: 400 },
@@ -110,18 +97,6 @@ export async function POST(request: NextRequest) {
     if (rol !== "ADMINISTRADOR" && rol !== "MESERO") {
       return NextResponse.json(
         { success: false, message: "Rol inválido" },
-        { status: 400 },
-      );
-    }
-
-    // ✅ Verificar que la sucursal exista
-    const sucursalExiste = await prisma.sucursales.findUnique({
-      where: { id: sucursalId },
-    });
-
-    if (!sucursalExiste) {
-      return NextResponse.json(
-        { success: false, message: "La sucursal no existe" },
         { status: 400 },
       );
     }
@@ -170,7 +145,6 @@ export async function POST(request: NextRequest) {
         telefono,
         password: hashedPassword, // ✅ Usar password hasheado
         rol: rol as roles, // ✅ Cast explícito
-        sucursal_id: sucursalId,
         creado_en: new Date(),
         actualizado_en: new Date(),
       },
@@ -182,12 +156,6 @@ export async function POST(request: NextRequest) {
         telefono: true,
         rol: true,
         activo: true,
-        sucursales: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
       },
     });
 
@@ -220,7 +188,6 @@ export async function PUT(request: Request) {
       telefono,
       password,
       rol,
-      sucursal_id,
       activo,
     } = body;
 
@@ -289,20 +256,6 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Verificar que la sucursal existe si se proporciona
-    if (sucursal_id) {
-      const sucursalExiste = await prisma.sucursales.findUnique({
-        where: { id: sucursal_id },
-      });
-
-      if (!sucursalExiste) {
-        return NextResponse.json(
-          { success: false, message: "Sucursal no encontrada" },
-          { status: 400 },
-        );
-      }
-    }
-
     // Preparar datos para actualizar
     const datosActualizacion: Prisma.usuariosUncheckedUpdateInput = {
       nombre_completo,
@@ -310,7 +263,6 @@ export async function PUT(request: Request) {
       correo,
       telefono,
       rol: rol as roles,
-      sucursal_id,
       activo: activo !== undefined ? activo : true,
       actualizado_en: new Date(),
     };
@@ -335,12 +287,6 @@ export async function PUT(request: Request) {
         activo: true,
         creado_en: true,
         actualizado_en: true,
-        sucursales: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
       },
     });
 

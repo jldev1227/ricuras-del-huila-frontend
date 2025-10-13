@@ -30,12 +30,6 @@ export async function GET(request: NextRequest) {
         telefono: true,
         rol: true,
         activo: true,
-        sucursales: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
         creado_en: true,
         actualizado_en: true,
       },
@@ -165,12 +159,6 @@ export async function PUT(request: NextRequest) {
         activo: true,
         creado_en: true,
         actualizado_en: true,
-        sucursales: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
       },
     });
 

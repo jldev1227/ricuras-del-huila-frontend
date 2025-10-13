@@ -317,7 +317,7 @@ export default function ModalFormProducto({
                       value={formData.nombre}
                       onChange={(e) => handleChange("nombre", e.target.value)}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
                       placeholder="Ej: Lechona Completa"
                     />
                   </div>
@@ -438,7 +438,7 @@ export default function ModalFormProducto({
                       required
                       min="0"
                       step="100"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
                       placeholder="25000"
                     />
                   </div>
@@ -464,7 +464,7 @@ export default function ModalFormProducto({
                       required
                       min="0"
                       step="100"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
                       placeholder="12000"
                     />
                   </div>

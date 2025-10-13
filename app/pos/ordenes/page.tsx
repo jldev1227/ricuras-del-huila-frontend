@@ -384,7 +384,7 @@ export default function OrdenesPage() {
                 placeholder="Buscar por mesero, mesa, cliente o sucursal..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine transition-all"
+                className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine transition-all text-black"
               />
               {searchTerm && (
                 <button
@@ -500,7 +500,7 @@ export default function OrdenesPage() {
                     type="date"
                     value={fechaFiltro}
                     onChange={(e) => setFechaFiltro(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all"
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-black"
                   />
                 </div>
               </div>

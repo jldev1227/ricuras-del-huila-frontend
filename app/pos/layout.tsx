@@ -635,7 +635,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (hasHydrated && isAuthenticated && user) {
       verifyUserExists();
     }
-  }, [hasHydrated, isAuthenticated, user, verifyUserExists]);
+  }, [hasHydrated, isAuthenticated, user]);
 
   // Validar acceso - solo administradores pueden acceder al POS
   useEffect(() => {

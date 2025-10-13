@@ -4,7 +4,6 @@ import {
   addToast,
   Button,
   Card,
-  Checkbox,
   Chip,
   Input,
   Modal,
@@ -51,7 +50,6 @@ interface Sucursal {
   nombre: string;
   direccion: string;
   telefono: string | null;
-  activo: boolean;
   _count?: {
     mesas: number;
   };
@@ -72,6 +70,8 @@ const ConfiguracionPage = () => {
   // Estados para usuario/perfil
   const [usuario, setUsuario] = useState<UsuarioProfile | null>(null);
   const [cargandoUsuario, setCargandoUsuario] = useState(true);
+  const [editandoPerfil, setEditandoPerfil] = useState(false);
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
 
   // Estados para sucursales
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -83,8 +83,21 @@ const ConfiguracionPage = () => {
     nombre: "",
     direccion: "",
     telefono: null as string | null,
-    activo: true,
   });
+
+  // Estados para editar perfil
+  const [formPerfil, setFormPerfil] = useState({
+    nombre_completo: "",
+    identificacion: "",
+    correo: null as string | null,
+    telefono: null as string | null,
+    password: "",
+    confirmar_password: "",
+  });
+
+  // Estados de errores
+  const [erroresPerfil, setErroresPerfil] = useState<{ [key: string]: string }>({});
+  const [erroresSucursal, setErroresSucursal] = useState<{ [key: string]: string }>({});
 
   // Estados para empresa
   const [configuracionEmpresa, setConfiguracionEmpresa] =
@@ -98,12 +111,197 @@ const ConfiguracionPage = () => {
   const [cargandoEmpresa, setCargandoEmpresa] = useState(false);
   const [guardandoEmpresa, setGuardandoEmpresa] = useState(false);
 
+  // Estados de errores para empresa
+  const [erroresEmpresa, setErroresEmpresa] = useState<{ [key: string]: string }>({});
+
   // Modal controls
   const {
     isOpen: modalSucursalAbierto,
     onOpen: abrirModalSucursal,
     onClose: cerrarModalSucursal,
   } = useDisclosure();
+
+  // Funciones de validación
+  const validarPerfil = useCallback(() => {
+    const errores: { [key: string]: string } = {};
+
+    // Validar nombre completo
+    if (!formPerfil.nombre_completo || formPerfil.nombre_completo.trim().length === 0) {
+      errores.nombre_completo = "El nombre completo es obligatorio";
+    } else if (formPerfil.nombre_completo.trim().length < 3) {
+      errores.nombre_completo = "El nombre debe tener al menos 3 caracteres";
+    } else if (formPerfil.nombre_completo.trim().length > 100) {
+      errores.nombre_completo = "El nombre no puede exceder los 100 caracteres";
+    }
+
+    // Validar identificación
+    if (!formPerfil.identificacion || formPerfil.identificacion.trim().length === 0) {
+      errores.identificacion = "La identificación es obligatoria";
+    } else if (formPerfil.identificacion.trim().length < 6) {
+      errores.identificacion = "La identificación debe tener al menos 6 caracteres";
+    } else if (formPerfil.identificacion.trim().length > 20) {
+      errores.identificacion = "La identificación no puede exceder los 20 caracteres";
+    }
+
+    // Validar correo (opcional, pero si se proporciona debe ser válido)
+    if (formPerfil.correo && formPerfil.correo.trim().length > 0) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formPerfil.correo)) {
+        errores.correo = "El formato del correo electrónico no es válido";
+      } else if (formPerfil.correo.length > 100) {
+        errores.correo = "El correo no puede exceder los 100 caracteres";
+      }
+    }
+
+    // Validar teléfono (opcional, pero si se proporciona debe ser válido)
+    if (formPerfil.telefono && formPerfil.telefono.trim().length > 0) {
+      const telefonoRegex = /^[0-9+\-\s()]+$/;
+      if (!telefonoRegex.test(formPerfil.telefono)) {
+        errores.telefono = "El teléfono contiene caracteres no válidos";
+      } else if (formPerfil.telefono.replace(/[^0-9]/g, '').length < 7) {
+        errores.telefono = "El teléfono debe tener al menos 7 dígitos";
+      } else if (formPerfil.telefono.replace(/[^0-9]/g, '').length > 15) {
+        errores.telefono = "El teléfono no puede tener más de 15 dígitos";
+      }
+    }
+
+    // Validar contraseña (solo si se proporciona)
+    if (formPerfil.password && formPerfil.password.trim().length > 0) {
+      if (formPerfil.password.length < 6) {
+        errores.password = "La contraseña debe tener al menos 6 caracteres";
+      } else if (formPerfil.password.length > 50) {
+        errores.password = "La contraseña no puede exceder los 50 caracteres";
+      }
+
+      // Validar confirmación de contraseña
+      if (formPerfil.password !== formPerfil.confirmar_password) {
+        errores.confirmar_password = "Las contraseñas no coinciden";
+      }
+    }
+
+    setErroresPerfil(errores);
+    return Object.keys(errores).length === 0;
+  }, [formPerfil]);
+
+  const validarSucursal = useCallback(() => {
+    const errores: { [key: string]: string } = {};
+
+    // Validar nombre
+    if (!formSucursal.nombre || formSucursal.nombre.trim().length === 0) {
+      errores.nombre = "El nombre de la sucursal es obligatorio";
+    } else if (formSucursal.nombre.trim().length < 3) {
+      errores.nombre = "El nombre debe tener al menos 3 caracteres";
+    } else if (formSucursal.nombre.trim().length > 100) {
+      errores.nombre = "El nombre no puede exceder los 100 caracteres";
+    }
+
+    // Validar dirección
+    if (!formSucursal.direccion || formSucursal.direccion.trim().length === 0) {
+      errores.direccion = "La dirección es obligatoria";
+    } else if (formSucursal.direccion.trim().length < 10) {
+      errores.direccion = "La dirección debe tener al menos 10 caracteres";
+    } else if (formSucursal.direccion.trim().length > 200) {
+      errores.direccion = "La dirección no puede exceder los 200 caracteres";
+    }
+
+    // Validar teléfono (opcional, pero si se proporciona debe ser válido)
+    if (formSucursal.telefono && formSucursal.telefono.trim().length > 0) {
+      const telefonoRegex = /^[0-9+\-\s()]+$/;
+      if (!telefonoRegex.test(formSucursal.telefono)) {
+        errores.telefono = "El teléfono contiene caracteres no válidos";
+      } else if (formSucursal.telefono.replace(/[^0-9]/g, '').length < 7) {
+        errores.telefono = "El teléfono debe tener al menos 7 dígitos";
+      } else if (formSucursal.telefono.replace(/[^0-9]/g, '').length > 15) {
+        errores.telefono = "El teléfono no puede tener más de 15 dígitos";
+      }
+    }
+
+    setErroresSucursal(errores);
+    return Object.keys(errores).length === 0;
+  }, [formSucursal]);
+
+  const validarEmpresa = useCallback(() => {
+    const errores: { [key: string]: string } = {};
+
+    // Validar NIT
+    if (!configuracionEmpresa.nit || configuracionEmpresa.nit.trim().length === 0) {
+      errores.nit = "El NIT es obligatorio";
+    } else if (configuracionEmpresa.nit.trim().length < 8) {
+      errores.nit = "El NIT debe tener al menos 8 caracteres";
+    } else if (configuracionEmpresa.nit.trim().length > 20) {
+      errores.nit = "El NIT no puede exceder los 20 caracteres";
+    }
+
+    // Validar razón social
+    if (!configuracionEmpresa.razon_social || configuracionEmpresa.razon_social.trim().length === 0) {
+      errores.razon_social = "La razón social es obligatoria";
+    } else if (configuracionEmpresa.razon_social.trim().length < 3) {
+      errores.razon_social = "La razón social debe tener al menos 3 caracteres";
+    } else if (configuracionEmpresa.razon_social.trim().length > 200) {
+      errores.razon_social = "La razón social no puede exceder los 200 caracteres";
+    }
+
+    // Validar teléfono
+    if (!configuracionEmpresa.telefono || configuracionEmpresa.telefono.trim().length === 0) {
+      errores.telefono = "El teléfono es obligatorio";
+    } else {
+      const telefonoRegex = /^[0-9+\-\s()]+$/;
+      if (!telefonoRegex.test(configuracionEmpresa.telefono)) {
+        errores.telefono = "El teléfono contiene caracteres no válidos";
+      } else if (configuracionEmpresa.telefono.replace(/[^0-9]/g, '').length < 7) {
+        errores.telefono = "El teléfono debe tener al menos 7 dígitos";
+      } else if (configuracionEmpresa.telefono.replace(/[^0-9]/g, '').length > 15) {
+        errores.telefono = "El teléfono no puede tener más de 15 dígitos";
+      }
+    }
+
+    // Validar correo (opcional, pero si se proporciona debe ser válido)
+    if (configuracionEmpresa.correo && configuracionEmpresa.correo.trim().length > 0) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(configuracionEmpresa.correo)) {
+        errores.correo = "El formato del correo electrónico no es válido";
+      } else if (configuracionEmpresa.correo.length > 100) {
+        errores.correo = "El correo no puede exceder los 100 caracteres";
+      }
+    }
+
+    // Validar dirección (opcional)
+    if (configuracionEmpresa.direccion && configuracionEmpresa.direccion.trim().length > 0) {
+      if (configuracionEmpresa.direccion.trim().length < 10) {
+        errores.direccion = "La dirección debe tener al menos 10 caracteres";
+      } else if (configuracionEmpresa.direccion.trim().length > 200) {
+        errores.direccion = "La dirección no puede exceder los 200 caracteres";
+      }
+    }
+
+    setErroresEmpresa(errores);
+    return Object.keys(errores).length === 0;
+  }, [configuracionEmpresa]);
+
+  // Función para limpiar errores individuales
+  const limpiarErrorPerfil = (campo: string) => {
+    setErroresPerfil(prev => {
+      const nuevosErrores = { ...prev };
+      delete nuevosErrores[campo];
+      return nuevosErrores;
+    });
+  };
+
+  const limpiarErrorSucursal = (campo: string) => {
+    setErroresSucursal(prev => {
+      const nuevosErrores = { ...prev };
+      delete nuevosErrores[campo];
+      return nuevosErrores;
+    });
+  };
+
+  const limpiarErrorEmpresa = (campo: string) => {
+    setErroresEmpresa(prev => {
+      const nuevosErrores = { ...prev };
+      delete nuevosErrores[campo];
+      return nuevosErrores;
+    });
+  };
 
   // Función para determinar las pestañas disponibles según el rol
   const getAvailableTabs = () => {
@@ -254,28 +452,152 @@ const ConfiguracionPage = () => {
     }
   }, []);
 
+  // Funciones auxiliares para perfil
+  const iniciarEdicionPerfil = () => {
+    if (usuario) {
+      setFormPerfil({
+        nombre_completo: usuario.nombre_completo,
+        identificacion: usuario.identificacion,
+        correo: usuario.correo,
+        telefono: usuario.telefono,
+        password: "",
+        confirmar_password: "",
+      });
+      setErroresPerfil({});
+      setEditandoPerfil(true);
+    }
+  };
+
+  const cancelarEdicionPerfil = () => {
+    setEditandoPerfil(false);
+    setFormPerfil({
+      nombre_completo: "",
+      identificacion: "",
+      correo: null,
+      telefono: null,
+      password: "",
+      confirmar_password: "",
+    });
+    setErroresPerfil({});
+  };
+
   // Función auxiliar para resetear el formulario de sucursal
   const resetFormSucursal = useCallback(() => {
     setFormSucursal({
       nombre: "",
       direccion: "",
       telefono: null,
-      activo: true,
     });
     setSucursalSeleccionada(null);
+    setErroresSucursal({});
   }, []);
+
+  // Guardar perfil
+  const guardarPerfil = useCallback(async () => {
+    try {
+      setGuardandoPerfil(true);
+
+      // Validar formulario
+      if (!validarPerfil()) {
+        return;
+      }
+
+      // Obtener el userId
+      let currentUserId = null;
+      try {
+        const authStorage = localStorage.getItem("auth-storage");
+        if (authStorage) {
+          const authData = JSON.parse(authStorage);
+          currentUserId = authData?.state?.user?.id;
+        }
+      } catch (error) {
+        console.warn("No se pudo obtener el usuario autenticado:", error);
+      }
+
+      if (!currentUserId) {
+        addToast({
+          title: "Error",
+          description: "No hay sesión activa. Por favor inicia sesión.",
+          color: "danger",
+        });
+        return;
+      }
+
+      // Preparar datos para enviar
+      const datosActualizacion = {
+        userId: currentUserId,
+        nombre_completo: formPerfil.nombre_completo,
+        identificacion: formPerfil.identificacion,
+        correo: formPerfil.correo || null,
+        telefono: formPerfil.telefono || null,
+        // Solo incluir password si no está vacía
+        ...(formPerfil.password.trim() && { password: formPerfil.password }),
+      };
+
+      const response = await fetch("/api/usuarios/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datosActualizacion),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Error al actualizar perfil");
+      }
+
+      // Actualizar el estado del usuario con los nuevos datos
+      setUsuario(result.data);
+
+      // Actualizar el auth-storage con los nuevos datos del usuario
+      try {
+        const authStorage = localStorage.getItem("auth-storage");
+        if (authStorage) {
+          const authData = JSON.parse(authStorage);
+          if (authData?.state?.user) {
+            // Actualizar los datos del usuario en el auth-storage
+            authData.state.user = {
+              ...authData.state.user,
+              nombre_completo: result.data.nombre_completo,
+              identificacion: result.data.identificacion,
+              correo: result.data.correo,
+              telefono: result.data.telefono,
+              actualizado_en: result.data.actualizado_en,
+            };
+            localStorage.setItem("auth-storage", JSON.stringify(authData));
+          }
+        }
+      } catch (error) {
+        console.warn("No se pudo actualizar el auth-storage:", error);
+      }
+
+      setEditandoPerfil(false);
+      cancelarEdicionPerfil();
+
+      addToast({
+        title: "Éxito",
+        description: "Perfil actualizado correctamente",
+        color: "success",
+      });
+    } catch (error) {
+      console.error("Error al guardar perfil:", error);
+      addToast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo actualizar el perfil",
+        color: "danger",
+      });
+    } finally {
+      setGuardandoPerfil(false);
+    }
+  }, [formPerfil, validarPerfil]);
 
   // Guardar sucursal
   const guardarSucursal = useCallback(async () => {
     try {
       setGuardandoSucursal(true);
 
-      if (!formSucursal.nombre || !formSucursal.direccion) {
-        addToast({
-          title: "Error",
-          description: "Nombre y dirección son obligatorios",
-          color: "danger",
-        });
+      // Validar formulario
+      if (!validarSucursal()) {
         return;
       }
 
@@ -300,6 +622,7 @@ const ConfiguracionPage = () => {
       addToast({
         title: "Éxito",
         description: `Sucursal ${sucursalSeleccionada ? "actualizada" : "creada"} correctamente`,
+        color: "success",
       });
     } catch (error) {
       console.error("Error al guardar sucursal:", error);
@@ -317,6 +640,8 @@ const ConfiguracionPage = () => {
     formSucursal,
     resetFormSucursal,
     sucursalSeleccionada,
+    erroresSucursal,
+    validarSucursal,
   ]);
 
   // Eliminar sucursal
@@ -353,14 +678,12 @@ const ConfiguracionPage = () => {
     try {
       setGuardandoEmpresa(true);
 
-      if (
-        !configuracionEmpresa.nit ||
-        !configuracionEmpresa.razon_social ||
-        !configuracionEmpresa.telefono
-      ) {
+      // Validar formulario
+      if (!validarEmpresa()) {
+        const camposConError = Object.keys(erroresEmpresa);
         addToast({
-          title: "Error",
-          description: "NIT, razón social y teléfono son obligatorios",
+          title: "Error de validación",
+          description: `Por favor corrige los errores en: ${camposConError.join(', ')}`,
           color: "danger",
         });
         return;
@@ -412,7 +735,7 @@ const ConfiguracionPage = () => {
     } finally {
       setGuardandoEmpresa(false);
     }
-  }, [configuracionEmpresa]);
+  }, [configuracionEmpresa, erroresEmpresa, validarEmpresa]);
 
   // Funciones auxiliares
   const abrirModalEditar = (sucursal: Sucursal) => {
@@ -421,8 +744,8 @@ const ConfiguracionPage = () => {
       nombre: sucursal.nombre,
       direccion: sucursal.direccion,
       telefono: sucursal.telefono,
-      activo: sucursal.activo,
     });
+    setErroresSucursal({});
     abrirModalSucursal();
   };
 
@@ -476,14 +799,44 @@ const ConfiguracionPage = () => {
             <div className="py-6">
               {tab.key === "perfil" && (
                 <Card className="p-6">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
                     <h2 className="text-2xl font-semibold">Mi Perfil</h2>
-                    <Chip
-                      color={usuario?.activo ? "success" : "danger"}
-                      variant="flat"
-                    >
-                      {usuario?.activo ? "Activo" : "Inactivo"}
-                    </Chip>
+                    <div className="flex flex-row items-center gap-3">
+                      <Chip
+                        color={usuario?.activo ? "success" : "danger"}
+                        variant="flat"
+                      >
+                        {usuario?.activo ? "Activo" : "Inactivo"}
+                      </Chip>
+                      {!editandoPerfil ? (
+                        <Button
+                          color="primary"
+                          variant="light"
+                          startContent={<Edit className="w-4 h-4" />}
+                          onPress={iniciarEdicionPerfil}
+                        >
+                          Editar
+                        </Button>
+                      ) : (
+                        <div className="flex flex-row gap-2">
+                          <Button
+                            color="danger"
+                            variant="light"
+                            onPress={cancelarEdicionPerfil}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            color="primary"
+                            startContent={<Save className="w-4 h-4" />}
+                            onPress={guardarPerfil}
+                            isLoading={guardandoPerfil}
+                          >
+                            {guardandoPerfil ? "Guardando..." : "Guardar"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {cargandoUsuario ? (
@@ -498,13 +851,21 @@ const ConfiguracionPage = () => {
                             htmlFor="nombre-completo"
                             className="block text-sm font-medium text-gray-700 mb-2"
                           >
-                            Nombre Completo
+                            Nombre Completo {editandoPerfil && "*"}
                           </label>
                           <Input
                             id="nombre-completo"
-                            value={usuario.nombre_completo}
-                            isReadOnly
+                            value={editandoPerfil ? formPerfil.nombre_completo : usuario.nombre_completo}
+                            onChange={editandoPerfil ? (e) => {
+                              setFormPerfil(prev => ({ ...prev, nombre_completo: e.target.value }));
+                              limpiarErrorPerfil('nombre_completo');
+                            } : undefined}
+                            isReadOnly={!editandoPerfil}
                             variant="bordered"
+                            isRequired={editandoPerfil}
+                            isInvalid={editandoPerfil && !!erroresPerfil.nombre_completo}
+                            errorMessage={editandoPerfil ? erroresPerfil.nombre_completo : undefined}
+                            className="text-black"
                           />
                         </div>
                         <div>
@@ -512,13 +873,21 @@ const ConfiguracionPage = () => {
                             htmlFor="identificacion"
                             className="block text-sm font-medium text-gray-700 mb-2"
                           >
-                            Identificación
+                            Identificación {editandoPerfil && "*"}
                           </label>
                           <Input
                             id="identificacion"
-                            value={usuario.identificacion}
-                            isReadOnly
+                            value={editandoPerfil ? formPerfil.identificacion : usuario.identificacion}
+                            onChange={editandoPerfil ? (e) => {
+                              setFormPerfil(prev => ({ ...prev, identificacion: e.target.value }));
+                              limpiarErrorPerfil('identificacion');
+                            } : undefined}
+                            isReadOnly={!editandoPerfil}
                             variant="bordered"
+                            isRequired={editandoPerfil}
+                            isInvalid={editandoPerfil && !!erroresPerfil.identificacion}
+                            errorMessage={editandoPerfil ? erroresPerfil.identificacion : undefined}
+                            className="text-black"
                           />
                         </div>
                         <div>
@@ -530,9 +899,18 @@ const ConfiguracionPage = () => {
                           </label>
                           <Input
                             id="correo"
-                            value={usuario.correo || "No especificado"}
-                            isReadOnly
+                            value={editandoPerfil ? (formPerfil.correo || "") : (usuario.correo || "No especificado")}
+                            onChange={editandoPerfil ? (e) => {
+                              setFormPerfil(prev => ({ ...prev, correo: e.target.value || null }));
+                              limpiarErrorPerfil('correo');
+                            } : undefined}
+                            isReadOnly={!editandoPerfil}
                             variant="bordered"
+                            type="email"
+                            placeholder={editandoPerfil ? "ejemplo@correo.com" : undefined}
+                            isInvalid={editandoPerfil && !!erroresPerfil.correo}
+                            errorMessage={editandoPerfil ? erroresPerfil.correo : undefined}
+                            className="text-black"
                           />
                         </div>
                         <div>
@@ -544,9 +922,17 @@ const ConfiguracionPage = () => {
                           </label>
                           <Input
                             id="telefono"
-                            value={usuario.telefono || "No especificado"}
-                            isReadOnly
+                            value={editandoPerfil ? (formPerfil.telefono || "") : (usuario.telefono || "No especificado")}
+                            onChange={editandoPerfil ? (e) => {
+                              setFormPerfil(prev => ({ ...prev, telefono: e.target.value || null }));
+                              limpiarErrorPerfil('telefono');
+                            } : undefined}
+                            isReadOnly={!editandoPerfil}
                             variant="bordered"
+                            placeholder={editandoPerfil ? "+57 300 123 4567" : undefined}
+                            isInvalid={editandoPerfil && !!erroresPerfil.telefono}
+                            errorMessage={editandoPerfil ? erroresPerfil.telefono : undefined}
+                            className="text-black"
                           />
                         </div>
                         <div>
@@ -570,6 +956,55 @@ const ConfiguracionPage = () => {
                             {usuario.rol}
                           </Chip>
                         </div>
+
+                        {editandoPerfil && (
+                          <>
+                            <div>
+                              <label
+                                htmlFor="password"
+                                className="block text-sm font-medium text-gray-700 mb-2"
+                              >
+                                Nueva Contraseña
+                              </label>
+                              <Input
+                                id="password"
+                                type="password"
+                                value={formPerfil.password}
+                                onChange={(e) => {
+                                  setFormPerfil(prev => ({ ...prev, password: e.target.value }));
+                                  limpiarErrorPerfil('password');
+                                }}
+                                variant="bordered"
+                                placeholder="Dejar vacío para mantener actual"
+                                isInvalid={!!erroresPerfil.password}
+                                errorMessage={erroresPerfil.password}
+                                className="text-black"
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor="confirmar_password"
+                                className="block text-sm font-medium text-gray-700 mb-2"
+                              >
+                                Confirmar Contraseña
+                              </label>
+                              <Input
+                                id="confirmar_password"
+                                type="password"
+                                value={formPerfil.confirmar_password}
+                                onChange={(e) => {
+                                  setFormPerfil(prev => ({ ...prev, confirmar_password: e.target.value }));
+                                  limpiarErrorPerfil('confirmar_password');
+                                }}
+                                variant="bordered"
+                                placeholder="Confirmar nueva contraseña"
+                                isInvalid={!!erroresPerfil.confirmar_password}
+                                errorMessage={erroresPerfil.confirmar_password}
+                                className="text-black"
+                              />
+                            </div>
+                          </>
+                        )}
                         {usuario.sucursales && (
                           <div>
                             <label
@@ -659,13 +1094,6 @@ const ConfiguracionPage = () => {
                               <h3 className="font-semibold">
                                 {sucursal.nombre}
                               </h3>
-                              <Chip
-                                color={sucursal.activo ? "success" : "danger"}
-                                size="sm"
-                                variant="flat"
-                              >
-                                {sucursal.activo ? "Activa" : "Inactiva"}
-                              </Chip>
                             </div>
                             <div className="space-y-2 text-sm text-gray-600">
                               <p>
@@ -751,15 +1179,18 @@ const ConfiguracionPage = () => {
                           <Input
                             id="nit-empresa"
                             value={configuracionEmpresa.nit}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setConfiguracionEmpresa((prev) => ({
                                 ...prev,
                                 nit: e.target.value,
-                              }))
-                            }
+                              }));
+                              limpiarErrorEmpresa('nit');
+                            }}
                             placeholder="Ej: 900123456-7"
                             variant="bordered"
                             isRequired
+                            isInvalid={!!erroresEmpresa.nit}
+                            errorMessage={erroresEmpresa.nit}
                           />
                         </div>
                         <div>
@@ -772,15 +1203,18 @@ const ConfiguracionPage = () => {
                           <Input
                             id="razon-social"
                             value={configuracionEmpresa.razon_social}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setConfiguracionEmpresa((prev) => ({
                                 ...prev,
                                 razon_social: e.target.value,
-                              }))
-                            }
+                              }));
+                              limpiarErrorEmpresa('razon_social');
+                            }}
                             placeholder="Ej: Ricuras Del Huila S.A.S."
                             variant="bordered"
                             isRequired
+                            isInvalid={!!erroresEmpresa.razon_social}
+                            errorMessage={erroresEmpresa.razon_social}
                           />
                         </div>
                         <div>
@@ -793,15 +1227,18 @@ const ConfiguracionPage = () => {
                           <Input
                             id="telefono-empresa"
                             value={configuracionEmpresa.telefono}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setConfiguracionEmpresa((prev) => ({
                                 ...prev,
                                 telefono: e.target.value,
-                              }))
-                            }
+                              }));
+                              limpiarErrorEmpresa('telefono');
+                            }}
                             placeholder="Ej: +57 300 123 4567"
                             variant="bordered"
                             isRequired
+                            isInvalid={!!erroresEmpresa.telefono}
+                            errorMessage={erroresEmpresa.telefono}
                           />
                         </div>
                         <div>
@@ -814,15 +1251,18 @@ const ConfiguracionPage = () => {
                           <Input
                             id="correo-empresa"
                             value={configuracionEmpresa.correo || ""}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setConfiguracionEmpresa((prev) => ({
                                 ...prev,
                                 correo: e.target.value || null,
-                              }))
-                            }
+                              }));
+                              limpiarErrorEmpresa('correo');
+                            }}
                             placeholder="Ej: info@ricurasdelhuila.com"
                             type="email"
                             variant="bordered"
+                            isInvalid={!!erroresEmpresa.correo}
+                            errorMessage={erroresEmpresa.correo}
                           />
                         </div>
                       </div>
@@ -837,15 +1277,18 @@ const ConfiguracionPage = () => {
                         <Textarea
                           id="direccion"
                           value={configuracionEmpresa.direccion || ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setConfiguracionEmpresa((prev) => ({
                               ...prev,
                               direccion: e.target.value || null,
-                            }))
-                          }
+                            }));
+                            limpiarErrorEmpresa('direccion');
+                          }}
                           placeholder="Dirección completa de la empresa"
                           variant="bordered"
                           minRows={2}
+                          isInvalid={!!erroresEmpresa.direccion}
+                          errorMessage={erroresEmpresa.direccion}
                         />
                       </div>
 
@@ -910,15 +1353,18 @@ const ConfiguracionPage = () => {
                     <Input
                       id="nombre"
                       value={formSucursal.nombre}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormSucursal((prev) => ({
                           ...prev,
                           nombre: e.target.value,
-                        }))
-                      }
+                        }));
+                        limpiarErrorSucursal('nombre');
+                      }}
                       placeholder="Ej: Sucursal Centro"
                       variant="bordered"
                       isRequired
+                      isInvalid={!!erroresSucursal.nombre}
+                      errorMessage={erroresSucursal.nombre}
                     />
                   </div>
                   <div>
@@ -931,16 +1377,19 @@ const ConfiguracionPage = () => {
                     <Textarea
                       id="direccion"
                       value={formSucursal.direccion}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormSucursal((prev) => ({
                           ...prev,
                           direccion: e.target.value,
-                        }))
-                      }
+                        }));
+                        limpiarErrorSucursal('direccion');
+                      }}
                       placeholder="Dirección completa de la sucursal"
                       variant="bordered"
                       minRows={2}
                       isRequired
+                      isInvalid={!!erroresSucursal.direccion}
+                      errorMessage={erroresSucursal.direccion}
                     />
                   </div>
                   <div>
@@ -953,28 +1402,18 @@ const ConfiguracionPage = () => {
                     <Input
                       id="telefono"
                       value={formSucursal.telefono || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormSucursal((prev) => ({
                           ...prev,
                           telefono: e.target.value || null,
-                        }))
-                      }
+                        }));
+                        limpiarErrorSucursal('telefono');
+                      }}
                       placeholder="Ej: +57 300 123 4567"
                       variant="bordered"
+                      isInvalid={!!erroresSucursal.telefono}
+                      errorMessage={erroresSucursal.telefono}
                     />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      isSelected={formSucursal.activo}
-                      onValueChange={(checked) =>
-                        setFormSucursal((prev) => ({
-                          ...prev,
-                          activo: checked,
-                        }))
-                      }
-                    >
-                      Sucursal activa
-                    </Checkbox>
                   </div>
                 </form>
               </ModalBody>

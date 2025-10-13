@@ -143,7 +143,7 @@ export default function Page() {
                 required
                 minLength={6}
                 disabled={loading}
-                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
+                className="text-black w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                 placeholder="Mínimo 6 caracteres"
               />
               <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
@@ -164,7 +164,7 @@ export default function Page() {
                 required
                 minLength={6}
                 disabled={loading}
-                className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
+                className="text-black w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-primary disabled:bg-gray-100"
                 placeholder="Repite la contraseña"
               />
             </div>

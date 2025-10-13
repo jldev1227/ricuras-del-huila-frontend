@@ -870,7 +870,7 @@ export default function ReportsPage() {
                       type="date"
                       value={specificDate}
                       onChange={(e) => setSpecificDate(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                     />
                   </div>
                 </div>
@@ -890,7 +890,7 @@ export default function ReportsPage() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                     />
                   </div>
                   <div>
@@ -905,7 +905,7 @@ export default function ReportsPage() {
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                     />
                   </div>
                 </div>
@@ -925,7 +925,7 @@ export default function ReportsPage() {
                       type="month"
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                     />
                   </div>
                 </div>
@@ -942,13 +942,13 @@ export default function ReportsPage() {
                         type="date"
                         value={compareStartDate1}
                         onChange={(e) => setCompareStartDate1(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                       />
                       <input
                         type="date"
                         value={compareEndDate1}
                         onChange={(e) => setCompareEndDate1(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                       />
                     </div>
                   </div>
@@ -961,13 +961,13 @@ export default function ReportsPage() {
                         type="date"
                         value={compareStartDate2}
                         onChange={(e) => setCompareStartDate2(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                       />
                       <input
                         type="date"
                         value={compareEndDate2}
                         onChange={(e) => setCompareEndDate2(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                       />
                     </div>
                   </div>
@@ -988,7 +988,7 @@ export default function ReportsPage() {
                       type="month"
                       value={compareMonth1}
                       onChange={(e) => setCompareMonth1(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                     />
                   </div>
                   <div>
@@ -1003,7 +1003,7 @@ export default function ReportsPage() {
                       type="month"
                       value={compareMonth2}
                       onChange={(e) => setCompareMonth2(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine"
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine text-black"
                     />
                   </div>
                 </div>

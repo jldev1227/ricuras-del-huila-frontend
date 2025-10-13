@@ -143,37 +143,61 @@ model sesiones {
 }
 
 model sucursales {
-  id        String     @id @db.Uuid
+  id        String    @id @db.Uuid
   nombre    String
   direccion String
   telefono  String?
-  activo    Boolean    @default(true)
-  creado_en DateTime   @default(now())
+  creado_en DateTime  @default(now())
   mesas     mesas[]
   ordenes   ordenes[]
-  usuarios  usuarios[]
 }
 
 model usuarios {
-  id              String            @id @db.Uuid
-  nombre_completo String
-  identificacion  String            @unique
-  correo          String?
-  telefono        String?
-  password        String
-  rol             roles             @default(MESERO)
-  activo          Boolean           @default(true)
-  ultima_conexion DateTime?
-  dispositivo_id  String?
-  version_cache   Int               @default(1)
-  creado_en       DateTime          @default(now())
-  actualizado_en  DateTime
-  sucursal_id     String            @db.Uuid
-  ordenes         ordenes[]
-  password_resets password_resets[]
-  sesiones        sesiones[]
+  id                    String                  @id @db.Uuid
+  nombre_completo       String
+  identificacion        String                  @unique
+  correo                String?
+  telefono              String?
+  password              String
+  rol                   roles                   @default(MESERO)
+  activo                Boolean                 @default(true)
+  ultima_conexion       DateTime?
+  dispositivo_id        String?
+  version_cache         Int                     @default(1)
+  creado_en             DateTime                @default(now())
+  actualizado_en        DateTime
   configuracion_empresa configuracion_empresa[]
-  sucursales      sucursales        @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  ordenes               ordenes[]
+  password_resets       password_resets[]
+  sesiones              sesiones[]
+}
+
+model configuracion_empresa {
+  id                 String              @id @default(uuid()) @db.Uuid
+  nit                String              @unique
+  razon_social       String
+  nombre_comercial   String?
+  telefono           String?
+  correo             String?
+  direccion          String?
+  ciudad             String?
+  departamento       String?
+  codigo_postal      String?
+  regimen_fiscal     regimenes_fiscales?
+  tipo_persona       tipos_persona       @default(JURIDICA)
+  numero_resolucion  String?
+  fecha_resolucion   DateTime?
+  numeracion_desde   String?
+  numeracion_hasta   String?
+  prefijo_factura    String?
+  consecutivo_actual Int                 @default(1)
+  logo_url           String?
+  sitio_web          String?
+  activo             Boolean             @default(true)
+  creado_en          DateTime            @default(now())
+  actualizado_en     DateTime            @updatedAt
+  creado_por         String?             @db.Uuid
+  usuarios           usuarios?           @relation(fields: [creado_por], references: [id])
 }
 
 enum estados_orden {
@@ -214,32 +238,4 @@ enum tipos_orden {
 enum tipos_persona {
   NATURAL
   JURIDICA
-}
-
-model configuracion_empresa {
-  id                     String               @id @db.Uuid @default(uuid())
-  nit                    String               @unique
-  razon_social           String
-  nombre_comercial       String?
-  telefono               String?
-  correo                 String?
-  direccion              String?
-  ciudad                 String?
-  departamento           String?
-  codigo_postal          String?
-  regimen_fiscal         regimenes_fiscales?
-  tipo_persona           tipos_persona        @default(JURIDICA)
-  numero_resolucion      String?
-  fecha_resolucion       DateTime?
-  numeracion_desde       String?
-  numeracion_hasta       String?
-  prefijo_factura        String?
-  consecutivo_actual     Int                  @default(1)
-  logo_url               String?
-  sitio_web              String?
-  activo                 Boolean              @default(true)
-  creado_en              DateTime             @default(now())
-  actualizado_en         DateTime             @updatedAt
-  creado_por             String?              @db.Uuid
-  usuarios               usuarios?            @relation(fields: [creado_por], references: [id])
 }

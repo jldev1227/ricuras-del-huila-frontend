@@ -51,15 +51,26 @@ type OrdenCompleta = Prisma.ordenesGetPayload<{
 type OrdenItem = {
   id: string;
   cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-  notas?: string;
+  precio_unitario: number | string;
+  subtotal: number | string;
+  notas?: string | null;
   productos: {
     id: string;
     nombre: string;
     precio: number;
+    imagen?: string | null;
   };
 };
+
+interface ConfiguracionEmpresa {
+  id: string;
+  nit: string;
+  razon_social: string;
+  telefono: string;
+  correo?: string | null;
+  direccion?: string | null;
+  activo: boolean;
+}
 
 interface ModalDetalleOrdenProps {
   ordenId: string | null;
@@ -77,6 +88,38 @@ export default function ModalDetalleOrden({
   const [loading, setLoading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [configEmpresa, setConfigEmpresa] = useState<ConfiguracionEmpresa | null>(null);
+
+  // Función para cargar configuración de empresa
+  const fetchConfiguracionEmpresa = async () => {
+    try {
+      // Obtener el userId del localStorage
+      let currentUserId = null;
+      try {
+        const authStorage = localStorage.getItem("auth-storage");
+        if (authStorage) {
+          const authData = JSON.parse(authStorage);
+          currentUserId = authData?.state?.user?.id;
+        }
+      } catch (error) {
+        console.warn("No se pudo obtener el usuario autenticado:", error);
+        return;
+      }
+
+      if (!currentUserId) {
+        console.warn("No hay usuario autenticado");
+        return;
+      }
+
+      const response = await fetch(`/api/configuracion/empresa?userId=${currentUserId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setConfigEmpresa(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar configuración de empresa:", error);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && ordenId) {
@@ -99,6 +142,7 @@ export default function ModalDetalleOrden({
       };
 
       fetchOrdenDetalle();
+      fetchConfiguracionEmpresa();
     }
   }, [isOpen, ordenId]);
 
@@ -140,11 +184,18 @@ export default function ModalDetalleOrden({
 
     // Header
     commands.push(...CENTER, ...SIZE_LARGE, ...BOLD_ON);
-    addText("RICURAS DEL HUILA\n");
+    addText(`${configEmpresa?.razon_social || "RICURAS DEL HUILA"}\n`);
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
     addText(`${orden.sucursales?.nombre || "Sucursal Principal"}\n`);
-    addText("Tel: (123) 456-7890\n");
-    addText("NIT: 123456789-0\n");
+    if (configEmpresa?.telefono) {
+      addText(`Tel: ${configEmpresa.telefono}\n`);
+    }
+    if (configEmpresa?.nit) {
+      addText(`NIT: ${configEmpresa.nit}\n`);
+    }
+    if (configEmpresa?.direccion) {
+      addText(`${configEmpresa.direccion}\n`);
+    }
     addLine("=");
 
     // Información de la orden
@@ -394,21 +445,38 @@ export default function ModalDetalleOrden({
                 </span>
               </ModalHeader>
               <ModalBody>
-                <div className="bg-white p-2">
-                  <div className="border-2 border-dashed border-gray-300 p-4">
-                    {/* Header */}
-                    <div className="font-mono text-xs leading-tight">
-                      <div className="text-center font-bold text-lg mb-1">
-                        RICURAS DEL HUILA
-                      </div>
-                      <div className="text-center">
-                        {orden.sucursales?.nombre || "Sucursal Principal"}
-                      </div>
-                      <div className="text-center">Tel: (123) 456-7890</div>
-                      <div className="text-center">NIT: 123456789-0</div>
-                      <div className="border-t-2 border-black my-2"></div>
-
-                      {/* Información de la orden */}
+                  <div className="bg-white p-2">
+                    <div className="border-2 border-dashed border-gray-300 p-4">
+                      {/* Header */}
+                      <div className="font-mono text-xs leading-tight">
+                        {/* Logo */}
+                        <div className="text-center mb-2">
+                          <div className="w-20 h-20 mx-auto mb-2 relative">
+                            <Image
+                              src="/logo.png"
+                              alt="Logo"
+                              fill
+                              className="object-contain"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="text-center font-bold text-lg mb-1">
+                          {configEmpresa?.razon_social || "RICURAS DEL HUILA"}
+                        </div>
+                        <div className="text-center">
+                          {orden.sucursales?.nombre || "Sucursal Principal"}
+                        </div>
+                        {configEmpresa?.telefono && (
+                          <div className="text-center">Tel: {configEmpresa.telefono}</div>
+                        )}
+                        {configEmpresa?.nit && (
+                          <div className="text-center">NIT: {configEmpresa.nit}</div>
+                        )}
+                        {configEmpresa?.direccion && (
+                          <div className="text-center">{configEmpresa.direccion}</div>
+                        )}
+                        <div className="border-t-2 border-black my-2"></div>                      {/* Información de la orden */}
                       <div className="font-bold">
                         ORDEN #{orden.id.slice(0, 8).toUpperCase()}
                       </div>
@@ -460,7 +528,7 @@ export default function ModalDetalleOrden({
                       <div className="font-bold">PRODUCTOS</div>
                       <div className="border-t border-dashed border-gray-400 my-1"></div>
 
-                      {orden.orden_items.map((item: OrdenItem, _index: number) => (
+                      {orden.orden_items.map((item, _index: number) => (
                         <div key={item.id as string} className="mb-2">
                           <div>{item.productos.nombre.substring(0, 38)}</div>
                           <div className="flex justify-between">
@@ -604,13 +672,29 @@ export default function ModalDetalleOrden({
                 </h2>
               ) : (
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      Orden #{orden.id.slice(0, 8).toUpperCase()}
-                    </h2>
-                    <p className="text-sm text-gray-500 font-normal mt-1">
-                      {formatearFecha(orden.creado_en)}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    {/* Logo */}
+                    <div className="w-12 h-12 relative flex-shrink-0">
+                      <Image
+                        src="/logo.png"
+                        alt="Logo"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        Orden #{orden.id.slice(0, 8).toUpperCase()}
+                      </h2>
+                      <p className="text-sm text-gray-500 font-normal mt-1">
+                        {formatearFecha(orden.creado_en)}
+                      </p>
+                      {configEmpresa && (
+                        <p className="text-xs text-gray-400">
+                          {configEmpresa.razon_social}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Chip
@@ -645,6 +729,45 @@ export default function ModalDetalleOrden({
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Información de la empresa */}
+                  {configEmpresa && (
+                    <div className="p-4 bg-gradient-to-r from-wine/10 to-wine/5 border border-wine/20 rounded-xl">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 relative flex-shrink-0">
+                          <Image
+                            src="/logo.png"
+                            alt="Logo"
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-wine text-lg">
+                            {configEmpresa.razon_social}
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-sm text-gray-700">
+                            <div>
+                              <span className="font-medium">NIT:</span> {configEmpresa.nit}
+                            </div>
+                            <div>
+                              <span className="font-medium">Teléfono:</span> {configEmpresa.telefono}
+                            </div>
+                            {configEmpresa.correo && (
+                              <div className="sm:col-span-2">
+                                <span className="font-medium">Email:</span> {configEmpresa.correo}
+                              </div>
+                            )}
+                            {configEmpresa.direccion && (
+                              <div className="sm:col-span-2">
+                                <span className="font-medium">Dirección:</span> {configEmpresa.direccion}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Información general */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -756,7 +879,7 @@ export default function ModalDetalleOrden({
                       Productos ({orden.orden_items.length})
                     </h3>
                     <div className="space-y-3">
-                      {orden.orden_items.map((item: OrdenItem) => (
+                      {orden.orden_items.map((item) => (
                         <div
                           key={item.id}
                           className="flex gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"

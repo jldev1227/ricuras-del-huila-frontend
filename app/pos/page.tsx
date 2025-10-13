@@ -339,7 +339,7 @@ export default function OrderDashboard() {
                 placeholder="Buscar comida..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 lg:pl-12 pr-10 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine transition-all text-sm lg:text-base"
+                className="w-full pl-10 lg:pl-12 pr-10 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine transition-all text-sm lg:text-base text-black"
               />
               {searchTerm && (
                 <button
@@ -691,7 +691,7 @@ export default function OrderDashboard() {
                             setCostoAdicional(Number(e.target.value) || 0)
                           }
                           min="0"
-                          className="w-full pl-7 lg:pl-8 pr-3 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm"
+                          className="w-full pl-7 lg:pl-8 pr-3 lg:pr-4 py-2.5 lg:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm text-black"
                         />
                       </div>
                     </div>
@@ -711,7 +711,7 @@ export default function OrderDashboard() {
                         placeholder="Dirección completa..."
                         value={direccionEntrega}
                         onChange={(e) => setDireccionEntrega(e.target.value)}
-                        className="w-full px-3 lg:px-4 py-2.5 lg:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm"
+                        className="w-full px-3 lg:px-4 py-2.5 lg:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm text-black"
                         required
                       />
                     </div>
@@ -900,7 +900,7 @@ export default function OrderDashboard() {
                           }
                           min="0"
                           max={calcularSubtotal()}
-                          className="w-full pl-6 lg:pl-7 pr-2 lg:pr-3 py-1.5 lg:py-2 border border-gray-200 rounded-lg text-right text-xs lg:text-sm focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all"
+                          className="w-full pl-6 lg:pl-7 pr-2 lg:pr-3 py-1.5 lg:py-2 border border-gray-200 rounded-lg text-right text-xs lg:text-sm focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-black"
                         />
                       </div>
                     </div>
@@ -1019,7 +1019,7 @@ export default function OrderDashboard() {
                             setMontoPagado(Number(e.target.value) || 0)
                           }
                           min={calcularTotal()}
-                          className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-lg font-semibold"
+                          className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-lg font-semibold text-black"
                         />
                       </div>
                     </div>
@@ -1100,7 +1100,7 @@ export default function OrderDashboard() {
                               placeholder="Buscar o seleccionar cliente..."
                               value={clienteSeleccionado?.nombre || ""}
                               readOnly
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm"
+                              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm text-black"
                             />
                           </div>
                           <Button
