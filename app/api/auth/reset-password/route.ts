@@ -69,13 +69,13 @@ export async function POST(request: NextRequest) {
 
     // Invalidar sesiones
     await prisma.sesiones.updateMany({
-      where: { usuarioId: usuario.id },
+      where: { usuario_id: usuario.id },
       data: { activa: false },
     });
 
     // Marcar password resets como usados
-    await prisma.passwordReset.updateMany({
-      where: { usuarioId: usuario.id },
+    await prisma.password_resets.updateMany({
+      where: { usuario_id: usuario.id },
       data: { usado: true },
     });
 

@@ -100,7 +100,7 @@ export default function OrderDashboard() {
         const params = new URLSearchParams();
         if (searchTerm) params.append("nombre", searchTerm);
         if (categoriaSeleccionada)
-          params.append("categoriaId", categoriaSeleccionada);
+          params.append("categoria_id", categoriaSeleccionada);
 
         const resProductos = await fetch(`/api/productos?${params}`);
         const dataProductos = await resProductos.json();
@@ -123,7 +123,7 @@ export default function OrderDashboard() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchCategoria = categoriaSeleccionada
-      ? producto.categoriaId === categoriaSeleccionada
+      ? producto.categoria_id === categoriaSeleccionada
       : true;
     return matchSearch && matchCategoria && producto.disponible;
   });
@@ -256,8 +256,6 @@ export default function OrderDashboard() {
         notas: `Pago: ${formatCOP(montoPagado)} | Vueltas: ${formatCOP(calcularVueltas())}`,
       };
 
-      console.log("Orden a crear:", orden);
-
       // TODO: Descomentar cuando el endpoint esté listo
       const response = await fetch("/api/ordenes", {
         method: "POST",
@@ -266,8 +264,6 @@ export default function OrderDashboard() {
       });
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
-
-      console.log(data);
 
       addToast({
         title: "Orden creada exitosamente",
@@ -310,7 +306,7 @@ export default function OrderDashboard() {
     setMesaSeleccionada(mesa);
   };
 
-  const meserosOptions = meseros.map((mesero) => ({
+  const meserosOptions = meseros?.map((mesero) => ({
     value: mesero.id,
     label: mesero.nombre_completo,
   }));
@@ -452,12 +448,12 @@ export default function OrderDashboard() {
                           </div>
                         )}
                       </div>
-                      {producto.categoriaId && (
+                      {producto.categoria_id && (
                         <div className="absolute top-2 left-2">
                           <span className="bg-white/95 backdrop-blur-sm px-2 py-0.5 lg:px-3 lg:py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
                             {
                               categorias.find(
-                                (c) => c.id === producto.categoriaId,
+                                (c) => c.id === producto.categoria_id,
                               )?.nombre
                             }
                           </span>

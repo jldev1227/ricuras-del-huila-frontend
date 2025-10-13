@@ -32,7 +32,7 @@ interface OrdenExistente {
   id: string;
   estado: string;
   meseroId?: string | null;
-  mesaId?: string | null;
+  mesa_id?: string | null;
   notas?: string | null;
   mesa?: { numero: number } | null;
   [key: string]: unknown;
@@ -60,22 +60,22 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const orden = await prisma.orden.findUnique({
+    const orden = await prisma.ordenes.findUnique({
       where: { id },
       include: {
-        items: {
+        orden_items: {
           include: {
-            producto: {
+            productos: {
               include: {
-                categoria: true,
+                categorias: true,
               },
             },
           },
         },
-        mesa: true,
-        cliente: true,
-        sucursal: true,
-        mesero: {
+        mesas: true,
+        clientes: true,
+        sucursales: true,
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
@@ -115,9 +115,9 @@ export async function PUT(
     const body = await request.json();
 
     // Verificar que la orden existe
-    const ordenExistente = await prisma.orden.findUnique({
+    const ordenExistente = await prisma.ordenes.findUnique({
       where: { id },
-      include: { items: true },
+      include: { orden_items: true },
     });
 
     if (!ordenExistente) {
@@ -139,17 +139,17 @@ export async function PUT(
     }
 
     const {
-      tipoOrden,
-      mesaId,
-      clienteId,
-      meseroId,
-      nombreCliente,
-      telefonoCliente,
-      direccionEntrega,
-      indicacionesEntrega,
-      costoEnvio,
-      costoAdicional,
-      horaRecogida,
+      tipo_orden,
+      mesa_id,
+      cliente_id,
+      mesero_id,
+      nombre_cliente,
+      telefono_cliente,
+      direccion_entrega,
+      indicaciones_entrega,
+      costo_envio,
+      costo_adicional,
+      hora_recogida,
       items,
       descuento,
       especificaciones,
@@ -161,8 +161,8 @@ export async function PUT(
       // Si hay nuevos items, eliminar los antiguos y crear los nuevos
       if (items && Array.isArray(items)) {
         // Eliminar items antiguos
-        await tx.ordenItem.deleteMany({
-          where: { ordenId: id },
+        await tx.orden_items.deleteMany({
+          where: { orden_id: id },
         });
 
         // Calcular nuevo subtotal
@@ -172,52 +172,52 @@ export async function PUT(
 
         // Calcular nuevo total
         let total = subtotal - (descuento || 0);
-        if (costoEnvio) total += Number(costoEnvio);
-        if (costoAdicional) total += Number(costoAdicional);
+        if (costo_envio) total += Number(costo_envio);
+        if (costo_adicional) total += Number(costo_adicional);
 
         // Actualizar orden con nuevos items
-        return await tx.orden.update({
+        return await tx.ordenes.update({
           where: { id },
           data: {
-            tipoOrden: tipoOrden || ordenExistente.tipoOrden,
-            mesaId: mesaId !== undefined ? mesaId : ordenExistente.mesaId,
-            clienteId:
-              clienteId !== undefined ? clienteId : ordenExistente.clienteId,
-            meseroId: meseroId || ordenExistente.meseroId,
-            nombreCliente:
-              nombreCliente !== undefined
-                ? nombreCliente
-                : ordenExistente.nombreCliente,
-            telefonoCliente:
-              telefonoCliente !== undefined
-                ? telefonoCliente
-                : ordenExistente.telefonoCliente,
-            direccionEntrega:
-              direccionEntrega !== undefined
-                ? direccionEntrega
-                : ordenExistente.direccionEntrega,
-            indicacionesEntrega:
-              indicacionesEntrega !== undefined
-                ? indicacionesEntrega
-                : ordenExistente.indicacionesEntrega,
-            costoEnvio:
-              costoEnvio !== undefined
-                ? costoEnvio
-                  ? Number(costoEnvio)
+            tipo_orden: tipo_orden || ordenExistente.tipo_orden,
+            mesa_id: mesa_id !== undefined ? mesa_id : ordenExistente.mesa_id,
+            cliente_id:
+              cliente_id !== undefined ? cliente_id : ordenExistente.cliente_id,
+            mesero_id: mesero_id || ordenExistente.mesero_id,
+            nombre_cliente:
+              nombre_cliente !== undefined
+                ? nombre_cliente
+                : ordenExistente.nombre_cliente,
+            telefono_cliente:
+              telefono_cliente !== undefined
+                ? telefono_cliente
+                : ordenExistente.telefono_cliente,
+            direccion_entrega:
+              direccion_entrega !== undefined
+                ? direccion_entrega
+                : ordenExistente.direccion_entrega,
+            indicaciones_entrega:
+              indicaciones_entrega !== undefined
+                ? indicaciones_entrega
+                : ordenExistente.indicaciones_entrega,
+            costo_envio:
+              costo_envio !== undefined
+                ? costo_envio
+                  ? Number(costo_envio)
                   : null
-                : ordenExistente.costoEnvio,
-            costoAdicional:
-              costoAdicional !== undefined
-                ? costoAdicional
-                  ? Number(costoAdicional)
+                : ordenExistente.costo_envio,
+            costo_adicional:
+              costo_adicional !== undefined
+                ? costo_adicional
+                  ? Number(costo_adicional)
                   : null
-                : ordenExistente.costoAdicional,
-            horaRecogida:
-              horaRecogida !== undefined
-                ? horaRecogida
-                  ? new Date(horaRecogida)
+                : ordenExistente.costo_adicional,
+            hora_recogida:
+              hora_recogida !== undefined
+                ? hora_recogida
+                  ? new Date(hora_recogida)
                   : null
-                : ordenExistente.horaRecogida,
+                : ordenExistente.hora_recogida,
             subtotal,
             descuento:
               descuento !== undefined
@@ -229,26 +229,27 @@ export async function PUT(
                 ? especificaciones
                 : ordenExistente.especificaciones,
             notas: notas !== undefined ? notas : ordenExistente.notas,
-            actualizadoEn: new Date(),
-            items: {
+            actualizado_en: new Date(),
+            orden_items: {
               create: items.map((item: OrderItem) => ({
-                productoId: item.productoId,
+                id: crypto.randomUUID(),
+                producto_id: item.productoId,
                 cantidad: item.cantidad,
-                precioUnitario: Number(item.precioUnitario),
+                precio_unitario: Number(item.precioUnitario),
                 subtotal: Number(item.precioUnitario) * item.cantidad,
                 notas: item.notas,
               })),
             },
           },
           include: {
-            items: {
+            orden_items: {
               include: {
-                producto: true,
+                productos: true,
               },
             },
-            mesa: true,
-            cliente: true,
-            mesero: {
+            mesas: true,
+            clientes: true,
+            usuarios: {
               select: {
                 id: true,
                 nombre_completo: true,
@@ -259,30 +260,30 @@ export async function PUT(
       } else {
         // Solo actualizar campos sin modificar items
         const dataUpdate: Record<string, unknown> = {
-          actualizadoEn: new Date(),
+          actualizado_en: new Date(),
         };
 
-        if (tipoOrden) dataUpdate.tipoOrden = tipoOrden;
-        if (mesaId !== undefined) dataUpdate.mesaId = mesaId;
-        if (clienteId !== undefined) dataUpdate.clienteId = clienteId;
-        if (meseroId) dataUpdate.meseroId = meseroId;
-        if (nombreCliente !== undefined)
-          dataUpdate.nombreCliente = nombreCliente;
-        if (telefonoCliente !== undefined)
-          dataUpdate.telefonoCliente = telefonoCliente;
-        if (direccionEntrega !== undefined)
-          dataUpdate.direccionEntrega = direccionEntrega;
-        if (indicacionesEntrega !== undefined)
-          dataUpdate.indicacionesEntrega = indicacionesEntrega;
-        if (costoEnvio !== undefined)
-          dataUpdate.costoEnvio = costoEnvio ? Number(costoEnvio) : null;
-        if (costoAdicional !== undefined)
-          dataUpdate.costoAdicional = costoAdicional
-            ? Number(costoAdicional)
+        if (tipo_orden) dataUpdate.tipo_orden = tipo_orden;
+        if (mesa_id !== undefined) dataUpdate.mesa_id = mesa_id;
+        if (cliente_id !== undefined) dataUpdate.cliente_id = cliente_id;
+        if (mesero_id) dataUpdate.mesero_id = mesero_id;
+        if (nombre_cliente !== undefined)
+          dataUpdate.nombre_cliente = nombre_cliente;
+        if (telefono_cliente !== undefined)
+          dataUpdate.telefono_cliente = telefono_cliente;
+        if (direccion_entrega !== undefined)
+          dataUpdate.direccion_entrega = direccion_entrega;
+        if (indicaciones_entrega !== undefined)
+          dataUpdate.indicaciones_entrega = indicaciones_entrega;
+        if (costo_envio !== undefined)
+          dataUpdate.costo_envio = costo_envio ? Number(costo_envio) : null;
+        if (costo_adicional !== undefined)
+          dataUpdate.costo_adicional = costo_adicional
+            ? Number(costo_adicional)
             : null;
-        if (horaRecogida !== undefined)
-          dataUpdate.horaRecogida = horaRecogida
-            ? new Date(horaRecogida)
+        if (hora_recogida !== undefined)
+          dataUpdate.hora_recogida = hora_recogida
+            ? new Date(hora_recogida)
             : null;
         if (descuento !== undefined) dataUpdate.descuento = Number(descuento);
         if (especificaciones !== undefined)
@@ -292,8 +293,8 @@ export async function PUT(
         // Recalcular total si hay cambios en montos
         if (
           descuento !== undefined ||
-          costoEnvio !== undefined ||
-          costoAdicional !== undefined
+          costo_envio !== undefined ||
+          costo_adicional !== undefined
         ) {
           const subtotalActual = ordenExistente.subtotal;
           let nuevoTotal =
@@ -301,30 +302,30 @@ export async function PUT(
             Number(
               descuento !== undefined ? descuento : ordenExistente.descuento,
             );
-          if (costoEnvio !== undefined && costoEnvio)
-            nuevoTotal += Number(costoEnvio);
-          else if (ordenExistente.costoEnvio)
-            nuevoTotal += Number(ordenExistente.costoEnvio);
-          if (costoAdicional !== undefined && costoAdicional)
-            nuevoTotal += Number(costoAdicional);
-          else if (ordenExistente.costoAdicional)
-            nuevoTotal += Number(ordenExistente.costoAdicional);
+          if (costo_envio !== undefined && costo_envio)
+            nuevoTotal += Number(costo_envio);
+          else if (ordenExistente.costo_envio)
+            nuevoTotal += Number(ordenExistente.costo_envio);
+          if (costo_adicional !== undefined && costo_adicional)
+            nuevoTotal += Number(costo_adicional);
+          else if (ordenExistente.costo_adicional)
+            nuevoTotal += Number(ordenExistente.costo_adicional);
 
           dataUpdate.total = nuevoTotal;
         }
 
-        return await tx.orden.update({
+        return await tx.ordenes.update({
           where: { id },
           data: dataUpdate,
           include: {
-            items: {
+            orden_items: {
               include: {
-                producto: true,
+                productos: true,
               },
             },
-            mesa: true,
-            cliente: true,
-            mesero: {
+            mesas: true,
+            clientes: true,
+            usuarios: {
               select: {
                 id: true,
                 nombre_completo: true,
@@ -360,9 +361,9 @@ export async function PATCH(
     const { accion, ...datos } = body;
 
     // Verificar que la orden existe
-    const ordenExistente = await prisma.orden.findUnique({
+    const ordenExistente = await prisma.ordenes.findUnique({
       where: { id },
-      include: { mesa: true },
+      include: { mesas: true },
     });
 
     if (!ordenExistente) {
@@ -397,20 +398,20 @@ export async function PATCH(
 
       default:
         // Actualización genérica de campos
-        ordenActualizada = await prisma.orden.update({
+        ordenActualizada = await prisma.ordenes.update({
           where: { id },
           data: {
             ...datos,
-            actualizadoEn: new Date(),
+            actualizado_en: new Date(),
           },
           include: {
-            items: {
+            orden_items: {
               include: {
-                producto: true,
+                productos: true,
               },
             },
-            mesa: true,
-            cliente: true,
+            mesas: true,
+            clientes: true,
           },
         });
     }
@@ -460,15 +461,15 @@ async function cambiarEstado(
 
   return await prisma.$transaction(async (tx) => {
     // Si el nuevo estado es ENTREGADA y tiene mesa, liberarla
-    if (nuevoEstado === "ENTREGADA" && ordenExistente.mesaId) {
-      await tx.mesa.update({
-        where: { id: ordenExistente.mesaId },
+    if (nuevoEstado === "ENTREGADA" && ordenExistente.mesa_id) {
+      await tx.mesas.update({
+        where: { id: ordenExistente.mesa_id },
         data: { disponible: true },
       });
     }
 
     // Actualizar orden
-    return await tx.orden.update({
+    return await tx.ordenes.update({
       where: { id: ordenId },
       data: {
         estado: nuevoEstado as
@@ -480,14 +481,14 @@ async function cambiarEstado(
         notas: (razon
           ? `${ordenExistente.notas || ""}\n[Cambio de estado]: ${razon}`.trim()
           : ordenExistente.notas) as string | null,
-        actualizadoEn: new Date(),
+        actualizado_en: new Date(),
       },
       include: {
-        items: {
-          include: { producto: true },
+        orden_items: {
+          include: { productos: true },
         },
-        mesa: true,
-        cliente: true,
+        mesas: true,
+        clientes: true,
       },
     });
   });
@@ -502,7 +503,7 @@ async function cancelarOrden(ordenId: string, datos: CancelacionData) {
   }
 
   return await prisma.$transaction(async (tx) => {
-    const orden = await tx.orden.findUnique({
+    const orden = await tx.ordenes.findUnique({
       where: { id: ordenId },
     });
 
@@ -516,27 +517,27 @@ async function cancelarOrden(ordenId: string, datos: CancelacionData) {
     }
 
     // Si tiene mesa, liberarla
-    if (orden.mesaId) {
-      await tx.mesa.update({
-        where: { id: orden.mesaId },
+    if (orden.mesa_id) {
+      await tx.mesas.update({
+        where: { id: orden.mesa_id },
         data: { disponible: true },
       });
     }
 
     // Actualizar orden
-    return await tx.orden.update({
+    return await tx.ordenes.update({
       where: { id: ordenId },
       data: {
         estado: "CANCELADA",
         notas: `${orden.notas || ""}\n[CANCELADA]: ${razonCancelacion}`.trim(),
-        actualizadoEn: new Date(),
+        actualizado_en: new Date(),
       },
       include: {
-        items: {
-          include: { producto: true },
+        orden_items: {
+          include: { productos: true },
         },
-        mesa: true,
-        cliente: true,
+        mesas: true,
+        clientes: true,
       },
     });
   });
@@ -554,7 +555,7 @@ async function marcarFacturada(ordenId: string, datos: FacturacionData) {
 
   // Nota: Necesitarás agregar estos campos al modelo Orden en el schema
   // Por ahora, lo guardaremos en las notas
-  const orden = await prisma.orden.findUnique({
+  const orden = await prisma.ordenes.findUnique({
     where: { id: ordenId },
   });
 
@@ -575,36 +576,36 @@ ${urlPdf ? `PDF: ${urlPdf}` : ""}
 ${urlXml ? `XML: ${urlXml}` : ""}
   `.trim();
 
-  return await prisma.orden.update({
+  return await prisma.ordenes.update({
     where: { id: ordenId },
     data: {
       notas: `${orden.notas || ""}\n${infoFacturacion}`.trim(),
-      actualizadoEn: new Date(),
+      actualizado_en: new Date(),
     },
     include: {
-      items: {
-        include: { producto: true },
+      orden_items: {
+        include: { productos: true },
       },
-      mesa: true,
-      cliente: true,
+      mesas: true,
+      clientes: true,
     },
   });
 }
 
 // Función para sincronizar orden offline
 async function sincronizarOrden(ordenId: string) {
-  return await prisma.orden.update({
+  return await prisma.ordenes.update({
     where: { id: ordenId },
     data: {
       sincronizado: true,
-      sincronizadoEn: new Date(),
+      sincronizado_en: new Date(),
     },
     include: {
-      items: {
-        include: { producto: true },
+      orden_items: {
+        include: { productos: true },
       },
-      mesa: true,
-      cliente: true,
+      mesas: true,
+      clientes: true,
     },
   });
 }
@@ -613,19 +614,19 @@ async function sincronizarOrden(ordenId: string) {
 async function actualizarNotas(ordenId: string, datos: NotasUpdateData) {
   const { notas, especificaciones } = datos;
 
-  return await prisma.orden.update({
+  return await prisma.ordenes.update({
     where: { id: ordenId },
     data: {
       ...(notas !== undefined && { notas }),
       ...(especificaciones !== undefined && { especificaciones }),
-      actualizadoEn: new Date(),
+      actualizado_en: new Date(),
     },
     include: {
-      items: {
-        include: { producto: true },
+      orden_items: {
+        include: { productos: true },
       },
-      mesa: true,
-      cliente: true,
+      mesas: true,
+      clientes: true,
     },
   });
 }

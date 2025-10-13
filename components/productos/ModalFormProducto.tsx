@@ -370,7 +370,10 @@ export default function ModalFormProducto({
 
                   {/* Imagen */}
                   <div className="md:col-span-2">
-                    <label htmlFor="imagen" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="imagen"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Imagen del producto
                     </label>
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { 
-  Button, 
+import {
+  Button,
   Spinner,
   Modal,
   ModalContent,
@@ -13,7 +13,7 @@ import {
   SelectItem,
   Textarea,
   Checkbox,
-  useDisclosure
+  useDisclosure,
 } from "@heroui/react";
 import { Edit, Filter, MapPin, Plus, Search, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -62,9 +62,17 @@ export default function MesasPage() {
   const [selectedDisponible, setSelectedDisponible] = useState("");
 
   // Estados para modales
-  const { isOpen: isNewMesaOpen, onOpen: onNewMesaOpen, onClose: onNewMesaClose } = useDisclosure();
-  const { isOpen: isEditMesaOpen, onOpen: onEditMesaOpen, onClose: onEditMesaClose } = useDisclosure();
-  
+  const {
+    isOpen: isNewMesaOpen,
+    onOpen: onNewMesaOpen,
+    onClose: onNewMesaClose,
+  } = useDisclosure();
+  const {
+    isOpen: isEditMesaOpen,
+    onOpen: onEditMesaOpen,
+    onClose: onEditMesaClose,
+  } = useDisclosure();
+
   // Estados para formularios
   const [formData, setFormData] = useState<FormMesa>({
     numero: 0,
@@ -72,9 +80,11 @@ export default function MesasPage() {
     disponible: true,
     ubicacion: "",
     notas: "",
-    sucursal_id: ""
+    sucursal_id: "",
   });
-  const [editingMesa, setEditingMesa] = useState<MesaConRelaciones | null>(null);
+  const [editingMesa, setEditingMesa] = useState<MesaConRelaciones | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<FormMesa>>({});
 
@@ -115,7 +125,7 @@ export default function MesasPage() {
   // Inicializar sucursal por defecto
   useEffect(() => {
     if (sucursales.length > 0 && !formData.sucursal_id) {
-      setFormData(prev => ({ ...prev, sucursal_id: sucursales[0].id }));
+      setFormData((prev) => ({ ...prev, sucursal_id: sucursales[0].id }));
     }
   }, [sucursales, formData.sucursal_id]);
 
@@ -127,7 +137,7 @@ export default function MesasPage() {
       disponible: true,
       ubicacion: "",
       notas: "",
-      sucursal_id: sucursales.length > 0 ? sucursales[0].id : ""
+      sucursal_id: sucursales.length > 0 ? sucursales[0].id : "",
     });
     setErrors({});
     setEditingMesa(null);
@@ -148,7 +158,7 @@ export default function MesasPage() {
       newErrors.sucursal_id = "";
     }
 
-    console.log(newErrors)
+    console.log(newErrors);
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -159,13 +169,13 @@ export default function MesasPage() {
 
     setIsSubmitting(true);
     try {
-      const url = editingMesa ? `/api/mesas/${editingMesa.id}` : '/api/mesas';
-      const method = editingMesa ? 'PUT' : 'POST';
+      const url = editingMesa ? `/api/mesas/${editingMesa.id}` : "/api/mesas";
+      const method = editingMesa ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -189,25 +199,35 @@ export default function MesasPage() {
         resetForm();
       }
     } catch (error) {
-      console.error('Error al guardar mesa:', error);
+      console.error("Error al guardar mesa:", error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, editingMesa, validateForm, onEditMesaClose, onNewMesaClose, resetForm]);
+  }, [
+    formData,
+    editingMesa,
+    validateForm,
+    onEditMesaClose,
+    onNewMesaClose,
+    resetForm,
+  ]);
 
-  const handleEdit = useCallback((mesa: MesaConRelaciones) => {
-    setEditingMesa(mesa);
-    setFormData({
-      numero: mesa.numero,
-      capacidad: mesa.capacidad,
-      disponible: mesa.disponible,
-      ubicacion: mesa.ubicacion || "",
-      notas: mesa.notas || "",
-      sucursal_id: mesa.sucursal_id
-    });
-    setErrors({});
-    onEditMesaOpen();
-  }, [onEditMesaOpen]);
+  const handleEdit = useCallback(
+    (mesa: MesaConRelaciones) => {
+      setEditingMesa(mesa);
+      setFormData({
+        numero: mesa.numero,
+        capacidad: mesa.capacidad,
+        disponible: mesa.disponible,
+        ubicacion: mesa.ubicacion || "",
+        notas: mesa.notas || "",
+        sucursal_id: mesa.sucursal_id,
+      });
+      setErrors({});
+      onEditMesaOpen();
+    },
+    [onEditMesaOpen],
+  );
 
   const handleNewMesa = useCallback(() => {
     resetForm();
@@ -380,7 +400,7 @@ export default function MesasPage() {
 
         {/* Resultados */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
                 {loading
@@ -528,11 +548,18 @@ export default function MesasPage() {
       </div>
 
       {/* Modal Nueva Mesa */}
-      <Modal isOpen={isNewMesaOpen} onClose={onNewMesaClose} size="2xl" scrollBehavior="inside">
+      <Modal
+        isOpen={isNewMesaOpen}
+        onClose={onNewMesaClose}
+        size="2xl"
+        scrollBehavior="inside"
+      >
         <ModalContent>
           <>
             <ModalHeader>
-              <h3 className="text-xl font-semibold text-gray-900">Nueva Mesa</h3>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Nueva Mesa
+              </h3>
             </ModalHeader>
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -541,19 +568,33 @@ export default function MesasPage() {
                   type="number"
                   min={1}
                   value={formData.numero.toString()}
-                  onChange={(e) => setFormData(prev => ({ ...prev, numero: parseInt(e.target.value) || 0 }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      numero: parseInt(value, 10) || 0,
+                    }))
+                  }
                   isInvalid={!!errors.numero}
                   errorMessage={errors.numero ? "Número de mesa requerido" : ""}
                   isRequired
                 />
-                
+
                 <Input
                   label="Capacidad"
                   type="number"
                   value={formData.capacidad.toString()}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capacidad: parseInt(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      capacidad: parseInt(e.target.value) || 0,
+                    }))
+                  }
                   isInvalid={!!errors.capacidad}
-                  errorMessage={errors.capacidad ? "Capacidad requerida y debe ser mayor a 0" : ""}
+                  errorMessage={
+                    errors.capacidad
+                      ? "Capacidad requerida y debe ser mayor a 0"
+                      : ""
+                  }
                   isRequired
                 />
               </div>
@@ -561,37 +602,51 @@ export default function MesasPage() {
               <Select
                 label="Sucursal"
                 value={formData.sucursal_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, sucursal_id: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sucursal_id: e.target.value,
+                  }))
+                }
                 isInvalid={!!errors.sucursal_id}
                 placeholder="Selecciona una sucursal"
-                errorMessage={errors.sucursal_id !== undefined ? "Sucursal requerida" : ""}
+                errorMessage={
+                  errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
+                }
                 isRequired
               >
                 {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id}>
-                    {sucursal.nombre}
-                  </SelectItem>
+                  <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
                 ))}
               </Select>
 
               <Input
                 label="Ubicación"
                 value={formData.ubicacion}
-                onChange={(e) => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    ubicacion: e.target.value,
+                  }))
+                }
                 placeholder="Ej: Terraza, Salón principal, etc."
               />
 
               <Textarea
                 label="Notas"
                 value={formData.notas}
-                onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, notas: e.target.value }))
+                }
                 placeholder="Notas adicionales sobre la mesa..."
                 minRows={3}
               />
 
               <Checkbox
                 isSelected={formData.disponible}
-                onValueChange={(checked) => setFormData(prev => ({ ...prev, disponible: checked }))}
+                onValueChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, disponible: checked }))
+                }
               >
                 Mesa disponible
               </Checkbox>
@@ -633,19 +688,33 @@ export default function MesasPage() {
                   type="number"
                   min={1}
                   value={formData.numero.toString()}
-                  onChange={(e) => setFormData(prev => ({ ...prev, numero: parseInt(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      numero: parseInt(e.target.value) || 0,
+                    }))
+                  }
                   isInvalid={!!errors.numero}
                   errorMessage={errors.numero ? "Número de mesa requerido" : ""}
                   isRequired
                 />
-                
+
                 <Input
                   label="Capacidad"
                   type="number"
                   value={formData.capacidad.toString()}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capacidad: parseInt(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      capacidad: parseInt(e.target.value) || 0,
+                    }))
+                  }
                   isInvalid={!!errors.capacidad}
-                  errorMessage={errors.capacidad ? "Capacidad requerida y debe ser mayor a 0" : ""}
+                  errorMessage={
+                    errors.capacidad
+                      ? "Capacidad requerida y debe ser mayor a 0"
+                      : ""
+                  }
                   isRequired
                 />
               </div>
@@ -653,37 +722,51 @@ export default function MesasPage() {
               <Select
                 label="Sucursal"
                 value={formData.sucursal_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, sucursal_id: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sucursal_id: e.target.value,
+                  }))
+                }
                 isInvalid={!!errors.sucursal_id}
-                errorMessage={errors.sucursal_id !== undefined ? "Sucursal requerida" : ""}
+                errorMessage={
+                  errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
+                }
                 isRequired
                 defaultSelectedKeys={[formData.sucursal_id]}
               >
                 {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id}>
-                    {sucursal.nombre}
-                  </SelectItem>
+                  <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
                 ))}
               </Select>
 
               <Input
                 label="Ubicación"
                 value={formData.ubicacion}
-                onChange={(e) => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    ubicacion: e.target.value,
+                  }))
+                }
                 placeholder="Ej: Terraza, Salón principal, etc."
               />
 
               <Textarea
                 label="Notas"
                 value={formData.notas}
-                onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, notas: e.target.value }))
+                }
                 placeholder="Notas adicionales sobre la mesa..."
                 minRows={3}
               />
 
               <Checkbox
                 isSelected={formData.disponible}
-                onValueChange={(checked) => setFormData(prev => ({ ...prev, disponible: checked }))}
+                onValueChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, disponible: checked }))
+                }
               >
                 Mesa disponible
               </Checkbox>

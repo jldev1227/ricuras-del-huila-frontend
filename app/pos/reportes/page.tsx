@@ -366,7 +366,10 @@ export default function ReportsPage() {
   }, [filteredOrders]);
 
   const mesasMasActivas = useMemo(() => {
-    const mesaCount: Record<string, { mesa: string; ordenes: number; ventas: number }> = {};
+    const mesaCount: Record<
+      string,
+      { mesa: string; ordenes: number; ventas: number }
+    > = {};
     filteredOrders.forEach((order) => {
       if (order.mesa) {
         if (!mesaCount[order.mesa]) {
@@ -410,61 +413,93 @@ export default function ReportsPage() {
 
   // Nuevas métricas avanzadas
   const ventasPorHora = useMemo(() => {
-    const horasVentas: { [key: string]: { hora: string; ventas: number; ordenes: number } } = {};
-    
+    const horasVentas: {
+      [key: string]: { hora: string; ventas: number; ordenes: number };
+    } = {};
+
     filteredOrders.forEach((order) => {
       const hora = order.fecha.getHours();
       const horaFormatted = `${hora}:00`;
-      
+
       if (!horasVentas[horaFormatted]) {
-        horasVentas[horaFormatted] = { hora: horaFormatted, ventas: 0, ordenes: 0 };
+        horasVentas[horaFormatted] = {
+          hora: horaFormatted,
+          ventas: 0,
+          ordenes: 0,
+        };
       }
-      
+
       horasVentas[horaFormatted].ventas += order.total;
       horasVentas[horaFormatted].ordenes += 1;
     });
-    
+
     return Object.values(horasVentas).sort((a, b) => {
-      const horaA = parseInt(a.hora.split(':')[0]);
-      const horaB = parseInt(b.hora.split(':')[0]);
+      const horaA = parseInt(a.hora.split(":")[0]);
+      const horaB = parseInt(b.hora.split(":")[0]);
       return horaA - horaB;
     });
   }, [filteredOrders]);
 
   const ventasPorDiaSemana = useMemo(() => {
-    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const diasVentas: { [key: string]: { dia: string; ventas: number; ordenes: number } } = {};
-    
+    const diasSemana = [
+      "Domingo",
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+    ];
+    const diasVentas: {
+      [key: string]: { dia: string; ventas: number; ordenes: number };
+    } = {};
+
     // Inicializar todos los días
-    diasSemana.forEach(dia => {
+    diasSemana.forEach((dia) => {
       diasVentas[dia] = { dia, ventas: 0, ordenes: 0 };
     });
-    
+
     filteredOrders.forEach((order) => {
       const diaSemana = diasSemana[order.fecha.getDay()];
       diasVentas[diaSemana].ventas += order.total;
       diasVentas[diaSemana].ordenes += 1;
     });
-    
+
     return Object.values(diasVentas);
   }, [filteredOrders]);
 
   const ticketPromedioEvolucion = useMemo(() => {
-    const agrupado: { [key: string]: { fecha: string; ventas: number; ordenes: number; ticketPromedio: number } } = {};
-    
+    const agrupado: {
+      [key: string]: {
+        fecha: string;
+        ventas: number;
+        ordenes: number;
+        ticketPromedio: number;
+      };
+    } = {};
+
     filteredOrders.forEach((order) => {
-      const fechaKey = order.fecha.toISOString().split('T')[0];
+      const fechaKey = order.fecha.toISOString().split("T")[0];
       if (!agrupado[fechaKey]) {
-        agrupado[fechaKey] = { fecha: fechaKey, ventas: 0, ordenes: 0, ticketPromedio: 0 };
+        agrupado[fechaKey] = {
+          fecha: fechaKey,
+          ventas: 0,
+          ordenes: 0,
+          ticketPromedio: 0,
+        };
       }
       agrupado[fechaKey].ventas += order.total;
       agrupado[fechaKey].ordenes += 1;
     });
-    
-    return Object.values(agrupado).map(item => ({
-      ...item,
-      ticketPromedio: item.ordenes > 0 ? item.ventas / item.ordenes : 0
-    })).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+    return Object.values(agrupado)
+      .map((item) => ({
+        ...item,
+        ticketPromedio: item.ordenes > 0 ? item.ventas / item.ordenes : 0,
+      }))
+      .sort(
+        (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime(),
+      );
   }, [filteredOrders]);
 
   const productosTopPorVentas = useMemo(() => {
@@ -480,82 +515,121 @@ export default function ReportsPage() {
 
   const metricsComparativas = useMemo(() => {
     const periodoActual = filteredOrders;
-    const fechaInicio = periodoActual.length > 0 ? 
-      new Date(Math.min(...periodoActual.map(o => o.fecha.getTime()))) : new Date();
-    const fechaFin = periodoActual.length > 0 ? 
-      new Date(Math.max(...periodoActual.map(o => o.fecha.getTime()))) : new Date();
-    
+    const fechaInicio =
+      periodoActual.length > 0
+        ? new Date(Math.min(...periodoActual.map((o) => o.fecha.getTime())))
+        : new Date();
+    const fechaFin =
+      periodoActual.length > 0
+        ? new Date(Math.max(...periodoActual.map((o) => o.fecha.getTime())))
+        : new Date();
+
     // Calcular período anterior del mismo tamaño
-    const diasPeriodo = Math.ceil((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
-    const fechaInicioAnterior = new Date(fechaInicio.getTime() - (diasPeriodo * 24 * 60 * 60 * 1000));
-    const fechaFinAnterior = new Date(fechaInicio.getTime() - (24 * 60 * 60 * 1000));
-    
-    const periodoAnterior = allOrders.filter(o => 
-      o.fecha >= fechaInicioAnterior && 
-      o.fecha <= fechaFinAnterior && 
-      o.estado === "ENTREGADA" &&
-      (selectedSucursal === "todas" || o.sucursal === selectedSucursal)
+    const diasPeriodo = Math.ceil(
+      (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24),
     );
-    
+    const fechaInicioAnterior = new Date(
+      fechaInicio.getTime() - diasPeriodo * 24 * 60 * 60 * 1000,
+    );
+    const fechaFinAnterior = new Date(
+      fechaInicio.getTime() - 24 * 60 * 60 * 1000,
+    );
+
+    const periodoAnterior = allOrders.filter(
+      (o) =>
+        o.fecha >= fechaInicioAnterior &&
+        o.fecha <= fechaFinAnterior &&
+        o.estado === "ENTREGADA" &&
+        (selectedSucursal === "todas" || o.sucursal === selectedSucursal),
+    );
+
     const ventasActual = periodoActual.reduce((sum, o) => sum + o.total, 0);
     const ventasAnterior = periodoAnterior.reduce((sum, o) => sum + o.total, 0);
     const ordenesActual = periodoActual.length;
     const ordenesAnterior = periodoAnterior.length;
-    
+
     return {
       ventas: {
         actual: ventasActual,
         anterior: ventasAnterior,
-        cambio: ventasAnterior > 0 ? ((ventasActual - ventasAnterior) / ventasAnterior) * 100 : 0
+        cambio:
+          ventasAnterior > 0
+            ? ((ventasActual - ventasAnterior) / ventasAnterior) * 100
+            : 0,
       },
       ordenes: {
         actual: ordenesActual,
         anterior: ordenesAnterior,
-        cambio: ordenesAnterior > 0 ? ((ordenesActual - ordenesAnterior) / ordenesAnterior) * 100 : 0
+        cambio:
+          ordenesAnterior > 0
+            ? ((ordenesActual - ordenesAnterior) / ordenesAnterior) * 100
+            : 0,
       },
       ticketPromedio: {
         actual: ordenesActual > 0 ? ventasActual / ordenesActual : 0,
         anterior: ordenesAnterior > 0 ? ventasAnterior / ordenesAnterior : 0,
-        cambio: ordenesAnterior > 0 && ventasAnterior > 0 ? 
-          (((ventasActual / ordenesActual) - (ventasAnterior / ordenesAnterior)) / (ventasAnterior / ordenesAnterior)) * 100 : 0
-      }
+        cambio:
+          ordenesAnterior > 0 && ventasAnterior > 0
+            ? ((ventasActual / ordenesActual -
+                ventasAnterior / ordenesAnterior) /
+                (ventasAnterior / ordenesAnterior)) *
+              100
+            : 0,
+      },
     };
   }, [filteredOrders, allOrders, selectedSucursal]);
 
   const exportToCSV = useCallback(() => {
-    const headers = ['Fecha', 'Sucursal', 'Mesero', 'Tipo Orden', 'Mesa', 'Estado', 'Total', 'Descuento'];
+    const headers = [
+      "Fecha",
+      "Sucursal",
+      "Mesero",
+      "Tipo Orden",
+      "Mesa",
+      "Estado",
+      "Total",
+      "Descuento",
+    ];
     const csvContent = [
-      headers.join(','),
-      ...filteredOrders.map(order => [
-        order.fecha.toISOString().split('T')[0],
-        order.sucursal,
-        order.mesero,
-        order.tipoOrden,
-        order.mesa || 'N/A',
-        order.estado,
-        order.total,
-        order.descuento
-      ].join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+      headers.join(","),
+      ...filteredOrders.map((order) =>
+        [
+          order.fecha.toISOString().split("T")[0],
+          order.sucursal,
+          order.mesero,
+          order.tipoOrden,
+          order.mesa || "N/A",
+          order.estado,
+          order.total,
+          order.descuento,
+        ].join(","),
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `reporte-ventas-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `reporte-ventas-${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }, [filteredOrders]);
 
   const sucursalesRanking = useMemo(() => {
-    const sucursalCount: Record<string, {
-      sucursal: string;
-      ordenes: number;
-      ventas: number;
-      ticketPromedio: number;
-    }> = {};
+    const sucursalCount: Record<
+      string,
+      {
+        sucursal: string;
+        ordenes: number;
+        ventas: number;
+        ticketPromedio: number;
+      }
+    > = {};
     filteredOrders.forEach((order) => {
       if (order.sucursal) {
         if (!sucursalCount[order.sucursal]) {
@@ -607,7 +681,10 @@ export default function ReportsPage() {
     const calcStats = (orders: TransformedOrder[]) => ({
       ventas: orders.reduce((s: number, o: TransformedOrder) => s + o.total, 0),
       ordenes: orders.length,
-      ganancias: orders.reduce((s: number, o: TransformedOrder) => s + o.total * 0.6, 0),
+      ganancias: orders.reduce(
+        (s: number, o: TransformedOrder) => s + o.total * 0.6,
+        0,
+      ),
     });
 
     return {
@@ -648,7 +725,10 @@ export default function ReportsPage() {
     const calcStats = (orders: TransformedOrder[]) => ({
       ventas: orders.reduce((s: number, o: TransformedOrder) => s + o.total, 0),
       ordenes: orders.length,
-      ganancias: orders.reduce((s: number, o: TransformedOrder) => s + o.total * 0.6, 0),
+      ganancias: orders.reduce(
+        (s: number, o: TransformedOrder) => s + o.total * 0.6,
+        0,
+      ),
     });
 
     return {
@@ -991,37 +1071,75 @@ export default function ReportsPage() {
               <p className="text-lg font-bold text-gray-900 mb-1">
                 {formatCurrency(metricsComparativas.ventas.actual)}
               </p>
-              <div className={`flex items-center justify-center gap-1 text-sm ${
-                metricsComparativas.ventas.cambio >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                <TrendingUp size={14} className={metricsComparativas.ventas.cambio < 0 ? 'rotate-180' : ''} />
-                <span>{metricsComparativas.ventas.cambio >= 0 ? '+' : ''}{metricsComparativas.ventas.cambio.toFixed(1)}%</span>
+              <div
+                className={`flex items-center justify-center gap-1 text-sm ${
+                  metricsComparativas.ventas.cambio >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                <TrendingUp
+                  size={14}
+                  className={
+                    metricsComparativas.ventas.cambio < 0 ? "rotate-180" : ""
+                  }
+                />
+                <span>
+                  {metricsComparativas.ventas.cambio >= 0 ? "+" : ""}
+                  {metricsComparativas.ventas.cambio.toFixed(1)}%
+                </span>
               </div>
             </div>
-            
+
             <div className="text-center p-4 rounded-lg bg-gray-50">
               <p className="text-xs text-gray-500 mb-2">Órdenes</p>
               <p className="text-lg font-bold text-gray-900 mb-1">
                 {metricsComparativas.ordenes.actual}
               </p>
-              <div className={`flex items-center justify-center gap-1 text-sm ${
-                metricsComparativas.ordenes.cambio >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                <TrendingUp size={14} className={metricsComparativas.ordenes.cambio < 0 ? 'rotate-180' : ''} />
-                <span>{metricsComparativas.ordenes.cambio >= 0 ? '+' : ''}{metricsComparativas.ordenes.cambio.toFixed(1)}%</span>
+              <div
+                className={`flex items-center justify-center gap-1 text-sm ${
+                  metricsComparativas.ordenes.cambio >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                <TrendingUp
+                  size={14}
+                  className={
+                    metricsComparativas.ordenes.cambio < 0 ? "rotate-180" : ""
+                  }
+                />
+                <span>
+                  {metricsComparativas.ordenes.cambio >= 0 ? "+" : ""}
+                  {metricsComparativas.ordenes.cambio.toFixed(1)}%
+                </span>
               </div>
             </div>
-            
+
             <div className="text-center p-4 rounded-lg bg-gray-50">
               <p className="text-xs text-gray-500 mb-2">Ticket Promedio</p>
               <p className="text-lg font-bold text-gray-900 mb-1">
                 {formatCurrency(metricsComparativas.ticketPromedio.actual)}
               </p>
-              <div className={`flex items-center justify-center gap-1 text-sm ${
-                metricsComparativas.ticketPromedio.cambio >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                <TrendingUp size={14} className={metricsComparativas.ticketPromedio.cambio < 0 ? 'rotate-180' : ''} />
-                <span>{metricsComparativas.ticketPromedio.cambio >= 0 ? '+' : ''}{metricsComparativas.ticketPromedio.cambio.toFixed(1)}%</span>
+              <div
+                className={`flex items-center justify-center gap-1 text-sm ${
+                  metricsComparativas.ticketPromedio.cambio >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                <TrendingUp
+                  size={14}
+                  className={
+                    metricsComparativas.ticketPromedio.cambio < 0
+                      ? "rotate-180"
+                      : ""
+                  }
+                />
+                <span>
+                  {metricsComparativas.ticketPromedio.cambio >= 0 ? "+" : ""}
+                  {metricsComparativas.ticketPromedio.cambio.toFixed(1)}%
+                </span>
               </div>
             </div>
           </div>
@@ -1267,17 +1385,21 @@ export default function ReportsPage() {
             </h2>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={ventasPorHora}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis 
-                  dataKey="hora" 
-                  stroke="#9ca3af" 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f3f4f6"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="hora"
+                  stroke="#9ca3af"
                   style={{ fontSize: "11px" }}
                 />
                 <YAxis stroke="#9ca3af" style={{ fontSize: "11px" }} />
                 <Tooltip
                   formatter={(value, name) => [
                     name === "ventas" ? formatCurrency(Number(value)) : value,
-                    name === "ventas" ? "Ventas" : "Órdenes"
+                    name === "ventas" ? "Ventas" : "Órdenes",
                   ]}
                   contentStyle={{
                     border: "1px solid #e5e7eb",
@@ -1285,10 +1407,10 @@ export default function ReportsPage() {
                     fontSize: "12px",
                   }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="ventas" 
-                  stroke={COLORS.primary} 
+                <Line
+                  type="monotone"
+                  dataKey="ventas"
+                  stroke={COLORS.primary}
                   strokeWidth={2}
                   dot={{ fill: COLORS.primary, strokeWidth: 2, r: 4 }}
                 />
@@ -1304,10 +1426,14 @@ export default function ReportsPage() {
             </h2>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={ventasPorDiaSemana}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis 
-                  dataKey="dia" 
-                  stroke="#9ca3af" 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f3f4f6"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="dia"
+                  stroke="#9ca3af"
                   style={{ fontSize: "11px" }}
                   angle={-45}
                   textAnchor="end"
@@ -1322,9 +1448,9 @@ export default function ReportsPage() {
                     fontSize: "12px",
                   }}
                 />
-                <Bar 
-                  dataKey="ventas" 
-                  fill={COLORS.wine} 
+                <Bar
+                  dataKey="ventas"
+                  fill={COLORS.wine}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>
@@ -1340,10 +1466,14 @@ export default function ReportsPage() {
           </h2>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={ticketPromedioEvolucion}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis 
-                dataKey="fecha" 
-                stroke="#9ca3af" 
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f3f4f6"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="fecha"
+                stroke="#9ca3af"
                 style={{ fontSize: "11px" }}
               />
               <YAxis stroke="#9ca3af" style={{ fontSize: "11px" }} />
@@ -1355,10 +1485,10 @@ export default function ReportsPage() {
                   fontSize: "12px",
                 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="ticketPromedio" 
-                stroke={COLORS.secondary} 
+              <Line
+                type="monotone"
+                dataKey="ticketPromedio"
+                stroke={COLORS.secondary}
                 strokeWidth={3}
                 dot={{ fill: COLORS.secondary, strokeWidth: 2, r: 5 }}
               />
@@ -1380,7 +1510,10 @@ export default function ReportsPage() {
                   className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: COLORS.primary}}>
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: COLORS.primary }}
+                    >
                       <span className="text-white text-xs font-bold">
                         #{idx + 1}
                       </span>
@@ -1394,7 +1527,10 @@ export default function ReportsPage() {
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold" style={{color: COLORS.primary}}>
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: COLORS.primary }}
+                  >
                     {formatCurrency(producto.ventas)}
                   </p>
                 </div>
@@ -1438,7 +1574,9 @@ export default function ReportsPage() {
                   />
                   <Tooltip
                     formatter={(value, name) => [
-                      name === "ordenes" ? value : formatCurrency(Number(value)),
+                      name === "ordenes"
+                        ? value
+                        : formatCurrency(Number(value)),
                       name === "ordenes" ? "Órdenes" : "Ventas",
                     ]}
                     contentStyle={{

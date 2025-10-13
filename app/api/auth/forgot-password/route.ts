@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { sendOTPEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 const _SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET || "dev-secret-change-in-production",
@@ -58,9 +59,9 @@ export async function POST(request: NextRequest) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Invalidar OTPs anteriores del usuario
-    await prisma.passwordReset.updateMany({
+    await prisma.password_resets.updateMany({
       where: {
-        usuarioId: usuario.id,
+        usuario_id: usuario.id,
         usado: false,
       },
       data: {
@@ -69,11 +70,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Crear nuevo registro de OTP
-    await prisma.passwordReset.create({
+    await prisma.password_resets.create({
       data: {
-        usuarioId: usuario.id,
+        id: crypto.randomUUID(),
+        usuario_id: usuario.id,
         otp,
-        expiraEn: new Date(Date.now() + 10 * 60 * 1000), // 10 minutos
+        expira_en: new Date(Date.now() + 10 * 60 * 1000), // 10 minutos
       },
     });
 

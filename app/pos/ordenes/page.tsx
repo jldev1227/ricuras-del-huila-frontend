@@ -325,13 +325,14 @@ export default function OrdenesPage() {
   };
 
   const ordenesFiltradas = ordenes.filter((orden) => {
+    console.log(orden);
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      orden.mesero?.nombre_completo.toLowerCase().includes(search) ||
-      orden.mesa?.numero.toString().includes(search) ||
-      orden.cliente?.nombre.toLowerCase().includes(search) ||
-      orden.sucursal.nombre.toLowerCase().includes(search)
+      orden.meseros?.nombre_completo.toLowerCase().includes(search) ||
+      orden.mesas?.numero.toString().includes(search) ||
+      orden.clientes?.nombre.toLowerCase().includes(search) ||
+      orden.sucursales?.nombre.toLowerCase().includes(search)
     );
   });
 
@@ -613,7 +614,7 @@ export default function OrdenesPage() {
                       </p>
                       <div className="flex items-center gap-1.5 text-xs text-gray-600">
                         <Building2 size={14} />
-                        <span>{orden.sucursal.nombre}</span>
+                        <span>{orden.sucursales.nombre}</span>
                       </div>
                       {orden.mesa && (
                         <p className="text-xs text-gray-500">
@@ -784,7 +785,7 @@ export default function OrdenesPage() {
                           <div className="flex items-center gap-1.5">
                             <Building2 size={16} className="text-gray-500" />
                             <span className="text-sm text-gray-700">
-                              {orden.sucursal.nombre}
+                              {orden.sucursales.nombre}
                             </span>
                           </div>
                         </td>

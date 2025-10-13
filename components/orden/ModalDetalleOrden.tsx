@@ -24,21 +24,21 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { formatCOP } from "@/utils/formatCOP";
 
-type OrdenCompleta = Prisma.OrdenGetPayload<{
+type OrdenCompleta = Prisma.ordenesGetPayload<{
   include: {
-    items: {
+    orden_items: {
       include: {
-        producto: {
+        productos: {
           include: {
-            categoria: true;
+            categorias: true;
           };
         };
       };
     };
-    mesa: true;
-    cliente: true;
-    sucursal: true;
-    mesero: {
+    mesas: true;
+    clientes: true;
+    sucursales: true;
+    usuarios: {
       select: {
         id: true;
         nombre_completo: true;
@@ -129,7 +129,7 @@ export default function ModalDetalleOrden({
     commands.push(...CENTER, ...SIZE_LARGE, ...BOLD_ON);
     addText("RICURAS DEL HUILA\n");
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
-    addText(`${orden.sucursal?.nombre || "Sucursal Principal"}\n`);
+    addText(`${orden.sucursales?.nombre || "Sucursal Principal"}\n`);
     addText("Tel: (123) 456-7890\n");
     addText("NIT: 123456789-0\n");
     addLine("=");
@@ -139,7 +139,7 @@ export default function ModalDetalleOrden({
     addText(`ORDEN #${orden.id.slice(0, 8).toUpperCase()}\n`);
     commands.push(...BOLD_OFF);
 
-    const fecha = new Date(orden.creadoEn).toLocaleString("es-CO", {
+    const fecha = new Date(orden.creado_en).toLocaleString("es-CO", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -147,33 +147,33 @@ export default function ModalDetalleOrden({
       minute: "2-digit",
     });
     addText(`Fecha: ${fecha}\n`);
-    addText(`Tipo: ${orden.tipoOrden}\n`);
-    addText(`Mesero: ${orden.mesero?.nombre_completo || "N/A"}\n`);
+    addText(`Tipo: ${orden.tipo_orden}\n`);
+    addText(`Mesero: ${orden.usuarios?.nombre_completo || "N/A"}\n`);
 
     // Mesa (si es LOCAL)
-    if (orden.tipoOrden === "LOCAL" && orden.mesa) {
-      addText(`Mesa: ${orden.mesa.numero} - ${orden.mesa.ubicacion || ""}\n`);
+    if (orden.tipo_orden === "LOCAL" && orden.mesas) {
+      addText(`Mesa: ${orden.mesas.numero} - ${orden.mesas.ubicacion || ""}\n`);
     }
 
     // Dirección (si es DOMICILIO)
-    if (orden.tipoOrden === "DOMICILIO" && orden.direccionEntrega) {
+    if (orden.tipo_orden === "DOMICILIO" && orden.direccion_entrega) {
       commands.push(...BOLD_ON);
       addText("DOMICILIO:\n");
       commands.push(...BOLD_OFF);
-      addText(`${orden.direccionEntrega}\n`);
-      if (orden.nombreCliente) addText(`Cliente: ${orden.nombreCliente}\n`);
-      if (orden.telefonoCliente) addText(`Tel: ${orden.telefonoCliente}\n`);
+      addText(`${orden.direccion_entrega}\n`);
+      if (orden.nombre_cliente) addText(`Cliente: ${orden.nombre_cliente}\n`);
+      if (orden.telefono_cliente) addText(`Tel: ${orden.telefono_cliente}\n`);
     }
 
     // Cliente registrado
-    if (orden.cliente) {
+    if (orden.clientes) {
       commands.push(...BOLD_ON);
       addText("CLIENTE:\n");
       commands.push(...BOLD_OFF);
-      addText(`${orden.cliente.nombre}\n`);
-      if (orden.cliente.numeroIdentificacion) {
+      addText(`${orden.clientes.nombre}\n`);
+      if (orden.clientes.numero_identificacion) {
         addText(
-          `${orden.cliente.tipoIdentificacion}: ${orden.cliente.numeroIdentificacion}\n`,
+          `${orden.clientes.tipo_identificacion}: ${orden.clientes.numero_identificacion}\n`,
         );
       }
     }
@@ -186,11 +186,11 @@ export default function ModalDetalleOrden({
     commands.push(...BOLD_OFF);
     addLine("-");
 
-    orden.items.forEach((item, index) => {
-      const nombre = item.producto.nombre.substring(0, 38);
+    orden.orden_items.forEach((item, index) => {
+      const nombre = item.productos.nombre.substring(0, 38);
       addText(`${nombre}\n`);
 
-      const cantidad = `  ${item.cantidad} x ${formatCOP(Number(item.precioUnitario))}`;
+      const cantidad = `  ${item.cantidad} x ${formatCOP(Number(item.precio_unitario))}`;
       const subtotal = formatCOP(Number(item.subtotal));
       addRow(cantidad, subtotal);
 
@@ -198,7 +198,7 @@ export default function ModalDetalleOrden({
         addText(`  Nota: ${item.notas}\n`);
       }
 
-      if (index < orden.items.length - 1) {
+      if (index < orden.orden_items.length - 1) {
         addText("\n");
       }
     });
@@ -229,12 +229,12 @@ export default function ModalDetalleOrden({
       addRow("Descuento:", `-${formatCOP(Number(orden.descuento))}`);
     }
 
-    if (orden.costoEnvio && Number(orden.costoEnvio) > 0) {
-      addRow("Costo envio:", formatCOP(Number(orden.costoEnvio)));
+    if (orden.costo_envio && Number(orden.costo_envio) > 0) {
+      addRow("Costo envio:", formatCOP(Number(orden.costo_envio)));
     }
 
-    if (orden.costoAdicional && Number(orden.costoAdicional) > 0) {
-      addRow("Costo adicional:", formatCOP(Number(orden.costoAdicional)));
+    if (orden.costo_adicional && Number(orden.costo_adicional) > 0) {
+      addRow("Costo adicional:", formatCOP(Number(orden.costo_adicional)));
     }
 
     addLine("=");
@@ -355,7 +355,7 @@ export default function ModalDetalleOrden({
   const TicketPreview = () => {
     if (!orden) return null;
 
-    const fecha = new Date(orden.creadoEn).toLocaleString("es-CO", {
+    const fecha = new Date(orden.creado_en).toLocaleString("es-CO", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -389,7 +389,7 @@ export default function ModalDetalleOrden({
                         RICURAS DEL HUILA
                       </div>
                       <div className="text-center">
-                        {orden.sucursal?.nombre || "Sucursal Principal"}
+                        {orden.sucursales?.nombre || "Sucursal Principal"}
                       </div>
                       <div className="text-center">Tel: (123) 456-7890</div>
                       <div className="text-center">NIT: 123456789-0</div>
@@ -400,42 +400,42 @@ export default function ModalDetalleOrden({
                         ORDEN #{orden.id.slice(0, 8).toUpperCase()}
                       </div>
                       <div>Fecha: {fecha}</div>
-                      <div>Tipo: {orden.tipoOrden}</div>
+                      <div>Tipo: {orden.tipo_orden}</div>
                       <div>
-                        Mesero: {orden.mesero?.nombre_completo || "N/A"}
+                        Mesero: {orden.usuarios?.nombre_completo || "N/A"}
                       </div>
 
                       {/* Mesa */}
-                      {orden.tipoOrden === "LOCAL" && orden.mesa && (
+                      {orden.tipo_orden === "LOCAL" && orden.mesas && (
                         <div>
-                          Mesa: {orden.mesa.numero} - {orden.mesa.ubicacion}
+                          Mesa: {orden.mesas.numero} - {orden.mesas.ubicacion}
                         </div>
                       )}
 
                       {/* Domicilio */}
-                      {orden.tipoOrden === "DOMICILIO" &&
-                        orden.direccionEntrega && (
+                      {orden.tipo_orden === "DOMICILIO" &&
+                        orden.direccion_entrega && (
                           <>
                             <div className="font-bold mt-2">DOMICILIO:</div>
-                            <div>{orden.direccionEntrega}</div>
-                            {orden.nombreCliente && (
-                              <div>Cliente: {orden.nombreCliente}</div>
+                            <div>{orden.direccion_entrega}</div>
+                            {orden.nombre_cliente && (
+                              <div>Cliente: {orden.nombre_cliente}</div>
                             )}
-                            {orden.telefonoCliente && (
-                              <div>Tel: {orden.telefonoCliente}</div>
+                            {orden.telefono_cliente && (
+                              <div>Tel: {orden.telefono_cliente}</div>
                             )}
                           </>
                         )}
 
                       {/* Cliente */}
-                      {orden.cliente && (
+                      {orden.clientes && (
                         <>
                           <div className="font-bold mt-2">CLIENTE:</div>
-                          <div>{orden.cliente.nombre}</div>
-                          {orden.cliente.numeroIdentificacion && (
+                          <div>{orden.clientes.nombre}</div>
+                          {orden.clientes.numero_identificacion && (
                             <div>
-                              {orden.cliente.tipoIdentificacion}:{" "}
-                              {orden.cliente.numeroIdentificacion}
+                              {orden.clientes.tipo_identificacion}:{" "}
+                              {orden.clientes.numero_identificacion}
                             </div>
                           )}
                         </>
@@ -447,27 +447,25 @@ export default function ModalDetalleOrden({
                       <div className="font-bold">PRODUCTOS</div>
                       <div className="border-t border-dashed border-gray-400 my-1"></div>
 
-                      {orden.items.map(
-                        (item: Record<string, unknown>, _index: number) => (
-                          <div key={item.id as string} className="mb-2">
-                            <div>{item.producto.nombre.substring(0, 38)}</div>
-                            <div className="flex justify-between">
-                              <span>
-                                {" "}
-                                {item.cantidad} x{" "}
-                                {formatCOP(item.precioUnitario)}
-                              </span>
-                              <span>{formatCOP(item.subtotal)}</span>
-                            </div>
-                            {item.notas && (
-                              <div className="text-gray-600">
-                                {" "}
-                                Nota: {item.notas}
-                              </div>
-                            )}
+                      {orden.orden_items.map((item: any, _index: number) => (
+                        <div key={item.id as string} className="mb-2">
+                          <div>{item.productos.nombre.substring(0, 38)}</div>
+                          <div className="flex justify-between">
+                            <span>
+                              {" "}
+                              {item.cantidad} x{" "}
+                              {formatCOP(Number(item.precio_unitario))}
+                            </span>
+                            <span>{formatCOP(Number(item.subtotal))}</span>
                           </div>
-                        ),
-                      )}
+                          {item.notas && (
+                            <div className="text-gray-600">
+                              {" "}
+                              Nota: {item.notas}
+                            </div>
+                          )}
+                        </div>
+                      ))}
 
                       <div className="border-t border-dashed border-gray-400 my-1"></div>
 
@@ -501,19 +499,19 @@ export default function ModalDetalleOrden({
                         </div>
                       )}
 
-                      {orden.costoEnvio && Number(orden.costoEnvio) > 0 && (
+                      {orden.costo_envio && Number(orden.costo_envio) > 0 && (
                         <div className="flex justify-between">
                           <span>Costo envio:</span>
-                          <span>{formatCOP(Number(orden.costoEnvio))}</span>
+                          <span>{formatCOP(Number(orden.costo_envio))}</span>
                         </div>
                       )}
 
-                      {orden.costoAdicional &&
-                        Number(orden.costoAdicional) > 0 && (
+                      {orden.costo_adicional &&
+                        Number(orden.costo_adicional) > 0 && (
                           <div className="flex justify-between">
                             <span>Costo adicional:</span>
                             <span>
-                              {formatCOP(Number(orden.costoAdicional))}
+                              {formatCOP(Number(orden.costo_adicional))}
                             </span>
                           </div>
                         )}
@@ -598,7 +596,7 @@ export default function ModalDetalleOrden({
                       Orden #{orden.id.slice(0, 8).toUpperCase()}
                     </h2>
                     <p className="text-sm text-gray-500 font-normal mt-1">
-                      {formatearFecha(orden.creadoEn)}
+                      {formatearFecha(orden.creado_en)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -639,12 +637,12 @@ export default function ModalDetalleOrden({
                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="flex items-center gap-3">
                         <div className="text-3xl">
-                          {getTipoOrdenIcon(orden.tipoOrden)}
+                          {getTipoOrdenIcon(orden.tipo_orden)}
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Tipo de orden</p>
                           <p className="font-semibold text-gray-900">
-                            {orden.tipoOrden}
+                            {orden.tipo_orden}
                           </p>
                         </div>
                       </div>
@@ -658,7 +656,7 @@ export default function ModalDetalleOrden({
                         <div>
                           <p className="text-sm text-gray-600">Atendido por</p>
                           <p className="font-semibold text-gray-900">
-                            {orden.mesero?.nombre_completo || "N/A"}
+                            {orden.usuarios?.nombre_completo || "N/A"}
                           </p>
                         </div>
                       </div>
@@ -666,16 +664,16 @@ export default function ModalDetalleOrden({
                   </div>
 
                   {/* Mesa (LOCAL) */}
-                  {orden.tipoOrden === "LOCAL" && orden.mesa && (
+                  {orden.tipo_orden === "LOCAL" && orden.mesas && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                       <div className="flex items-start gap-3">
                         <MapPin className="text-blue-600 mt-0.5" size={20} />
                         <div>
                           <p className="font-semibold text-blue-900">
-                            Mesa {orden.mesa.numero}
+                            Mesa {orden.mesas.numero}
                           </p>
                           <p className="text-sm text-blue-700">
-                            {orden.mesa.ubicacion}
+                            {orden.mesas.ubicacion}
                           </p>
                         </div>
                       </div>
@@ -683,7 +681,7 @@ export default function ModalDetalleOrden({
                   )}
 
                   {/* Domicilio */}
-                  {orden.tipoOrden === "DOMICILIO" && (
+                  {orden.tipo_orden === "DOMICILIO" && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-xl space-y-2">
                       <div className="flex items-start gap-3">
                         <Home className="text-green-600 mt-0.5" size={20} />
@@ -692,22 +690,22 @@ export default function ModalDetalleOrden({
                             Dirección de entrega
                           </p>
                           <p className="text-sm text-green-700">
-                            {orden.direccionEntrega}
+                            {orden.direccion_entrega}
                           </p>
                         </div>
                       </div>
-                      {(orden.nombreCliente || orden.telefonoCliente) && (
+                      {(orden.nombre_cliente || orden.telefono_cliente) && (
                         <div className="flex items-center gap-3 pl-8">
                           <Phone className="text-green-600" size={16} />
                           <div>
-                            {orden.nombreCliente && (
+                            {orden.nombre_cliente && (
                               <p className="text-sm text-green-900">
-                                {orden.nombreCliente}
+                                {orden.nombre_cliente}
                               </p>
                             )}
-                            {orden.telefonoCliente && (
+                            {orden.telefono_cliente && (
                               <p className="text-sm text-green-700">
-                                {orden.telefonoCliente}
+                                {orden.telefono_cliente}
                               </p>
                             )}
                           </div>
@@ -717,7 +715,7 @@ export default function ModalDetalleOrden({
                   )}
 
                   {/* Cliente */}
-                  {orden.cliente && (
+                  {orden.clientes && (
                     <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
                       <div className="flex items-start gap-3">
                         <Receipt className="text-purple-600 mt-0.5" size={20} />
@@ -726,12 +724,12 @@ export default function ModalDetalleOrden({
                             Cliente registrado
                           </p>
                           <p className="text-sm text-purple-700">
-                            {orden.cliente.nombre}
+                            {orden.clientes.nombre}
                           </p>
-                          {orden.cliente.numeroIdentificacion && (
+                          {orden.clientes.numero_identificacion && (
                             <p className="text-xs text-purple-600">
-                              {orden.cliente.tipoIdentificacion}:{" "}
-                              {orden.cliente.numeroIdentificacion}
+                              {orden.clientes.tipo_identificacion}:{" "}
+                              {orden.clientes.numero_identificacion}
                             </p>
                           )}
                         </div>
@@ -742,10 +740,10 @@ export default function ModalDetalleOrden({
                   {/* Items */}
                   <div>
                     <h3 className="font-bold text-gray-900 mb-4">
-                      Productos ({orden.items.length})
+                      Productos ({orden.orden_items.length})
                     </h3>
                     <div className="space-y-3">
-                      {orden.items.map((item: Record<string, unknown>) => (
+                      {orden.orden_items.map((item: any) => (
                         <div
                           key={item.id}
                           className="flex gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
@@ -755,18 +753,17 @@ export default function ModalDetalleOrden({
                               <Image
                                 fill
                                 src={
-                                  (item.producto.imagen as string) ||
-                                  (item.imagen as string) ||
+                                  item.productos.imagen ||
                                   "/placeholder-producto.png"
                                 }
-                                alt={item.producto.nombre as string}
-                                className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${
-                                  item.producto.imagen ? "" : "opacity-60"
+                                alt={item.productos.nombre}
+                                className={`rounded-xl transition-opacity duration-300 ${
+                                  item.productos.imagen ? "" : "opacity-60"
                                 }`}
                                 loading="lazy"
                                 draggable={false}
                               />
-                              {!item.producto.imagen && (
+                              {!item.productos.imagen && (
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
                                   {/* You need to import CircleQuestionMark from lucide-react or your icon library */}
                                   <CircleQuestionMark
@@ -780,13 +777,13 @@ export default function ModalDetalleOrden({
 
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900 mb-1">
-                              {item.producto.nombre}
+                              {item.productos.nombre}
                             </h4>
                             <div className="flex items-center gap-4 text-sm">
                               <div>
                                 <span className="text-gray-600">Precio: </span>
                                 <span className="font-semibold text-gray-900">
-                                  {formatCOP(item.precioUnitario)}
+                                  {formatCOP(Number(item.precio_unitario))}
                                 </span>
                               </div>
                               <div>
@@ -810,7 +807,7 @@ export default function ModalDetalleOrden({
 
                           <div className="text-right">
                             <p className="font-bold text-wine text-lg">
-                              {formatCOP(item.subtotal)}
+                              {formatCOP(Number(item.subtotal))}
                             </p>
                           </div>
                         </div>
@@ -860,21 +857,21 @@ export default function ModalDetalleOrden({
                         </div>
                       )}
 
-                      {orden.costoEnvio && Number(orden.costoEnvio) > 0 && (
+                      {orden.costo_envio && Number(orden.costo_envio) > 0 && (
                         <div className="flex justify-between text-sm text-green-600">
                           <span>Costo de envío</span>
                           <span className="font-semibold">
-                            +{formatCOP(Number(orden.costoEnvio))}
+                            +{formatCOP(Number(orden.costo_envio))}
                           </span>
                         </div>
                       )}
 
-                      {orden.costoAdicional &&
-                        Number(orden.costoAdicional) > 0 && (
+                      {orden.costo_adicional &&
+                        Number(orden.costo_adicional) > 0 && (
                           <div className="flex justify-between text-sm text-green-600">
                             <span>Costo adicional</span>
                             <span className="font-semibold">
-                              +{formatCOP(Number(orden.costoAdicional))}
+                              +{formatCOP(Number(orden.costo_adicional))}
                             </span>
                           </div>
                         )}

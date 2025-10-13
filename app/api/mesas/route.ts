@@ -48,12 +48,12 @@ export async function GET(request: NextRequest) {
             usuarios: true,
             _count: {
               select: {
-                orden_items: true
-              }
-            }
-          }
-        }
-      }
+                orden_items: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // Transformar los datos para incluir ordenActual
@@ -94,30 +94,34 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numero, capacidad, sucursal_id, ubicacion, notas, disponible } = body;
+    const { numero, capacidad, sucursal_id, ubicacion, notas, disponible } =
+      body;
 
-    console.log(body)
+    console.log(body);
 
-    // Validar datos requeridos 
+    // Validar datos requeridos
     if (!numero || !sucursal_id) {
       return NextResponse.json(
         { success: false, message: "Número y sucursal son requeridos" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Verificar que no exista otra mesa con el mismo número en la misma sucursal
     const mesaExistente = await prisma.mesas.findFirst({
       where: {
-        numero: parseInt(numero),
-        sucursal_id: sucursal_id
-      }
+        numero: parseInt(numero, 10),
+        sucursal_id: sucursal_id,
+      },
     });
 
     if (mesaExistente) {
       return NextResponse.json(
-        { success: false, message: "Ya existe una mesa con ese número en esta sucursal" },
-        { status: 400 }
+        {
+          success: false,
+          message: "Ya existe una mesa con ese número en esta sucursal",
+        },
+        { status: 400 },
       );
     }
 
@@ -125,29 +129,29 @@ export async function POST(request: NextRequest) {
     const nuevaMesa = await prisma.mesas.create({
       data: {
         id: crypto.randomUUID(),
-        numero: parseInt(numero),
-        capacidad: parseInt(capacidad) || 4,
+        numero: parseInt(numero, 10),
+        capacidad: parseInt(capacidad, 10) || 4,
         sucursal_id,
         ubicacion: ubicacion || null,
         notas: notas || null,
         disponible: disponible !== false,
-        actualizado_en: new Date()
+        actualizado_en: new Date(),
       },
       include: {
-        sucursales: true
-      }
+        sucursales: true,
+      },
     });
 
     return NextResponse.json({
       success: true,
       message: "Mesa creada exitosamente",
-      mesa: nuevaMesa
+      mesa: nuevaMesa,
     });
   } catch (error) {
     console.error("Error al crear mesa:", error);
     return NextResponse.json(
       { success: false, message: "Error al crear mesa" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -9,9 +9,9 @@ export async function PUT(
     const { params } = await context;
     const mesaId = params.id;
     const body = await request.json();
-    const { meseroId } = body;
+    const { mesero_id } = body;
 
-    if (!mesaId || !meseroId) {
+    if (!mesaId || !mesero_id) {
       return NextResponse.json(
         {
           success: false,
@@ -32,10 +32,10 @@ export async function PUT(
             },
           },
           include: {
-            mesero: true,
+            usuarios: true,
           },
           orderBy: {
-            creadoEn: "desc",
+            creado_en: "desc",
           },
           take: 1,
         },
@@ -65,7 +65,7 @@ export async function PUT(
     }
 
     // Verificar que el mesero que intenta liberar la mesa es el mismo que la tiene asignada
-    if (ordenActiva.meseroId !== meseroId) {
+    if (ordenActiva.mesero_id !== mesero_id) {
       return NextResponse.json(
         {
           success: false,

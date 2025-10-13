@@ -46,14 +46,14 @@ export async function PUT(
       nombre,
       descripcion,
       precio,
-      costoProduccion,
-      categoriaId,
+      costo_produccion,
+      categoria_id,
       imagen,
       disponible,
       destacado,
     } = body;
 
-    if (!nombre || !categoriaId) {
+    if (!nombre || !categoria_id) {
       return NextResponse.json(
         { message: "Nombre y categoría son requeridos" },
         { status: 400 },
@@ -97,8 +97,8 @@ export async function PUT(
         nombre,
         descripcion,
         precio,
-        costo_produccion: costoProduccion,
-        categoria_id: categoriaId,
+        costo_produccion: costo_produccion,
+        categoria_id: categoria_id,
         imagen: nuevaImagen, // ✅ ya tiene /productos/
         disponible,
         destacado,

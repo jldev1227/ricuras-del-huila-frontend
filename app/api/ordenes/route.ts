@@ -3,12 +3,13 @@
 import type { $Enums, Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 // Tipos para los items de orden
 interface OrderItem {
-  productoId: string;
+  producto_id: string;
   cantidad: number;
-  precioUnitario: number;
+  precio_unitario: number;
   especificaciones?: string;
   notas?: string;
 }
@@ -19,12 +20,12 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     // Filtros
-    const sucursalId = searchParams.get("sucursalId");
-    const meseroId = searchParams.get("meseroId");
-    const mesaId = searchParams.get("mesaId");
-    const clienteId = searchParams.get("clienteId");
+    const sucursal_id = searchParams.get("sucursal_id");
+    const mesero_id = searchParams.get("mesero_id");
+    const mesa_id = searchParams.get("mesa_id");
+    const cliente_id = searchParams.get("cliente_id");
     const estado = searchParams.get("estado");
-    const tipoOrden = searchParams.get("tipoOrden");
+    const tipo_orden = searchParams.get("tipo_orden");
     const fecha = searchParams.get("fecha");
     const sincronizado = searchParams.get("sincronizado");
 
@@ -36,12 +37,12 @@ export async function GET(request: NextRequest) {
     // Construir filtros
     const where: Prisma.ordenesWhereInput = {};
 
-    if (sucursalId) where.sucursal_id = sucursalId;
-    if (meseroId) where.mesero_id = meseroId;
-    if (mesaId) where.mesa_id = mesaId;
-    if (clienteId) where.cliente_id = clienteId;
+    if (sucursal_id) where.sucursal_id = sucursal_id;
+    if (mesero_id) where.mesero_id = mesero_id;
+    if (mesa_id) where.mesa_id = mesa_id;
+    if (cliente_id) where.cliente_id = cliente_id;
     if (estado) where.estado = estado as $Enums.estados_orden;
-    if (tipoOrden) where.tipo_orden = tipoOrden as $Enums.tipos_orden;
+    if (tipo_orden) where.tipo_orden = tipo_orden as $Enums.tipos_orden;
     if (sincronizado) where.sincronizado = sincronizado === "true";
 
     if (fecha) {
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
 
     // Calcular subtotal
     const subtotal = items.reduce((total: number, item: OrderItem) => {
-      return total + item.precioUnitario * item.cantidad;
+      return total + item.precio_unitario * item.cantidad;
     }, 0);
 
     // Calcular total
@@ -239,10 +240,10 @@ export async function POST(request: NextRequest) {
           orden_items: {
             create: items.map((item: OrderItem) => ({
               id: crypto.randomUUID(),
-              producto_id: item.productoId,
+              producto_id: item.producto_id,
               cantidad: item.cantidad,
-              precio_unitario: item.precioUnitario,
-              subtotal: item.precioUnitario * item.cantidad,
+              precio_unitario: item.precio_unitario,
+              subtotal: item.precio_unitario * item.cantidad,
               notas: item.notas,
             })),
           },
@@ -330,12 +331,12 @@ export async function PUT(request: NextRequest) {
         });
 
         const subtotal = data.items.reduce((total: number, item: OrderItem) => {
-          return total + item.precioUnitario * item.cantidad;
+          return total + item.precio_unitario * item.cantidad;
         }, 0);
 
         let total = subtotal - (data.descuento || 0);
-        if (data.costoEnvio) total += parseFloat(data.costoEnvio);
-        if (data.costoAdicional) total += parseFloat(data.costoAdicional);
+        if (data.costo_envio) total += parseFloat(data.costo_envio);
+        if (data.costo_adicional) total += parseFloat(data.costo_adicional);
 
         data.subtotal = subtotal;
         data.total = total;
@@ -347,14 +348,15 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: {
           ...ordenData,
-          actualizadoEn: new Date(),
+          actualizado_en: new Date(),
           ...(items && {
-            items: {
+            orden_items: {
               create: items.map((item: OrderItem) => ({
-                productoId: item.productoId,
+                id: crypto.randomUUID(),
+                producto_id: item.producto_id,
                 cantidad: item.cantidad,
-                precioUnitario: item.precioUnitario,
-                subtotal: item.precioUnitario * item.cantidad,
+                precio_unitario: item.precio_unitario,
+                subtotal: item.precio_unitario * item.cantidad,
                 notas: item.notas,
               })),
             },

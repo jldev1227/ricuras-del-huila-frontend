@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const nombre = searchParams.get("nombre");
-    const categoriaId = searchParams.get("categoriaId");
+    const categoria_id = searchParams.get("categoria_id");
     const disponible = searchParams.get("disponible");
 
     const where: {
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    if (categoriaId) {
-      where.categoria_id = categoriaId;
+    if (categoria_id) {
+      where.categoria_id = categoria_id;
     }
 
     if (disponible !== null && disponible !== undefined) {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       descripcion,
       precio,
       costo_produccion,
-      categoriaId,
+      categoria_id,
       imagen,
       disponible = true,
       destacado = false,
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!categoriaId || typeof categoriaId !== "string") {
+    if (!categoria_id || typeof categoria_id !== "string") {
       return NextResponse.json(
         {
           success: false,
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     // 🔍 Verificar que la categoría existe
     const categoriaExiste = await prisma.categorias.findUnique({
-      where: { id: categoriaId },
+      where: { id: categoria_id },
     });
 
     if (!categoriaExiste) {
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
         descripcion: descripcion?.trim() || null,
         precio,
         costo_produccion,
-        categoria_id: categoriaId,
+        categoria_id: categoria_id,
         imagen: imagenProcesada,
         disponible: Boolean(disponible),
         destacado: Boolean(destacado),

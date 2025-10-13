@@ -21,26 +21,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar el OTP más reciente válido
-    const passwordReset = await prisma.passwordReset.findFirst({
+    const passwordReset = await prisma.password_resets.findFirst({
       where: {
-        usuarioId: usuario.id,
+        usuario_id: usuario.id,
         otp,
         usado: false,
-        expiraEn: {
+        expira_en: {
           gt: new Date(), // Mayor que ahora (no expirado)
         },
       },
       orderBy: {
-        creadoEn: "desc",
+        creado_en: "desc",
       },
     });
 
     // Validaciones
     if (!passwordReset) {
       // Incrementar intentos fallidos
-      await prisma.passwordReset.updateMany({
+      await prisma.password_resets.updateMany({
         where: {
-          usuarioId: usuario.id,
+          usuario_id: usuario.id,
           usado: false,
         },
         data: {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar intentos (máximo 3)
     if (passwordReset.intentos >= 3) {
-      await prisma.passwordReset.update({
+      await prisma.password_resets.update({
         where: { id: passwordReset.id },
         data: { usado: true }, // Bloquear
       });
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Marcar como usado
-    await prisma.passwordReset.update({
+    await prisma.password_resets.update({
       where: { id: passwordReset.id },
       data: { usado: true },
     });
