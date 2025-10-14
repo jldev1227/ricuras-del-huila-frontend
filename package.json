@@ -10,7 +10,14 @@
     "lint": "biome check",
     "format": "biome format --write",
     "db:push": "npx prisma db push",
-    "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
+    "db:test": "tsx scripts/test-db.ts",
+    "db:health": "curl http://localhost:3001/api/health/database",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:pull": "prisma db pull",
+    "db:reset": "prisma migrate reset",
+    "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -51,6 +58,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   },
   "overrides": {

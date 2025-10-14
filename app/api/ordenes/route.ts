@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
           estado: true,
           total: true,
           descuento: true,
+          metodo_pago: true,
           creado_en: true,
           sucursales: {
             select: {
@@ -89,6 +90,19 @@ export async function GET(request: NextRequest) {
           clientes: {
             select: {
               nombre: true,
+            },
+          },
+          orden_items: {
+            select: {
+              cantidad: true,
+              precio_unitario: true,
+              productos: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  precio: true,
+                },
+              },
             },
           },
           _count: {

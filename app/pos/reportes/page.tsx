@@ -5,6 +5,7 @@ import {
   Calendar,
   ChevronDown,
   Clock,
+  CreditCard,
   DollarSign,
   Download,
   Filter,
@@ -58,6 +59,16 @@ interface TransformedOrder {
   descuento: number;
   itemsCount: number;
   cliente?: string;
+  metodoPago?: string;
+  items?: Array<{
+    cantidad: number;
+    precioUnitario: number;
+    producto: {
+      id: string;
+      nombre: string;
+      precio: number;
+    };
+  }>;
 }
 
 export default function ReportsPage() {
@@ -117,11 +128,21 @@ export default function ReportsPage() {
               estado: string;
               total: number;
               descuento?: number;
+              metodoPago?: string;
               sucursal?: { id: string; nombre: string };
               mesero?: { id: string; nombre_completo: string };
               mesa?: { id: string; numero: number };
               cliente?: { id: string; nombre: string };
-              _count?: { items: number };
+              orden_items?: Array<{
+                cantidad: number;
+                precio_unitario: number;
+                productos: {
+                  id: string;
+                  nombre: string;
+                  precio: number;
+                };
+              }>;
+              _count?: { orden_items: number };
             };
 
             const transformedOrders: TransformedOrder[] = data.ordenes.map(
@@ -137,8 +158,18 @@ export default function ReportsPage() {
                 estado: orden.estado,
                 total: Number(orden.total),
                 descuento: Number(orden.descuento ?? 0),
-                itemsCount: orden._count?.items ?? 0,
+                itemsCount: orden._count?.orden_items ?? 0,
                 cliente: orden.cliente?.nombre,
+                metodoPago: orden.metodoPago || "EFECTIVO",
+                items: orden.orden_items?.map(item => ({
+                  cantidad: item.cantidad,
+                  precioUnitario: Number(item.precio_unitario),
+                  producto: {
+                    id: item.productos.id,
+                    nombre: item.productos.nombre,
+                    precio: Number(item.productos.precio),
+                  }
+                })) || [],
               }),
             );
 
@@ -364,6 +395,43 @@ export default function ReportsPage() {
     return Object.values(grouped);
   }, [filteredOrders]);
 
+  // Análisis de métodos de pago
+  type MetodoPagoStats = {
+    metodo: string;
+    ventas: number;
+    ordenes: number;
+    porcentaje: number | string;
+  };
+
+  const ventasPorMetodoPago: MetodoPagoStats[] = useMemo(() => {
+    const grouped: { [key: string]: MetodoPagoStats } = {};
+    filteredOrders.forEach((order) => {
+      const metodo = order.metodoPago || "EFECTIVO";
+      if (!grouped[metodo]) {
+        grouped[metodo] = {
+          metodo: metodo,
+          ventas: 0,
+          ordenes: 0,
+          porcentaje: 0,
+        };
+      }
+      grouped[metodo].ventas += Number(order.total);
+      grouped[metodo].ordenes += 1;
+    });
+    
+    const totalVentas = Object.values(grouped).reduce(
+      (sum, item) => sum + item.ventas,
+      0,
+    );
+    
+    Object.values(grouped).forEach((item) => {
+      item.porcentaje =
+        totalVentas > 0 ? ((item.ventas / totalVentas) * 100).toFixed(1) : 0;
+    });
+    
+    return Object.values(grouped).sort((a, b) => b.ordenes - a.ordenes);
+  }, [filteredOrders]);
+
   const mesasMasActivas = useMemo(() => {
     const mesaCount: Record<
       string,
@@ -502,15 +570,40 @@ export default function ReportsPage() {
   }, [filteredOrders]);
 
   const productosTopPorVentas = useMemo(() => {
-    // Esta funcionalidad requeriría datos de items, por ahora simularemos
-    return [
-      { nombre: "Producto A", ventas: 150000, cantidad: 45 },
-      { nombre: "Producto B", ventas: 120000, cantidad: 38 },
-      { nombre: "Producto C", ventas: 98000, cantidad: 32 },
-      { nombre: "Producto D", ventas: 85000, cantidad: 28 },
-      { nombre: "Producto E", ventas: 72000, cantidad: 24 },
-    ];
-  }, []);
+    const productosAgrupados: {
+      [key: string]: {
+        nombre: string;
+        ventas: number;
+        cantidad: number;
+      };
+    } = {};
+
+    // Procesar todos los items de las órdenes filtradas
+    filteredOrders.forEach((order) => {
+      if (order.items && order.items.length > 0) {
+        order.items.forEach((item) => {
+          const productoId = item.producto.id;
+          const ventasItem = item.cantidad * item.precioUnitario;
+          
+          if (!productosAgrupados[productoId]) {
+            productosAgrupados[productoId] = {
+              nombre: item.producto.nombre,
+              ventas: 0,
+              cantidad: 0,
+            };
+          }
+          
+          productosAgrupados[productoId].ventas += ventasItem;
+          productosAgrupados[productoId].cantidad += item.cantidad;
+        });
+      }
+    });
+
+    // Convertir a array y ordenar por ventas
+    return Object.values(productosAgrupados)
+      .sort((a, b) => b.ventas - a.ventas)
+      .slice(0, 5); // Top 5 productos
+  }, [filteredOrders]);
 
   const metricsComparativas = useMemo(() => {
     const periodoActual = filteredOrders;
@@ -586,6 +679,7 @@ export default function ReportsPage() {
       "Tipo Orden",
       "Mesa",
       "Estado",
+      "Método Pago",
       "Total",
       "Descuento",
     ];
@@ -599,6 +693,7 @@ export default function ReportsPage() {
           order.tipoOrden,
           order.mesa || "N/A",
           order.estado,
+          order.metodoPago || "EFECTIVO",
           order.total,
           order.descuento,
         ].join(","),
@@ -1372,6 +1467,68 @@ export default function ReportsPage() {
               ))}
             </div>
           </div>
+
+          {/* Métodos de Pago */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-gray-400" />
+              Métodos de Pago
+            </h2>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={ventasPorMetodoPago}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                  dataKey="ventas"
+                >
+                  {ventasPorMetodoPago.map((entry) => (
+                    <Cell
+                      key={entry.metodo}
+                      fill={
+                        CHART_COLORS[
+                          ventasPorMetodoPago.indexOf(entry) % CHART_COLORS.length
+                        ]
+                      }
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value) => formatCurrency(Number(value))}
+                  contentStyle={{ fontSize: "12px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="grid grid-cols-3 gap-3 mt-4">
+              {ventasPorMetodoPago.map((metodo, idx) => (
+                <div key={metodo.metodo} className="text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                    ></div>
+                    <p className="text-xs text-gray-600">
+                      {metodo.metodo === 'EFECTIVO' ? 'Efectivo' : 
+                       metodo.metodo === 'TARJETA' ? 'Tarjeta' : 
+                       metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
+                    </p>
+                  </div>
+                  <p className="text-base lg:text-lg font-bold text-gray-900">
+                    {metodo.porcentaje}%
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {metodo.ordenes} órdenes
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {formatCurrency(metodo.ventas)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Gráficos Adicionales de Análisis */}
@@ -1686,6 +1843,113 @@ export default function ReportsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Análisis Detallado de Métodos de Pago */}
+        {ventasPorMetodoPago.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
+            <h2 className="text-base lg:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-wine" />
+              Análisis Detallado de Métodos de Pago
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">
+                      Método de Pago
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                      Órdenes
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                      Ventas
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                      % del Total
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">
+                      Ticket Promedio
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ventasPorMetodoPago.map((metodo, index) => (
+                    <tr key={metodo.metodo} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                          ></div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {metodo.metodo === 'EFECTIVO' ? 'Efectivo' : 
+                             metodo.metodo === 'TARJETA' ? 'Tarjeta' : 
+                             metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right text-sm text-gray-900">
+                        {metodo.ordenes}
+                      </td>
+                      <td className="py-3 px-4 text-right text-sm font-semibold text-gray-900">
+                        {formatCurrency(metodo.ventas)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-sm text-gray-600">
+                        {metodo.porcentaje}%
+                      </td>
+                      <td className="py-3 px-4 text-right text-sm text-gray-600">
+                        {formatCurrency(metodo.ventas / metodo.ordenes)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Insights de Métodos de Pago */}
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-primary/5 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Método Más Popular
+                </h3>
+                <p className="text-2xl font-bold text-primary mb-1">
+                  {ventasPorMetodoPago[0]?.metodo === 'EFECTIVO' ? 'Efectivo' : 
+                   ventasPorMetodoPago[0]?.metodo === 'TARJETA' ? 'Tarjeta' : 
+                   ventasPorMetodoPago[0]?.metodo === 'TRANSFERENCIA' ? 'Transferencia' : 
+                   ventasPorMetodoPago[0]?.metodo || 'N/A'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  {ventasPorMetodoPago[0]?.ordenes || 0} órdenes ({ventasPorMetodoPago[0]?.porcentaje || 0}%)
+                </p>
+              </div>
+              
+              <div className="bg-wine/5 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Mayor Ticket Promedio
+                </h3>
+                <p className="text-2xl font-bold text-wine mb-1">
+                  {ventasPorMetodoPago.length > 0 
+                    ? formatCurrency(Math.max(...ventasPorMetodoPago.map(m => m.ventas / m.ordenes)))
+                    : formatCurrency(0)
+                  }
+                </p>
+                <p className="text-xs text-gray-600">
+                  {ventasPorMetodoPago.length > 0
+                    ? (() => {
+                        const maxTicket = ventasPorMetodoPago.reduce((max, metodo) => 
+                          (metodo.ventas / metodo.ordenes) > (max.ventas / max.ordenes) ? metodo : max
+                        );
+                        return `${maxTicket.metodo === 'EFECTIVO' ? 'Efectivo' : 
+                               maxTicket.metodo === 'TARJETA' ? 'Tarjeta' : 
+                               maxTicket.metodo === 'TRANSFERENCIA' ? 'Transferencia' : maxTicket.metodo}`;
+                      })()
+                    : 'N/A'
+                  }
+                </p>
+              </div>
             </div>
           </div>
         )}
