@@ -29,8 +29,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       MESERO: "/mesero",
     } as const;
 
-    console.log(user);
-
     const redirectPath =
       roleRedirects[user?.rol as keyof typeof roleRedirects] || "/dashboard";
     router.push(redirectPath);

@@ -1,4 +1,5 @@
 import {
+  addToast,
   Button,
   Card,
   Checkbox,
@@ -8,8 +9,6 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
-  Select,
-  SelectItem,
   Spinner,
   Textarea,
   useDisclosure,
@@ -30,11 +29,6 @@ interface Mesa {
   ultima_limpieza?: Date | null;
   creado_en: Date;
   actualizado_en: Date;
-}
-
-interface Sucursal {
-  id: string;
-  nombre: string;
 }
 
 // Interface para formulario de mesa
@@ -149,11 +143,10 @@ export default function ModalSeleccionarMesa({
   const [searchNumero, setSearchNumero] = useState("");
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [tempMesa, setTempMesa] = useState<Mesa | null>(null);
-  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
 
   // Estados para el formulario de nueva mesa
   const [formData, setFormData] = useState<FormMesa>({
-    numero: 0,
+    numero: 1,
     capacidad: 4,
     disponible: true,
     ubicacion: "",
@@ -167,29 +160,33 @@ export default function ModalSeleccionarMesa({
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Cargar sucursales
-        const sucursalesRes = await fetch("/api/sucursales");
-        const sucursalesData = await sucursalesRes.json();
-        if (sucursalesData.success) {
-          setSucursales(sucursalesData.sucursales);
-          // Establecer sucursal por defecto si no hay una seleccionada
-          if (sucursalesData.sucursales.length > 0 && !formData.sucursal_id) {
-            setFormData((prev) => ({
-              ...prev,
-              sucursal_id: sucursalesData.sucursales[0].id,
-            }));
-          }
+        // Obtener sucursal actual del localStorage
+        const sucursalActual = localStorage.getItem('sucursal-actual');
+        const sucursalId = sucursalActual ? JSON.parse(sucursalActual).id : null;
+
+        if (!sucursalId) {
+          console.error('No hay sucursal seleccionada');
+          setLoading(false);
+          return;
         }
 
-        // Cargar mesas
+        // Establecer sucursal_id en el formulario si no está establecido
+        if (!formData.sucursal_id) {
+          setFormData((prev) => ({
+            ...prev,
+            sucursal_id: sucursalId,
+          }));
+        }
+
+        // Cargar mesas filtrando por sucursal actual
         const params = new URLSearchParams();
+        params.append("sucursal_id", sucursalId);
         if (searchNumero) params.append("numero", searchNumero);
 
         const response = await fetch(`/api/mesas?${params}`);
         const data = await response.json();
 
         if (data.success) {
-          console.log(data);
           setMesas(data.mesas);
         }
       } catch (error) {
@@ -219,13 +216,17 @@ export default function ModalSeleccionarMesa({
 
   // Funciones para el formulario de nueva mesa
   const resetForm = () => {
+    // Obtener sucursal actual del localStorage
+    const sucursalActual = localStorage.getItem('sucursal-actual');
+    const sucursalId = sucursalActual ? JSON.parse(sucursalActual).id : "";
+
     setFormData({
-      numero: 0,
+      numero: 1,
       capacidad: 4,
       disponible: true,
       ubicacion: "",
       notas: "",
-      sucursal_id: sucursales.length > 0 ? sucursales[0].id : "",
+      sucursal_id: sucursalId,
     });
     setErrors({});
   };
@@ -241,9 +242,7 @@ export default function ModalSeleccionarMesa({
       newErrors.capacidad = 1;
     }
 
-    if (!formData.sucursal_id) {
-      newErrors.sucursal_id = "";
-    }
+    // La sucursal_id siempre estará presente desde localStorage, no necesita validación
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -265,8 +264,13 @@ export default function ModalSeleccionarMesa({
       const data = await response.json();
 
       if (data.success) {
-        // Recargar mesas para mostrar la nueva mesa
-        const mesasRes = await fetch(`/api/mesas`);
+        // Recargar mesas para mostrar la nueva mesa, filtrando por sucursal actual
+        const sucursalActual = localStorage.getItem('sucursal-actual');
+        const sucursalId = sucursalActual ? JSON.parse(sucursalActual).id : "";
+        const params = new URLSearchParams();
+        if (sucursalId) params.append("sucursal_id", sucursalId);
+        
+        const mesasRes = await fetch(`/api/mesas?${params}`);
         const mesasData = await mesasRes.json();
         if (mesasData.success) {
           setMesas(mesasData.mesas);
@@ -282,18 +286,30 @@ export default function ModalSeleccionarMesa({
         }
       } else {
         console.error("Error al crear mesa:", data.message);
-        alert(`Error al crear mesa: ${data.message}`);
+        addToast({ title: "Error al crear mesa", description: data.message, color: "danger" });
       }
     } catch (error) {
       console.error("Error al crear mesa:", error);
-      alert("Error al crear mesa");
+      addToast({ title: "Error al crear mesa", color: "danger" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleNewMesa = () => {
-    resetForm();
+    // Obtener sucursal actual del localStorage antes de abrir el modal
+    const sucursalActual = localStorage.getItem('sucursal-actual');
+    const sucursalId = sucursalActual ? JSON.parse(sucursalActual).id : "";
+    
+    setFormData({
+      numero: 1,
+      capacidad: 4,
+      disponible: true,
+      ubicacion: "",
+      notas: "",
+      sucursal_id: sucursalId,
+    });
+    setErrors({});
     onNewMesaOpen();
   };
 
@@ -358,8 +374,11 @@ export default function ModalSeleccionarMesa({
                     <Spinner size="lg" />
                   </div>
                 ) : mesas.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {mesas.map((mesa) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {mesas
+                      .slice()
+                      .sort((a, b) => a.numero - b.numero)
+                      .map((mesa) => (
                       <MesaIlustracion
                         key={mesa.id}
                         numero={mesa.numero}
@@ -367,8 +386,8 @@ export default function ModalSeleccionarMesa({
                         onClick={() => onSelectTemp(mesa)}
                         isSelected={tempMesa?.id === mesa.id}
                       />
-                    ))}
-                  </div>
+                      ))}
+                    </div>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-gray-500">No se encontraron mesas</p>
@@ -443,27 +462,8 @@ export default function ModalSeleccionarMesa({
               />
             </div>
 
-            <Select
-              label="Sucursal"
-              selectedKeys={formData.sucursal_id ? [formData.sucursal_id] : []}
-              onSelectionChange={(keys) => {
-                const sucursalId = Array.from(keys)[0] as string;
-                setFormData((prev) => ({
-                  ...prev,
-                  sucursal_id: sucursalId,
-                }));
-              }}
-              isInvalid={!!errors.sucursal_id}
-              placeholder="Selecciona una sucursal"
-              errorMessage={
-                errors.sucursal_id !== undefined ? "Sucursal requerida" : ""
-              }
-              isRequired
-            >
-              {sucursales.map((sucursal) => (
-                <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
-              ))}
-            </Select>
+            {/* Campo oculto para sucursal - se toma del localStorage */}
+            <input type="hidden" value={formData.sucursal_id} />
 
             <Input
               label="Ubicación"

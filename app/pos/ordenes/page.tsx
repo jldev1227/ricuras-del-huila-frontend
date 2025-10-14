@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import ModalActualizarOrden from "@/components/orden/ModalActualizarOrden";
 import ModalDetalleOrden from "@/components/orden/ModalDetalleOrden";
 import { formatCOP } from "@/utils/formatCOP";
 
@@ -93,15 +92,13 @@ export default function OrdenesPage() {
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<string | null>(
     null,
   );
-  const [ordenIdEditar, _setOrdenIdEditar] = useState<string | null>(null);
+  const [_ordenIdEditar, _setOrdenIdEditar] = useState<string | null>(null);
 
   const {
     isOpen: openDetalle,
     onOpen: abrirDetalle,
     onOpenChange: cerrarDetalle,
   } = useDisclosure();
-  const { isOpen: isEditOpen, onOpenChange: onEditOpenChange } =
-    useDisclosure();
 
   // Modales de confirmación
   const {
@@ -331,7 +328,6 @@ export default function OrdenesPage() {
   };
 
   const ordenesFiltradas = ordenes.filter((orden) => {
-    console.log(orden);
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -669,7 +665,7 @@ export default function OrdenesPage() {
                         color="secondary"
                         startContent={<Edit size={16} />}
                         onPress={() => {
-                          router.push(`/pos/ordenes/${orden.id}/editar`);
+                          router.push(`/pos?ordenId=${orden.id}`);
                         }}
                         title="Editar orden"
                         className="text-secondary bg-secondary/10"
@@ -857,7 +853,7 @@ export default function OrdenesPage() {
                               variant="flat"
                               color="secondary"
                               onPress={() => {
-                                router.push(`/pos/ordenes/${orden.id}/editar`);
+                                router.push(`/pos?ordenId=${orden.id}`);
                               }}
                               isIconOnly
                               title="Editar orden"
@@ -959,14 +955,6 @@ export default function OrdenesPage() {
         isOpen={openDetalle}
         onOpenChange={cerrarDetalle}
         ordenId={ordenSeleccionada}
-      />
-
-      {/* Modal de Editar */}
-      <ModalActualizarOrden
-        ordenId={ordenIdEditar}
-        isOpen={isEditOpen}
-        onOpenChange={onEditOpenChange}
-        onOrdenActualizada={() => fetchOrdenes()}
       />
 
       {/* Modal Confirmar Entrega */}

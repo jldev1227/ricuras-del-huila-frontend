@@ -45,22 +45,20 @@ type OrdenCompleta = Prisma.ordenesGetPayload<{
         rol: true;
       };
     };
+    creador: {
+      select: {
+        id: true;
+        nombre_completo: true;
+      };
+    };
+    actualizador: {
+      select: {
+        id: true;
+        nombre_completo: true;
+      };
+    };
   };
 }>;
-
-type OrdenItem = {
-  id: string;
-  cantidad: number;
-  precio_unitario: number | string;
-  subtotal: number | string;
-  notas?: string | null;
-  productos: {
-    id: string;
-    nombre: string;
-    precio: number;
-    imagen?: string | null;
-  };
-};
 
 interface ConfiguracionEmpresa {
   id: string;
@@ -90,37 +88,6 @@ export default function ModalDetalleOrden({
   const [showPreview, setShowPreview] = useState(false);
   const [configEmpresa, setConfigEmpresa] = useState<ConfiguracionEmpresa | null>(null);
 
-  // Función para cargar configuración de empresa
-  const fetchConfiguracionEmpresa = async () => {
-    try {
-      // Obtener el userId del localStorage
-      let currentUserId = null;
-      try {
-        const authStorage = localStorage.getItem("auth-storage");
-        if (authStorage) {
-          const authData = JSON.parse(authStorage);
-          currentUserId = authData?.state?.user?.id;
-        }
-      } catch (error) {
-        console.warn("No se pudo obtener el usuario autenticado:", error);
-        return;
-      }
-
-      if (!currentUserId) {
-        console.warn("No hay usuario autenticado");
-        return;
-      }
-
-      const response = await fetch(`/api/configuracion/empresa?userId=${currentUserId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setConfigEmpresa(data);
-      }
-    } catch (error) {
-      console.error("Error al cargar configuración de empresa:", error);
-    }
-  };
-
   useEffect(() => {
     if (isOpen && ordenId) {
       const fetchOrdenDetalle = async () => {
@@ -141,6 +108,37 @@ export default function ModalDetalleOrden({
         }
       };
 
+      // Función para cargar configuración de empresa
+      const fetchConfiguracionEmpresa = async () => {
+        try {
+          // Obtener el userId del localStorage
+          let currentUserId = null;
+          try {
+            const authStorage = localStorage.getItem("auth-storage");
+            if (authStorage) {
+              const authData = JSON.parse(authStorage);
+              currentUserId = authData?.state?.user?.id;
+            }
+          } catch (error) {
+            console.warn("No se pudo obtener el usuario autenticado:", error);
+            return;
+          }
+
+          if (!currentUserId) {
+            console.warn("No hay usuario autenticado");
+            return;
+          }
+
+          const response = await fetch(`/api/configuracion/empresa?userId=${currentUserId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setConfigEmpresa(data);
+          }
+        } catch (error) {
+          console.error("Error al cargar configuración de empresa:", error);
+        }
+      };
+
       fetchOrdenDetalle();
       fetchConfiguracionEmpresa();
     }
@@ -154,11 +152,9 @@ export default function ModalDetalleOrden({
     // Comandos ESC/POS básicos
     const ESC = 0x1b;
     const GS = 0x1d;
-    const _LF = 0x0a;
     const INIT = [ESC, 0x40]; // Inicializar impresora
     const CENTER = [ESC, 0x61, 0x01]; // Alinear centro
     const LEFT = [ESC, 0x61, 0x00]; // Alinear izquierda
-    const _RIGHT = [ESC, 0x61, 0x02]; // Alinear derecha
     const BOLD_ON = [ESC, 0x45, 0x01]; // Negrita ON
     const BOLD_OFF = [ESC, 0x45, 0x00]; // Negrita OFF
     const SIZE_NORMAL = [GS, 0x21, 0x00]; // Tamaño normal
@@ -234,7 +230,7 @@ export default function ModalDetalleOrden({
       commands.push(...BOLD_ON);
       addText("CLIENTE:\n");
       commands.push(...BOLD_OFF);
-      addText(`${orden.clientes.nombre}\n`);
+      addText(`${orden.clientes.nombre} ${orden.clientes.apellido}\n`);
       if (orden.clientes.numero_identificacion) {
         addText(
           `${orden.clientes.tipo_identificacion}: ${orden.clientes.numero_identificacion}\n`,
@@ -445,38 +441,38 @@ export default function ModalDetalleOrden({
                 </span>
               </ModalHeader>
               <ModalBody>
-                  <div className="bg-white p-2">
-                    <div className="border-2 border-dashed border-gray-300 p-4">
-                      {/* Header */}
-                      <div className="font-mono text-xs leading-tight">
-                        {/* Logo */}
-                        <div className="text-center mb-2">
-                          <div className="w-20 h-20 mx-auto mb-2 relative">
-                            <Image
-                              src="/logo.png"
-                              alt="Logo"
-                              fill
-                              className="object-contain"
-                            />
-                          </div>
+                <div className="bg-white p-2">
+                  <div className="border-2 border-dashed border-gray-300 p-4">
+                    {/* Header */}
+                    <div className="font-mono text-xs leading-tight">
+                      {/* Logo */}
+                      <div className="text-center mb-2">
+                        <div className="w-20 h-20 mx-auto mb-2 relative">
+                          <Image
+                            src="/logo.png"
+                            alt="Logo"
+                            fill
+                            className="object-contain"
+                          />
                         </div>
-                        
-                        <div className="text-center font-bold text-lg mb-1">
-                          {configEmpresa?.razon_social || "RICURAS DEL HUILA"}
-                        </div>
-                        <div className="text-center">
-                          {orden.sucursales?.nombre || "Sucursal Principal"}
-                        </div>
-                        {configEmpresa?.telefono && (
-                          <div className="text-center">Tel: {configEmpresa.telefono}</div>
-                        )}
-                        {configEmpresa?.nit && (
-                          <div className="text-center">NIT: {configEmpresa.nit}</div>
-                        )}
-                        {configEmpresa?.direccion && (
-                          <div className="text-center">{configEmpresa.direccion}</div>
-                        )}
-                        <div className="border-t-2 border-black my-2"></div>                      {/* Información de la orden */}
+                      </div>
+
+                      <div className="text-center font-bold text-lg mb-1">
+                        {configEmpresa?.razon_social || "RICURAS DEL HUILA"}
+                      </div>
+                      <div className="text-center">
+                        {orden.sucursales?.nombre || "Sucursal Principal"}
+                      </div>
+                      {configEmpresa?.telefono && (
+                        <div className="text-center">Tel: {configEmpresa.telefono}</div>
+                      )}
+                      {configEmpresa?.nit && (
+                        <div className="text-center">NIT: {configEmpresa.nit}</div>
+                      )}
+                      {configEmpresa?.direccion && (
+                        <div className="text-center">{configEmpresa.direccion}</div>
+                      )}
+                      <div className="border-t-2 border-black my-2"></div>                      {/* Información de la orden */}
                       <div className="font-bold">
                         ORDEN #{orden.id.slice(0, 8).toUpperCase()}
                       </div>
@@ -512,7 +508,7 @@ export default function ModalDetalleOrden({
                       {orden.clientes && (
                         <>
                           <div className="font-bold mt-2">CLIENTE:</div>
-                          <div>{orden.clientes.nombre}</div>
+                          <div>{orden.clientes.nombre} {orden.clientes.apellido}</div>
                           {orden.clientes.numero_identificacion && (
                             <div>
                               {orden.clientes.tipo_identificacion}:{" "}
@@ -729,45 +725,6 @@ export default function ModalDetalleOrden({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Información de la empresa */}
-                  {configEmpresa && (
-                    <div className="p-4 bg-gradient-to-r from-wine/10 to-wine/5 border border-wine/20 rounded-xl">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 relative flex-shrink-0">
-                          <Image
-                            src="/logo.png"
-                            alt="Logo"
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-wine text-lg">
-                            {configEmpresa.razon_social}
-                          </h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-sm text-gray-700">
-                            <div>
-                              <span className="font-medium">NIT:</span> {configEmpresa.nit}
-                            </div>
-                            <div>
-                              <span className="font-medium">Teléfono:</span> {configEmpresa.telefono}
-                            </div>
-                            {configEmpresa.correo && (
-                              <div className="sm:col-span-2">
-                                <span className="font-medium">Email:</span> {configEmpresa.correo}
-                              </div>
-                            )}
-                            {configEmpresa.direccion && (
-                              <div className="sm:col-span-2">
-                                <span className="font-medium">Dirección:</span> {configEmpresa.direccion}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Información general */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -860,7 +817,7 @@ export default function ModalDetalleOrden({
                             Cliente registrado
                           </p>
                           <p className="text-sm text-purple-700">
-                            {orden.clientes.nombre}
+                            {orden.clientes.nombre} {orden.clientes.apellido}
                           </p>
                           {orden.clientes.numero_identificacion && (
                             <p className="text-xs text-purple-600">
@@ -893,9 +850,8 @@ export default function ModalDetalleOrden({
                                   "/placeholder-producto.png"
                                 }
                                 alt={item.productos.nombre}
-                                className={`rounded-xl transition-opacity duration-300 ${
-                                  item.productos.imagen ? "" : "opacity-60"
-                                }`}
+                                className={`rounded-xl transition-opacity duration-300 ${item.productos.imagen ? "" : "opacity-60"
+                                  }`}
                                 loading="lazy"
                                 draggable={false}
                               />
@@ -1019,6 +975,50 @@ export default function ModalDetalleOrden({
                         <span className="font-bold text-2xl text-wine">
                           {formatCOP(Number(orden.total))}
                         </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Información de auditoría */}
+                  <div className="border-t pt-4">
+                    <h3 className="font-bold text-gray-900 mb-4">
+                      Información de auditoría
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Creador */}
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
+                            <User className="text-blue-600" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm text-blue-600">Creado por</p>
+                            <p className="font-semibold text-blue-900">
+                              {orden.creador?.nombre_completo || "Sistema"}
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              {formatearFecha(orden.creado_en)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Última actualización */}
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
+                            <User className="text-green-600" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm text-green-600">Actualizado por</p>
+                            <p className="font-semibold text-green-900">
+                              {orden.actualizador?.nombre_completo || "Sistema"}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              {formatearFecha(orden.actualizado_en)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

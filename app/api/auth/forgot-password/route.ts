@@ -82,27 +82,8 @@ export async function POST(request: NextRequest) {
     // Enviar OTP por email
     try {
       await sendOTPEmail(usuario.correo, otp, usuario.nombre_completo);
-
-      console.log("========================================");
-      console.log("EMAIL ENVIADO EXITOSAMENTE");
-      console.log("========================================");
-      console.log("Usuario:", usuario.nombre_completo);
-      console.log("Correo:", usuario.correo);
-      console.log("Código OTP:", otp);
-      console.log("Expira en: 10 minutos");
-      console.log("========================================");
     } catch (emailError) {
       console.error("Error al enviar email:", emailError);
-
-      // Log de respaldo en desarrollo
-      if (process.env.NODE_ENV === "development") {
-        console.log("========================================");
-        console.log("CÓDIGO OTP (EMAIL FALLÓ)");
-        console.log("========================================");
-        console.log("OTP:", otp);
-        console.log("========================================");
-      }
-
       // Retornar error si el email falla
       return NextResponse.json(
         { message: "Error al enviar el código. Intenta de nuevo." },

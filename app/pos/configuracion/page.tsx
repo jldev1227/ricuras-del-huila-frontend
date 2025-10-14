@@ -468,7 +468,7 @@ const ConfiguracionPage = () => {
     }
   };
 
-  const cancelarEdicionPerfil = () => {
+  const cancelarEdicionPerfil = useCallback(() => {
     setEditandoPerfil(false);
     setFormPerfil({
       nombre_completo: "",
@@ -479,7 +479,7 @@ const ConfiguracionPage = () => {
       confirmar_password: "",
     });
     setErroresPerfil({});
-  };
+  }, []);
 
   // Función auxiliar para resetear el formulario de sucursal
   const resetFormSucursal = useCallback(() => {
@@ -589,7 +589,7 @@ const ConfiguracionPage = () => {
     } finally {
       setGuardandoPerfil(false);
     }
-  }, [formPerfil, validarPerfil]);
+  }, [formPerfil, validarPerfil, cancelarEdicionPerfil]);
 
   // Guardar sucursal
   const guardarSucursal = useCallback(async () => {
@@ -640,7 +640,6 @@ const ConfiguracionPage = () => {
     formSucursal,
     resetFormSucursal,
     sucursalSeleccionada,
-    erroresSucursal,
     validarSucursal,
   ]);
 

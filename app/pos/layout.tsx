@@ -15,7 +15,6 @@ import {
 } from "@heroui/react";
 import {
   BarChart3,
-  Bell,
   ChevronRight,
   ClipboardList,
   Grid,
@@ -225,17 +224,15 @@ function NavItem({
     <Link
       href={item.href}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${
-        isActive
+      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${isActive
           ? "bg-wine text-white shadow-md"
           : "text-gray-700 hover:bg-gray-100"
-      }`}
+        }`}
     >
       <span className="flex-shrink-0">{item.icon}</span>
       <span
-        className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${
-          isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
-        }`}
+        className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+          }`}
       >
         {item.name}
       </span>
@@ -296,11 +293,10 @@ function SucursalSelector({
         {sucursales.map((sucursal) => (
           <DropdownItem
             key={sucursal.id}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-              sucursal.id === sucursalActual?.id
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${sucursal.id === sucursalActual?.id
                 ? "bg-wine/10 text-wine font-semibold"
                 : "hover:bg-gray-100 text-gray-700"
-            }`}
+              }`}
             startContent={
               <MapPin
                 size={18}
@@ -350,9 +346,8 @@ function UserMenu({
             {user.nombre_completo.charAt(0).toUpperCase()}
           </div>
           <div
-            className={`transition-all duration-300 overflow-hidden text-left ${
-              isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
-            }`}
+            className={`transition-all duration-300 overflow-hidden text-left ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+              }`}
           >
             <p className="text-sm font-medium text-gray-700">
               {user.nombre_completo}
@@ -395,9 +390,8 @@ function DesktopSidebar({
 }) {
   return (
     <aside
-      className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${
-        isHovered ? "w-64" : "w-20"
-      }`}
+      className={`hidden lg:block relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out ${isHovered ? "w-64" : "w-20"
+        }`}
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
     >
@@ -479,9 +473,8 @@ function MobileSidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Header */}
         <div className="h-20 flex items-center justify-between px-4 border-b border-gray-200">
@@ -511,11 +504,10 @@ function MobileSidebar({
                 <Link
                   href={item.href}
                   onClick={onClose}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${
-                    pathname === item.href
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${pathname === item.href
                       ? "bg-wine text-white shadow-md"
                       : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="flex-shrink-0">{item.icon}</span>
@@ -584,58 +576,78 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { hasPermission: isAdmin } = useRoleGuard(["ADMINISTRADOR"]);
 
   // Estado para verificación de usuario
-  const [isVerifyingUser, setIsVerifyingUser] = useState(false);
+  const [_isVerifyingUser, _setIsVerifyingUser] = useState(false);
+
+  // Función auxiliar para limpiar sesión (fuera del componente o como función interna)
+  const clearSessionAndRedirect = useCallback(async () => {
+    // Limpiar todo el localStorage relacionado con auth
+    localStorage.removeItem("auth-storage");
+    localStorage.removeItem("sucursal-actual");
+
+    // Hacer logout y redirigir al login
+    await logout();
+    router.push("/auth/login");
+  }, [logout, router]);
 
   // Función para verificar que el usuario existe en la base de datos
-  const verifyUserExists = useCallback(async () => {
-    if (!user?.id || isVerifyingUser) return;
-
+  const verifyUserExists = useCallback(async (userId: string, signal?: AbortSignal) => {
     try {
-      setIsVerifyingUser(true);
-      const response = await fetch(`/api/usuarios/profile?userId=${user.id}`);
+      const response = await fetch(
+        `/api/usuarios/profile?userId=${userId}`,
+        { signal }
+      );
 
       if (!response.ok) {
-        console.warn(
-          "Usuario no encontrado en la base de datos, limpiando sesión",
-        );
-
-        // Limpiar todo el localStorage relacionado con auth
-        localStorage.removeItem("auth-storage");
-        localStorage.removeItem("sucursal-actual");
-
-        // Hacer logout y redirigir al login
-        await logout();
-        router.push("/auth/login");
+        console.warn("Usuario no encontrado en la base de datos, limpiando sesión");
+        await clearSessionAndRedirect();
         return;
       }
 
       const result = await response.json();
+
       if (!result.success || !result.data) {
         console.warn("Datos de usuario inválidos, limpiando sesión");
-
-        // Limpiar localStorage
-        localStorage.removeItem("auth-storage");
-        localStorage.removeItem("sucursal-actual");
-
-        // Hacer logout y redirigir
-        await logout();
-        router.push("/auth/login");
+        await clearSessionAndRedirect();
+        return;
       }
+
+      // Verificación exitosa
+      return result.data;
     } catch (error) {
+      // Ignorar errores de cancelación
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+
       console.error("Error verificando usuario:", error);
       // En caso de error de red, no limpiar la sesión automáticamente
       // Solo loggear el error para investigación
-    } finally {
-      setIsVerifyingUser(false);
     }
-  }, [user?.id, isVerifyingUser, logout, router]);
+  }, [clearSessionAndRedirect]);
 
   // Verificar usuario al cargar y cuando cambie el usuario
   useEffect(() => {
-    if (hasHydrated && isAuthenticated && user) {
-      verifyUserExists();
+    if (!hasHydrated || !isAuthenticated || !user?.id) {
+      return;
     }
-  }, [hasHydrated, isAuthenticated, user]);
+
+    const abortController = new AbortController();
+    let isActive = true;
+
+    const verify = async () => {
+      if (!isActive) return;
+
+      await verifyUserExists(user.id, abortController.signal);
+    };
+
+    verify();
+
+    return () => {
+      isActive = false;
+      abortController.abort();
+    };
+  }, [hasHydrated, isAuthenticated, user?.id, verifyUserExists]);
+
 
   // Validar acceso - solo administradores pueden acceder al POS
   useEffect(() => {
@@ -826,21 +838,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               onSelect={handleSelectSucursal}
               variant="desktop"
             />
-
-            {/* Notifications */}
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              className="p-2 hover:bg-gray-100 rounded-lg relative"
-              aria-label="Notificaciones - Tienes notificaciones nuevas"
-            >
-              <Bell size={20} className="lg:w-6 lg:h-6" />
-              <span
-                className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
-                aria-hidden="true"
-              />
-            </Button>
           </div>
         </header>
 

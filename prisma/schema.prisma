@@ -92,12 +92,17 @@ model ordenes {
   telefono_cliente     String?
   tipo_orden           tipos_orden
   especificaciones     String?
+  metodo_pago          metodos_pago? @default(EFECTIVO)
   sucursal_id          String        @db.Uuid
+  creado_por           String?       @db.Uuid
+  actualizado_por      String?       @db.Uuid
   orden_items          orden_items[]
   clientes             clientes?     @relation(fields: [cliente_id], references: [id], onUpdate: NoAction)
   mesas                mesas?        @relation(fields: [mesa_id], references: [id], onUpdate: NoAction)
   usuarios             usuarios?     @relation(fields: [mesero_id], references: [id], onUpdate: NoAction)
   sucursales           sucursales    @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  creador              usuarios?     @relation("OrdenCreador", fields: [creado_por], references: [id], onUpdate: NoAction)
+  actualizador         usuarios?     @relation("OrdenActualizador", fields: [actualizado_por], references: [id], onUpdate: NoAction)
 }
 
 model password_resets {
@@ -168,6 +173,8 @@ model usuarios {
   actualizado_en        DateTime
   configuracion_empresa configuracion_empresa[]
   ordenes               ordenes[]
+  ordenes_creadas       ordenes[]           @relation("OrdenCreador")
+  ordenes_actualizadas  ordenes[]           @relation("OrdenActualizador")
   password_resets       password_resets[]
   sesiones              sesiones[]
 }
@@ -238,4 +245,10 @@ enum tipos_orden {
 enum tipos_persona {
   NATURAL
   JURIDICA
+}
+
+enum metodos_pago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
 }

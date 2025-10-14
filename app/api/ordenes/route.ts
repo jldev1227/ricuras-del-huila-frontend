@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import type { $Enums, Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUserFromRequest } from "@/lib/auth-server";
 
 // Tipos para los items de orden
 interface OrderItem {
@@ -126,10 +127,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log(
-      "📥 Datos recibidos en POST /api/ordenes:",
-      JSON.stringify(body, null, 2),
-    );
 
     const {
       sucursalId,
@@ -149,7 +146,13 @@ export async function POST(request: NextRequest) {
       notas,
       especificaciones,
       creadoOffline = false,
+      userId, // Campo para el usuario que crea la orden (desde el frontend)
+      metodoPago = "EFECTIVO", // Método de pago por defecto
     } = body;
+
+    // Obtener el usuario autenticado del header Authorization
+    const userIdFromAuth = await getUserFromRequest(request);
+    const finalUserId = userId || userIdFromAuth; // Priorizar el userId del cuerpo, luego el del auth
 
     // Validar sucursalId
     if (!sucursalId) {
@@ -255,8 +258,11 @@ export async function POST(request: NextRequest) {
           total,
           notas,
           especificaciones,
+          metodo_pago: metodoPago,
           creado_offline: creadoOffline,
           sincronizado: !creadoOffline,
+          creado_por: finalUserId || null,
+          actualizado_por: finalUserId || null,
           actualizado_en: new Date(),
           orden_items: {
             create: items.map((item: OrderItem) => ({
@@ -272,13 +278,25 @@ export async function POST(request: NextRequest) {
         include: {
           orden_items: {
             include: {
-              productos: true,
+            productos: true,
             },
           },
           mesas: true,
           clientes: true,
           sucursales: true,
           usuarios: {
+            select: {
+              id: true,
+              nombre_completo: true,
+            },
+          },
+          creador: {
+            select: {
+              id: true,
+              nombre_completo: true,
+            },
+          },
+          actualizador: {
             select: {
               id: true,
               nombre_completo: true,
@@ -311,7 +329,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, ...data } = body;
+    const { id, userId, ...data } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -319,6 +337,10 @@ export async function PUT(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Obtener el usuario autenticado del header Authorization
+    const userIdFromAuth = await getUserFromRequest(request);
+    const finalUserId = userId || userIdFromAuth;
 
     // Verificar que la orden existe
     const ordenExistente = await prisma.ordenes.findUnique({
@@ -370,6 +392,7 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: {
           ...ordenData,
+          actualizado_por: finalUserId || null,
           actualizado_en: new Date(),
           ...(items && {
             orden_items: {

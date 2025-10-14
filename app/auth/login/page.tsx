@@ -25,7 +25,6 @@ export default function Page() {
       const isAdmin =
         typeof rol === "string" && rol.toUpperCase() === "ADMINISTRADOR";
 
-      console.log(isAdmin);
       window.location.href = isAdmin ? "/pos" : "/mesero";
     } catch (err) {
       // El error ya está siendo manejado por el hook useAuth

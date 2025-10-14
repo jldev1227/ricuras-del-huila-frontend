@@ -80,7 +80,6 @@ export default function ProductosPage() {
 
         const productosRes = await fetch(`/api/productos?${params}`);
         const productosData = await productosRes.json();
-        console.log(productosData);
         if (productosData.success) {
           setProductos(productosData.productos);
         }
@@ -105,8 +104,6 @@ export default function ProductosPage() {
 
       const response = await fetch(`/api/productos?${params}`);
       const data = await response.json();
-
-      console.log(data);
 
       if (data.success) {
         setProductos(data.productos);

@@ -33,15 +33,6 @@ interface Usuario {
   activo: boolean;
   creado_en: string;
   actualizado_en: string;
-  sucursales?: {
-    id: string;
-    nombre: string;
-  };
-}
-
-interface Sucursal {
-  id: string;
-  nombre: string;
 }
 
 interface FormUsuario {
@@ -51,7 +42,6 @@ interface FormUsuario {
   telefono: string;
   password: string;
   rol: string;
-  sucursal_id: string;
   activo: boolean;
 }
 
@@ -62,7 +52,6 @@ const rolesOptions = [
 
 const UsuariosPage = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [usuarioSeleccionado, setUsuarioSeleccionado] =
@@ -72,7 +61,6 @@ const UsuariosPage = () => {
   // Estados para filtros
   const [searchText, setSearchText] = useState("");
   const [selectedRol, setSelectedRol] = useState("");
-  const [selectedSucursal, setSelectedSucursal] = useState("");
   const [selectedEstado, setSelectedEstado] = useState("");
 
   const {
@@ -103,7 +91,6 @@ const UsuariosPage = () => {
     telefono: "",
     password: "",
     rol: "MESERO",
-    sucursal_id: "",
     activo: true,
   });
 
@@ -128,7 +115,6 @@ const UsuariosPage = () => {
       const params = new URLSearchParams();
       if (searchText) params.append("search", searchText);
       if (selectedRol) params.append("rol", selectedRol);
-      if (selectedSucursal) params.append("sucursal_id", selectedSucursal);
       if (selectedEstado) params.append("activo", selectedEstado);
       if (currentUserId) params.append("excludeUserId", currentUserId); // Excluir usuario autenticado
 
@@ -137,7 +123,6 @@ const UsuariosPage = () => {
 
       if (result.success) {
         setUsuarios(result.data || result.usuarios || []);
-        console.log(result.data || result.usuarios);
       } else {
         addToast({
           title: "Error al cargar usuarios",
@@ -155,37 +140,11 @@ const UsuariosPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchText, selectedEstado, selectedRol, selectedSucursal]);
-
-  // Cargar sucursales
-  const cargarSucursales = useCallback(async () => {
-    try {
-      const response = await fetch("/api/sucursales");
-      const result = await response.json();
-
-      if (result.success) {
-        setSucursales(result.sucursales);
-      } else {
-        addToast({
-          title: "Error al cargar sucursales",
-          description: result.message || "Intenta nuevamente más tarde",
-          color: "danger",
-        });
-      }
-    } catch (error) {
-      console.error("Error al cargar sucursales:", error);
-      addToast({
-        title: "Error al cargar sucursales",
-        description: "Intenta nuevamente más tarde",
-        color: "danger",
-      });
-    }
-  }, []);
+  }, [searchText, selectedEstado, selectedRol]);
 
   useEffect(() => {
     cargarUsuarios();
-    cargarSucursales();
-  }, [cargarSucursales, cargarUsuarios]);
+  }, [cargarUsuarios]);
 
   // Efecto para filtros en tiempo real
   useEffect(() => {
@@ -303,7 +262,6 @@ const UsuariosPage = () => {
       telefono: "",
       password: "",
       rol: "MESERO",
-      sucursal_id: "",
       activo: true,
     });
     setUsuarioSeleccionado(null);
@@ -313,7 +271,6 @@ const UsuariosPage = () => {
   const limpiarFiltros = () => {
     setSearchText("");
     setSelectedRol("");
-    setSelectedSucursal("");
     setSelectedEstado("");
   };
 
@@ -333,7 +290,6 @@ const UsuariosPage = () => {
       telefono: usuario.telefono || "",
       password: "", // No mostrar password actual
       rol: usuario.rol,
-      sucursal_id: usuario.sucursales?.id || "",
       activo: usuario.activo,
     });
     onOpenEdit();
@@ -353,23 +309,6 @@ const UsuariosPage = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getRolColor = (rol: string) => {
-    switch (rol) {
-      case "ADMINISTRADOR":
-        return "danger";
-      case "GERENTE":
-        return "warning";
-      case "MESERO":
-        return "primary";
-      case "COCINERO":
-        return "secondary";
-      case "CAJERO":
-        return "success";
-      default:
-        return "default";
-    }
   };
 
   return (
@@ -459,33 +398,8 @@ const UsuariosPage = () => {
           </div>
         </div>
 
-        {/* Filtro adicional para sucursal */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-          <div>
-            <label
-              htmlFor="sucursal"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Sucursal
-            </label>
-            <select
-              id="sucursal"
-              value={selectedSucursal}
-              onChange={(e) => setSelectedSucursal(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="">Todas las sucursales</option>
-              {sucursales.map((sucursal) => (
-                <option key={sucursal.id} value={sucursal.id}>
-                  {sucursal.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
         {/* Botón limpiar filtros */}
-        {(searchText || selectedRol || selectedSucursal || selectedEstado) && (
+        {(searchText || selectedRol || selectedEstado) && (
           <div className="mt-4">
             <Button onPress={limpiarFiltros} variant="bordered" size="sm">
               Limpiar filtros
@@ -514,7 +428,7 @@ const UsuariosPage = () => {
               No se encontraron usuarios
             </h3>
             <p className="text-gray-500 mb-4">
-              {searchText || selectedRol || selectedSucursal || selectedEstado
+              {searchText || selectedRol || selectedEstado
                 ? "Intenta ajustar los filtros de búsqueda"
                 : "Comienza agregando tu primer usuario"}
             </p>
@@ -549,10 +463,10 @@ const UsuariosPage = () => {
                     </div>
                     <div className="flex gap-2">
                       <Chip
-                        color={getRolColor(usuario.rol)}
+                        color="primary"
                         variant="flat"
                         size="sm"
-                        className="text-xs"
+                        className="text-xs text-primary"
                       >
                         {rolesOptions.find((r) => r.key === usuario.rol)
                           ?.label || usuario.rol}
@@ -586,12 +500,6 @@ const UsuariosPage = () => {
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Sucursal:</span>
-                      <span className="text-gray-800 truncate ml-2">
-                        {usuario.sucursales?.nombre || "No asignada"}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Fecha de creación */}
@@ -713,19 +621,6 @@ const UsuariosPage = () => {
                   <SelectItem key={rol.key}>{rol.label}</SelectItem>
                 ))}
               </Select>
-              <Select
-                label="Sucursal"
-                placeholder="Seleccionar sucursal"
-                selectedKeys={[formData.sucursal_id]}
-                onChange={(e) =>
-                  setFormData({ ...formData, sucursal_id: e.target.value })
-                }
-                isRequired
-              >
-                {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id}>{sucursal.nombre}</SelectItem>
-                ))}
-              </Select>
             </div>
           </ModalBody>
           <ModalFooter>
@@ -831,21 +726,6 @@ const UsuariosPage = () => {
                   </SelectItem>
                 ))}
               </Select>
-              <Select
-                label="Sucursal"
-                placeholder="Seleccionar sucursal"
-                selectedKeys={[formData.sucursal_id]}
-                onChange={(e) =>
-                  setFormData({ ...formData, sucursal_id: e.target.value })
-                }
-                isRequired
-              >
-                {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id} textValue={sucursal.id}>
-                    {sucursal.nombre}
-                  </SelectItem>
-                ))}
-              </Select>
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -928,10 +808,10 @@ const UsuariosPage = () => {
                       {usuarioSeleccionado.nombre_completo}
                     </h3>
                     <Chip
-                      color={getRolColor(usuarioSeleccionado.rol)}
+                      color="primary"
                       variant="flat"
                       size="lg"
-                      className="mt-2"
+                      className="mt-2 text-primary"
                     >
                       {rolesOptions.find(
                         (r) => r.key === usuarioSeleccionado.rol,
@@ -1016,58 +896,6 @@ const UsuariosPage = () => {
                           </div>
                         </div>
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Columna derecha - Información del sistema */}
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-gray-900 border-b pb-2">
-                      Información del Sistema
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">
-                          Sucursal asignada
-                        </p>
-                        <div className="p-3 bg-blue-50 rounded-lg">
-                          <p className="font-medium text-blue-900">
-                            {usuarioSeleccionado.sucursales?.nombre ||
-                              "No asignada"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">
-                          ID del usuario
-                        </p>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="font-mono text-sm text-gray-700">
-                            {usuarioSeleccionado.id}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3">
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">
-                            Fecha de creación
-                          </p>
-                          <p className="font-medium">
-                            {formatearFecha(usuarioSeleccionado.creado_en)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">
-                            Última actualización
-                          </p>
-                          <p className="font-medium">
-                            {formatearFecha(usuarioSeleccionado.actualizado_en)}
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>

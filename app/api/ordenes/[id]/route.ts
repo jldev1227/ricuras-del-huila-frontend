@@ -2,6 +2,7 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUserFromRequest } from "@/lib/auth-server";
 
 // Types for better type safety
 interface EstadoUpdateData {
@@ -46,9 +47,9 @@ interface OrdenActualizada {
 
 // Tipos para los items de orden
 interface OrderItem {
-  productoId: string;
+  producto_id: string;
   cantidad: number;
-  precioUnitario: number;
+  precio_unitario: number;
   especificaciones?: string;
   notas?: string;
 }
@@ -80,6 +81,18 @@ export async function GET(
             id: true,
             nombre_completo: true,
             rol: true,
+          },
+        },
+        creador: {
+          select: {
+            id: true,
+            nombre_completo: true,
+          },
+        },
+        actualizador: {
+          select: {
+            id: true,
+            nombre_completo: true,
           },
         },
       },
@@ -154,7 +167,13 @@ export async function PUT(
       descuento,
       especificaciones,
       notas,
+      metodo_pago,
+      userId, // Usuario que actualiza la orden (desde el frontend)
     } = body;
+
+    // Obtener el usuario autenticado del header Authorization
+    const userIdFromAuth = await getUserFromRequest(request);
+    const finalUserId = userId || userIdFromAuth;
 
     // Actualizar orden con transacción
     const ordenActualizada = await prisma.$transaction(async (tx) => {
@@ -167,7 +186,7 @@ export async function PUT(
 
         // Calcular nuevo subtotal
         const subtotal = items.reduce((total: number, item: OrderItem) => {
-          return total + Number(item.precioUnitario) * item.cantidad;
+          return total + Number(item.precio_unitario) * item.cantidad;
         }, 0);
 
         // Calcular nuevo total
@@ -229,6 +248,8 @@ export async function PUT(
                 ? especificaciones
                 : ordenExistente.especificaciones,
             notas: notas !== undefined ? notas : ordenExistente.notas,
+            metodo_pago: metodo_pago !== undefined ? metodo_pago : ordenExistente.metodo_pago,
+            actualizado_por: finalUserId || null,
             actualizado_en: new Date(),
             orden_items: {
               create: items.map((item: OrderItem) => ({
@@ -289,6 +310,7 @@ export async function PUT(
         if (especificaciones !== undefined)
           dataUpdate.especificaciones = especificaciones;
         if (notas !== undefined) dataUpdate.notas = notas;
+        if (metodo_pago !== undefined) dataUpdate.metodo_pago = metodo_pago;
 
         // Recalcular total si hay cambios en montos
         if (
@@ -316,7 +338,10 @@ export async function PUT(
 
         return await tx.ordenes.update({
           where: { id },
-          data: dataUpdate,
+          data: {
+            ...dataUpdate,
+            actualizado_por: finalUserId || null,
+          },
           include: {
             orden_items: {
               include: {
@@ -326,6 +351,18 @@ export async function PUT(
             mesas: true,
             clientes: true,
             usuarios: {
+              select: {
+                id: true,
+                nombre_completo: true,
+              },
+            },
+            creador: {
+              select: {
+                id: true,
+                nombre_completo: true,
+              },
+            },
+            actualizador: {
               select: {
                 id: true,
                 nombre_completo: true,
@@ -358,7 +395,11 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { accion, ...datos } = body;
+    const { accion, userId, ...datos } = body;
+
+    // Obtener el usuario autenticado del header Authorization
+    const userIdFromAuth = await getUserFromRequest(request);
+    const finalUserId = userId || userIdFromAuth;
 
     // Verificar que la orden existe
     const ordenExistente = await prisma.ordenes.findUnique({
@@ -377,23 +418,23 @@ export async function PATCH(
 
     switch (accion) {
       case "cambiar_estado":
-        ordenActualizada = await cambiarEstado(id, datos, ordenExistente);
+        ordenActualizada = await cambiarEstado(id, datos, ordenExistente, finalUserId);
         break;
 
       case "cancelar":
-        ordenActualizada = await cancelarOrden(id, datos);
+        ordenActualizada = await cancelarOrden(id, datos, finalUserId);
         break;
 
       case "marcar_facturada":
-        ordenActualizada = await marcarFacturada(id, datos);
+        ordenActualizada = await marcarFacturada(id, datos, finalUserId);
         break;
 
       case "sincronizar":
-        ordenActualizada = await sincronizarOrden(id);
+        ordenActualizada = await sincronizarOrden(id, finalUserId);
         break;
 
       case "actualizar_notas":
-        ordenActualizada = await actualizarNotas(id, datos);
+        ordenActualizada = await actualizarNotas(id, datos, finalUserId);
         break;
 
       default:
@@ -402,6 +443,7 @@ export async function PATCH(
           where: { id },
           data: {
             ...datos,
+            actualizado_por: finalUserId || null,
             actualizado_en: new Date(),
           },
           include: {
@@ -412,6 +454,24 @@ export async function PATCH(
             },
             mesas: true,
             clientes: true,
+            usuarios: {
+              select: {
+                id: true,
+                nombre_completo: true,
+              },
+            },
+            creador: {
+              select: {
+                id: true,
+                nombre_completo: true,
+              },
+            },
+            actualizador: {
+              select: {
+                id: true,
+                nombre_completo: true,
+              },
+            },
           },
         });
     }
@@ -437,6 +497,7 @@ async function cambiarEstado(
   ordenId: string,
   datos: EstadoUpdateData,
   ordenExistente: OrdenExistente,
+  userId?: string | null,
 ) {
   const { nuevoEstado, razon } = datos;
 
@@ -481,6 +542,7 @@ async function cambiarEstado(
         notas: (razon
           ? `${ordenExistente.notas || ""}\n[Cambio de estado]: ${razon}`.trim()
           : ordenExistente.notas) as string | null,
+        actualizado_por: userId || null,
         actualizado_en: new Date(),
       },
       include: {
@@ -495,7 +557,7 @@ async function cambiarEstado(
 }
 
 // Función para cancelar orden
-async function cancelarOrden(ordenId: string, datos: CancelacionData) {
+async function cancelarOrden(ordenId: string, datos: CancelacionData, userId?: string | null) {
   const { razonCancelacion } = datos;
 
   if (!razonCancelacion) {
@@ -530,6 +592,7 @@ async function cancelarOrden(ordenId: string, datos: CancelacionData) {
       data: {
         estado: "CANCELADA",
         notas: `${orden.notas || ""}\n[CANCELADA]: ${razonCancelacion}`.trim(),
+        actualizado_por: userId || null,
         actualizado_en: new Date(),
       },
       include: {
@@ -544,7 +607,7 @@ async function cancelarOrden(ordenId: string, datos: CancelacionData) {
 }
 
 // Función para marcar como facturada (agregar campo facturada al schema si es necesario)
-async function marcarFacturada(ordenId: string, datos: FacturacionData) {
+async function marcarFacturada(ordenId: string, datos: FacturacionData, userId?: string | null) {
   const {
     numeroFactura,
     fechaFacturacion,
@@ -580,6 +643,7 @@ ${urlXml ? `XML: ${urlXml}` : ""}
     where: { id: ordenId },
     data: {
       notas: `${orden.notas || ""}\n${infoFacturacion}`.trim(),
+      actualizado_por: userId || null,
       actualizado_en: new Date(),
     },
     include: {
@@ -593,12 +657,13 @@ ${urlXml ? `XML: ${urlXml}` : ""}
 }
 
 // Función para sincronizar orden offline
-async function sincronizarOrden(ordenId: string) {
+async function sincronizarOrden(ordenId: string, userId?: string | null) {
   return await prisma.ordenes.update({
     where: { id: ordenId },
     data: {
       sincronizado: true,
       sincronizado_en: new Date(),
+      actualizado_por: userId || null,
     },
     include: {
       orden_items: {
@@ -611,7 +676,7 @@ async function sincronizarOrden(ordenId: string) {
 }
 
 // Función para actualizar notas/especificaciones
-async function actualizarNotas(ordenId: string, datos: NotasUpdateData) {
+async function actualizarNotas(ordenId: string, datos: NotasUpdateData, userId?: string | null) {
   const { notas, especificaciones } = datos;
 
   return await prisma.ordenes.update({
@@ -619,6 +684,7 @@ async function actualizarNotas(ordenId: string, datos: NotasUpdateData) {
     data: {
       ...(notas !== undefined && { notas }),
       ...(especificaciones !== undefined && { especificaciones }),
+      actualizado_por: userId || null,
       actualizado_en: new Date(),
     },
     include: {

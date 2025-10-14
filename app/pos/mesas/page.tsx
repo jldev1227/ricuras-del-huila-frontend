@@ -158,8 +158,6 @@ export default function MesasPage() {
       newErrors.sucursal_id = "";
     }
 
-    console.log(newErrors);
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);

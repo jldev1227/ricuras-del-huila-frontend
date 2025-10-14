@@ -14,7 +14,6 @@ import {
   useDisclosure,
 } from "@heroui/react";
 import {
-  Bell,
   ChevronRight,
   ClipboardList,
   Home,
@@ -577,21 +576,6 @@ export default function MeseroLayout({ children }: { children: ReactNode }) {
               onChangeBranch={handleChangeBranch}
               variant="desktop"
             />
-
-            {/* Notifications */}
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              className="p-2 hover:bg-gray-100 rounded-lg relative"
-              aria-label="Notificaciones - Tienes notificaciones nuevas"
-            >
-              <Bell size={20} className="lg:w-6 lg:h-6" />
-              <span
-                className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
-                aria-hidden="true"
-              />
-            </Button>
           </div>
         </header>
 

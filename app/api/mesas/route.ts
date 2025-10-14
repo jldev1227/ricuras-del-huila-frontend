@@ -97,8 +97,6 @@ export async function POST(request: NextRequest) {
     const { numero, capacidad, sucursal_id, ubicacion, notas, disponible } =
       body;
 
-    console.log(body);
-
     // Validar datos requeridos
     if (!numero || !sucursal_id) {
       return NextResponse.json(

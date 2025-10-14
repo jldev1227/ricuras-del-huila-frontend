@@ -1,7 +1,7 @@
 "use client";
 
 import { addToast, Button, Card, Spinner } from "@heroui/react";
-import type { Categoria, Mesa, Producto } from "@prisma/client";
+import type { categorias, mesas, productos } from "@prisma/client";
 import {
   ArrowLeft,
   CircleQuestionMark,
@@ -17,23 +17,32 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
+import ModalCrearCliente from "@/components/cliente/ModalCrearCliente";
+import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
+import { useAuthenticatedFetch } from "@/lib/api-client";
 import { formatCOP } from "@/utils/formatCOP";
 
-interface Carrito extends Producto {
+interface Carrito extends productos {
   cantidad: number;
 }
 
 type PasoOrden = "carrito" | "pago";
 
-export default function OrderDashboard() {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+interface OrderDashboardProps {
+  searchParams: {
+    ordenId?: string;
+  };
+}
+
+export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
+  const [productos, setProductos] = useState<productos[]>([]);
+  const [categorias, setCategorias] = useState<categorias[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
   const [carrito, setCarrito] = useState<Carrito[]>([]);
   const [tipoOrden, setTipoOrden] = useState("llevar");
-  const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState<mesas | null>(null);
   const [loading, setLoading] = useState(true);
   const [mostrarAside, setMostrarAside] = useState(false);
   const [especificaciones, setEspecificaciones] = useState("");
@@ -44,19 +53,61 @@ export default function OrderDashboard() {
   // Estados para el paso de pago
   const [pasoActual, setPasoActual] = useState<PasoOrden>("carrito");
   const [montoPagado, setMontoPagado] = useState<number>(0);
+  const [metodoPago, setMetodoPago] = useState("EFECTIVO");
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<{
     id: string;
     nombre: string;
     telefono?: string;
-    email?: string;
-    tipoIdentificacion?: string;
-    numeroIdentificacion?: string;
+    correo?: string;
+    tipo_identificacion?: string;
+    numero_identificacion?: string;
   } | null>(null);
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [clientesEncontrados, setClientesEncontrados] = useState<{
+    id: string;
+    nombre: string;
+    apellido?: string;
+    telefono?: string;
+    correo?: string;
+    tipo_identificacion?: string;
+    numero_identificacion?: string;
+  }[]>([]);
+  const [mostrarDropdownClientes, setMostrarDropdownClientes] = useState(false);
+  const [buscandoClientes, setBuscandoClientes] = useState(false);
   const [procesandoOrden, setProcesandoOrden] = useState(false);
 
-  // Obtener la sucursal
+  // Estados para el modo de edición
+  const [modoEdicion, _setModoEdicion] = useState(!!searchParams.ordenId);
+  const [ordenExistente, setOrdenExistente] = useState<{
+    id: string;
+    tipo_orden: string;
+    especificaciones?: string;
+    descuento?: number;
+    costo_adicional?: number;
+    direccion_entrega?: string;
+    mesa?: { id: string; numero: number; ubicacion?: string };
+    mesero?: { id: string; nombre_completo: string; correo?: string };
+    cliente?: {
+      id: string;
+      nombre: string;
+      telefono?: string;
+      correo?: string;
+      tipo_identificacion?: string;
+      numero_identificacion?: string;
+    };
+    orden_items?: Array<{
+      cantidad: number;
+      notas?: string;
+      producto: productos;
+    }>;
+  } | null>(null);
+  const [cargandoOrden, setCargandoOrden] = useState(!!searchParams.ordenId);
+
+  // Obtener la sucursal y usuario autenticado
   const { sucursal } = useSucursal();
+  const { user } = useAuth();
+  const authenticatedFetch = useAuthenticatedFetch();
 
   // Meseros y hub
   const [hubMesero, setHubMesero] = useState(false);
@@ -118,6 +169,157 @@ export default function OrderDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hubMesero, searchTerm, categoriaSeleccionada]);
 
+  // useEffect para cargar orden existente en modo de edición
+  useEffect(() => {
+    const cargarOrdenExistente = async () => {
+      if (!searchParams.ordenId) return;
+
+      setCargandoOrden(true);
+      try {
+        const response = await authenticatedFetch(`/api/ordenes/${searchParams.ordenId}`);
+        if (!response.ok) {
+          throw new Error('Error al cargar la orden');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.orden) {
+          const orden = data.orden;
+          setOrdenExistente(orden);
+
+          // Precargar datos en el formulario
+          setTipoOrden(orden.tipo_orden || "llevar");
+          setEspecificaciones(orden.especificaciones || "");
+          setDescuento(orden.descuento || 0);
+          setCostoAdicional(orden.costo_adicional || 0);
+          setDireccionEntrega(orden.direccion_entrega || "");
+          
+          // Precargar mesa si existe
+          if (orden.mesa) {
+            setMesaSeleccionada(orden.mesa);
+          }
+
+          // Precargar mesero si existe
+          if (orden.mesero) {
+            setMeseroSeleccionado({
+              id: orden.mesero.id,
+              nombre_completo: orden.mesero.nombre_completo,
+              email: orden.mesero.correo
+            });
+            setHubMesero(true);
+          }
+
+          // Precargar productos en el carrito
+          if (orden.orden_items && orden.orden_items.length > 0) {
+            const productosCarrito = orden.orden_items.map((item: { cantidad: number; notas?: string; producto: productos }) => ({
+              ...item.producto,
+              cantidad: item.cantidad,
+              notas: item.notas || ""
+            }));
+            setCarrito(productosCarrito);
+            setMostrarAside(true);
+          }
+
+          // Precargar cliente si existe
+          if (orden.cliente) {
+            setClienteSeleccionado({
+              id: orden.cliente.id,
+              nombre: orden.cliente.nombre,
+              telefono: orden.cliente.telefono,
+              correo: orden.cliente.correo,
+              tipo_identificacion: orden.cliente.tipo_identificacion,
+              numero_identificacion: orden.cliente.numero_identificacion
+            });
+          }
+
+          addToast({
+            title: "Orden cargada",
+            description: `Orden #${orden.id.slice(-8)} cargada para edición`,
+            color: "success",
+          });
+        }
+      } catch (error) {
+        console.error("Error al cargar la orden:", error);
+        addToast({
+          title: "Error",
+          description: "No se pudo cargar la orden para edición",
+          color: "danger",
+        });
+      } finally {
+        setCargandoOrden(false);
+      }
+    };
+
+    cargarOrdenExistente();
+  }, [searchParams.ordenId, authenticatedFetch]);
+
+  useEffect(() => {
+    // Abort controller para cancelar peticiones pendientes
+    const abortController = new AbortController();
+
+    const buscarClientes = async (busqueda: string) => {
+      if (busqueda.length < 2) {
+        setClientesEncontrados([]);
+        setMostrarDropdownClientes(false);
+        return;
+      }
+
+      setBuscandoClientes(true);
+
+      try {
+        const response = await fetch(
+          `/api/clientes?busqueda=${encodeURIComponent(busqueda)}`,
+          { signal: abortController.signal }
+        );
+
+        if (!response.ok) throw new Error("Error al buscar clientes");
+
+        const data = await response.json();
+        setClientesEncontrados(data.clientes || []);
+        setMostrarDropdownClientes(true);
+      } catch (error) {
+        // Ignorar errores de cancelación
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
+
+        console.error("Error buscando clientes:", error);
+        addToast({
+          title: "Error",
+          description: "No se pudo buscar los clientes",
+          color: "danger",
+        });
+      } finally {
+        setBuscandoClientes(false);
+      }
+    };
+
+    // Debounce de 300ms
+    const timeoutId = setTimeout(() => {
+      buscarClientes(busquedaCliente);
+    }, 300);
+
+    // Cleanup: cancelar timeout y petición pendiente
+    return () => {
+      clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [busquedaCliente]); // addToast debería ser estable (de un context o useCallback)
+  // useEffect para cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('#cliente') && !target.closest('.dropdown-clientes')) {
+        setMostrarDropdownClientes(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const productosFiltrados = productos.filter((producto) => {
     const matchSearch = producto.nombre
       .toLowerCase()
@@ -128,8 +330,38 @@ export default function OrderDashboard() {
     return matchSearch && matchCategoria && producto.disponible;
   });
 
+  // Función para seleccionar un cliente
+  const seleccionarCliente = (cliente: {
+    id: string;
+    nombre: string;
+    apellido?: string;
+    telefono?: string;
+    correo?: string;
+    tipo_identificacion?: string;
+    numero_identificacion?: string;
+  }) => {
+    setClienteSeleccionado({
+      id: cliente.id,
+      nombre: cliente.nombre + (cliente.apellido ? ` ${cliente.apellido}` : ''),
+      telefono: cliente.telefono,
+      correo: cliente.correo,
+      tipo_identificacion: cliente.tipo_identificacion,
+      numero_identificacion: cliente.numero_identificacion,
+    });
+    setBusquedaCliente(cliente.nombre + (cliente.apellido ? ` ${cliente.apellido}` : ''));
+    setMostrarDropdownClientes(false);
+  };
+
+  // Función para limpiar la búsqueda de cliente
+  const limpiarBusquedaCliente = () => {
+    setClienteSeleccionado(null);
+    setBusquedaCliente("");
+    setClientesEncontrados([]);
+    setMostrarDropdownClientes(false);
+  };
+
   // Funciones del carrito
-  const agregarAlCarrito = (producto: Producto) => {
+  const agregarAlCarrito = (producto: productos) => {
     const existente = carrito.find((item) => item.id === producto.id);
     if (existente) {
       setCarrito(
@@ -214,7 +446,7 @@ export default function OrderDashboard() {
     setPasoActual("carrito");
   };
 
-  const crearOrden = async () => {
+  const guardarOrden = async () => {
     if (montoPagado < calcularTotal()) {
       addToast({
         title: "Monto insuficiente",
@@ -241,7 +473,7 @@ export default function OrderDashboard() {
         tipoOrden: tipoOrden.toUpperCase(),
         mesaId: tipoOrden === "local" ? mesaSeleccionada?.id : null,
         clienteId: clienteSeleccionado?.id || null,
-        meseroId: hubMesero ? meseroSeleccionado?.id : null, // Cambiar aquí
+        meseroId: hubMesero ? meseroSeleccionado?.id : null,
         direccionEntrega: tipoOrden === "domicilio" ? direccionEntrega : null,
         costoAdicional: costoAdicional || null,
         items: carrito.map((item) => ({
@@ -253,30 +485,49 @@ export default function OrderDashboard() {
         descuento,
         total: calcularTotal(),
         especificaciones,
+        metodoPago,
         notas: `Pago: ${formatCOP(montoPagado)} | Vueltas: ${formatCOP(calcularVueltas())}`,
+        userId: user?.id, // ID del usuario que crea/actualiza la orden
       };
 
-      // TODO: Descomentar cuando el endpoint esté listo
-      const response = await fetch("/api/ordenes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orden),
-      });
+      let response: Response;
+      let successMessage: string;
+
+      if (modoEdicion && ordenExistente) {
+        // Actualizar orden existente
+        response = await authenticatedFetch(`/api/ordenes/${ordenExistente.id}`, {
+          method: "PUT",
+          body: JSON.stringify(orden),
+        });
+        successMessage = "Orden actualizada exitosamente";
+      } else {
+        // Crear nueva orden
+        response = await authenticatedFetch("/api/ordenes", {
+          method: "POST",
+          body: JSON.stringify(orden),
+        });
+        successMessage = "Orden creada exitosamente";
+      }
+
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
 
       addToast({
-        title: "Orden creada exitosamente",
+        title: successMessage,
         description: `Total: ${formatCOP(calcularTotal())} | Vueltas: ${formatCOP(calcularVueltas())}`,
         color: "success",
       });
 
-      // Resetear todo
-      resetearOrden();
+      // En modo edición, redirigir a la lista de órdenes, sino resetear
+      if (modoEdicion) {
+        window.location.href = "/pos/ordenes";
+      } else {
+        resetearOrden();
+      }
     } catch (error: unknown) {
       console.log(error);
       addToast({
-        title: "Error al crear orden",
+        title: `Error al ${modoEdicion ? 'actualizar' : 'crear'} orden`,
         description:
           error instanceof Error
             ? error.message
@@ -298,18 +549,21 @@ export default function OrderDashboard() {
     setMostrarAside(false);
     setPasoActual("carrito");
     setMontoPagado(0);
+    setMetodoPago("EFECTIVO");
     setRequiereFactura(false);
     setClienteSeleccionado(null);
   };
 
-  const onSelectMesa = (mesa: Mesa | null) => {
-    setMesaSeleccionada(mesa);
+  const onSelectMesa = (mesa: { id: string; numero: number; ubicacion?: string | null }) => {
+    setMesaSeleccionada(mesa as mesas);
   };
 
   const meserosOptions = meseros?.map((mesero) => ({
     value: mesero.id,
     label: mesero.nombre_completo,
   }));
+
+  const [modalCrearClienteAbierto, setModalCrearClienteAbierto] = useState(false);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-gray-50">
@@ -356,11 +610,10 @@ export default function OrderDashboard() {
               <button
                 type="button"
                 onClick={() => setCategoriaSeleccionada("")}
-                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
-                  !categoriaSeleccionada
-                    ? "bg-wine text-white shadow-md"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${!categoriaSeleccionada
+                  ? "bg-wine text-white shadow-md"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
               >
                 Todos
               </button>
@@ -375,11 +628,10 @@ export default function OrderDashboard() {
                         : categoria.id,
                     )
                   }
-                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
-                    categoriaSeleccionada === categoria.id
-                      ? "bg-wine text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${categoriaSeleccionada === categoria.id
+                    ? "bg-wine text-white shadow-md"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   {categoria.nombre}
                 </button>
@@ -387,6 +639,37 @@ export default function OrderDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Indicador de modo edición */}
+        {modoEdicion && (
+          <div className="bg-amber-100 border-l-4 border-amber-500 p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <ClipboardCheck className="h-5 w-5 text-amber-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-amber-800">
+                  Modo edición - Orden #{ordenExistente?.id?.slice(-8)}
+                </p>
+                <p className="text-xs text-amber-600">
+                  Modificando orden existente. Los cambios se guardarán al confirmar.
+                </p>
+              </div>
+              <div className="ml-auto">
+                <Button
+                  size="sm"
+                  variant="light"
+                  color="warning"
+                  onPress={() => {
+                    window.location.href = "/pos/ordenes";
+                  }}
+                >
+                  Cancelar edición
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sección de productos */}
         <div className="flex-1 overflow-y-auto">
@@ -413,11 +696,11 @@ export default function OrderDashboard() {
               )}
             </div>
 
-            {loading ? (
+            {loading || cargandoOrden ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Spinner size="lg" color="primary" />
                 <p className="mt-4 text-gray-500 text-sm">
-                  Cargando productos...
+                  {cargandoOrden ? "Cargando orden..." : "Cargando productos..."}
                 </p>
               </div>
             ) : productosFiltrados.length > 0 ? (
@@ -485,9 +768,8 @@ export default function OrderDashboard() {
 
       {/* Aside - Panel de Orden */}
       <div
-        className={`fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[30rem] bg-white border-l shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
-          mostrarAside ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[30rem] bg-white border-l shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${mostrarAside ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         {/* Header */}
         <div className="p-4 lg:p-6 border-b bg-gradient-to-r from-wine to-wine/90 flex-shrink-0">
@@ -538,11 +820,10 @@ export default function OrderDashboard() {
                 <Button
                   key={tipo.value}
                   onPress={() => setTipoOrden(tipo.value)}
-                  className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all ${
-                    tipoOrden === tipo.value
-                      ? "bg-white text-wine shadow-lg scale-105"
-                      : "bg-white/20 text-white hover:bg-white/30"
-                  }`}
+                  className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all ${tipoOrden === tipo.value
+                    ? "bg-white text-wine shadow-lg scale-105"
+                    : "bg-white/20 text-white hover:bg-white/30"
+                    }`}
                 >
                   {tipo.label}
                 </Button>
@@ -833,9 +1114,9 @@ export default function OrderDashboard() {
                               value={
                                 meseroSeleccionado
                                   ? {
-                                      value: meseroSeleccionado.id,
-                                      label: meseroSeleccionado.nombre_completo,
-                                    }
+                                    value: meseroSeleccionado.id,
+                                    label: meseroSeleccionado.nombre_completo,
+                                  }
                                   : null
                               }
                               onChange={(option) => {
@@ -1001,6 +1282,25 @@ export default function OrderDashboard() {
                   <div className="space-y-4">
                     <div>
                       <label
+                        htmlFor="metodoPago"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Método de pago *
+                      </label>
+                      <select
+                        id="metodoPago"
+                        value={metodoPago}
+                        onChange={(e) => setMetodoPago(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-black bg-white"
+                      >
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TARJETA">Tarjeta</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
                         htmlFor="montoPagado"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
@@ -1027,22 +1327,20 @@ export default function OrderDashboard() {
                     {/* Cálculo de vueltas */}
                     {montoPagado > 0 && (
                       <div
-                        className={`p-4 rounded-lg border-2 ${
-                          calcularVueltas() >= 0
-                            ? "bg-green-50 border-green-200"
-                            : "bg-red-50 border-red-200"
-                        }`}
+                        className={`p-4 rounded-lg border-2 ${calcularVueltas() >= 0
+                          ? "bg-green-50 border-green-200"
+                          : "bg-red-50 border-red-200"
+                          }`}
                       >
                         <div className="flex justify-between items-center">
                           <span className="font-medium text-gray-700">
                             Devolver:
                           </span>
                           <span
-                            className={`text-2xl font-bold ${
-                              calcularVueltas() >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
+                            className={`text-2xl font-bold ${calcularVueltas() >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                              }`}
                           >
                             {formatCOP(Math.abs(calcularVueltas()))}
                           </span>
@@ -1097,26 +1395,81 @@ export default function OrderDashboard() {
                             <input
                               id="cliente"
                               type="text"
-                              placeholder="Buscar o seleccionar cliente..."
-                              value={clienteSeleccionado?.nombre || ""}
-                              readOnly
+                              placeholder="Buscar cliente por nombre, identificación..."
+                              value={busquedaCliente}
+                              onChange={(e) => setBusquedaCliente(e.target.value)}
+                              onFocus={() => {
+                                if (clientesEncontrados.length > 0) {
+                                  setMostrarDropdownClientes(true);
+                                }
+                              }}
                               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-sm text-black"
                             />
+                            {buscandoClientes && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <Spinner size="sm" />
+                              </div>
+                            )}
+
+                            {/* Dropdown de clientes */}
+                            {mostrarDropdownClientes && clientesEncontrados.length > 0 && (
+                              <div className="dropdown-clientes absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                                {clientesEncontrados.map((cliente) => (
+                                  <button
+                                    key={cliente.id}
+                                    type="button"
+                                    onClick={() => seleccionarCliente(cliente)}
+                                    className="w-full text-left p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                  >
+                                    <div className="font-medium text-gray-900">
+                                      {cliente.nombre} {cliente.apellido}
+                                    </div>
+                                    <div className="text-sm text-gray-600 space-y-1">
+                                      {cliente.numero_identificacion && (
+                                        <div>{cliente.tipo_identificacion}: {cliente.numero_identificacion}</div>
+                                      )}
+                                      {cliente.telefono && <div>Tel: {cliente.telefono}</div>}
+                                      {cliente.correo && <div>Email: {cliente.correo}</div>}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Mensaje cuando no hay resultados */}
+                            {mostrarDropdownClientes && busquedaCliente.length >= 2 && clientesEncontrados.length === 0 && !buscandoClientes && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3">
+                                <div className="text-sm text-gray-600 text-center">
+                                  No se encontraron clientes con ese criterio
+                                </div>
+                              </div>
+                            )}
                           </div>
+                          {clienteSeleccionado && (
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              aria-label="Limpiar cliente seleccionado"
+                              onPress={limpiarBusquedaCliente}
+                              className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gray-500 text-white rounded-lg transition-all hover:bg-gray-600"
+                            >
+                              <X size={16} />
+                            </Button>
+                          )}
                           <Button
                             isIconOnly
                             size="sm"
                             aria-label="Agregar nuevo cliente"
-                            onPress={() =>
-                              console.log("Abrir modal de agregar cliente")
-                            }
+                            onPress={() => setModalCrearClienteAbierto(true)}
                             className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-wine text-white rounded-lg transition-all"
                           >
                             <Plus size={20} />
                           </Button>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          Haz clic en el botón + para agregar un nuevo cliente
+                          {clienteSeleccionado
+                            ? "Cliente seleccionado. Usa la X para limpiar la selección."
+                            : "Escribe para buscar clientes existentes o usa el + para crear uno nuevo"}
                         </p>
                       </div>
 
@@ -1127,10 +1480,10 @@ export default function OrderDashboard() {
                               <p className="font-semibold text-gray-900">
                                 {clienteSeleccionado.nombre}
                               </p>
-                              {clienteSeleccionado.numeroIdentificacion && (
+                              {clienteSeleccionado.numero_identificacion && (
                                 <p className="text-sm text-gray-600">
-                                  {clienteSeleccionado.tipoIdentificacion}:{" "}
-                                  {clienteSeleccionado.numeroIdentificacion}
+                                  {clienteSeleccionado.tipo_identificacion}:{" "}
+                                  {clienteSeleccionado.numero_identificacion}
                                 </p>
                               )}
                               {clienteSeleccionado.telefono && (
@@ -1162,7 +1515,7 @@ export default function OrderDashboard() {
             <div className="border-t bg-white p-4 lg:p-6 flex-shrink-0">
               <button
                 type="button"
-                onClick={crearOrden}
+                onClick={guardarOrden}
                 disabled={
                   procesandoOrden ||
                   montoPagado < calcularTotal() ||
@@ -1178,7 +1531,7 @@ export default function OrderDashboard() {
                 ) : (
                   <>
                     <ClipboardCheck size={20} />
-                    <span>Confirmar orden</span>
+                    <span>{modoEdicion ? "Actualizar orden" : "Confirmar orden"}</span>
                   </>
                 )}
               </button>
@@ -1186,6 +1539,15 @@ export default function OrderDashboard() {
           </>
         )}
       </div>
+
+      <ModalCrearCliente
+        isOpen={modalCrearClienteAbierto}
+        onClose={() => setModalCrearClienteAbierto(false)}
+        onClienteCreado={cliente => {
+          seleccionarCliente(cliente);
+          setModalCrearClienteAbierto(false);
+        }}
+      />
     </div>
   );
 }

@@ -99,10 +99,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(
-      `Contraseña actualizada para usuario: ${usuario.nombre_completo}`,
-    );
-
     return NextResponse.json({
       success: true,
       message: "Contraseña actualizada exitosamente",
