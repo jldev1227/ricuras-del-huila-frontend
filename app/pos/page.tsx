@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import ModalCrearCliente from "@/components/cliente/ModalCrearCliente";
@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 import { useAuthenticatedFetch } from "@/lib/api-client";
 import { formatCOP } from "@/utils/formatCOP";
+import { useSearchParams } from "next/navigation"; // si no estás recibiendo searchParams como prop
 
 interface Carrito extends productos {
   cantidad: number;
@@ -29,13 +30,7 @@ interface Carrito extends productos {
 
 type PasoOrden = "carrito" | "pago";
 
-interface OrderDashboardProps {
-  searchParams: {
-    ordenId?: string;
-  };
-}
-
-export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
+export default function OrderDashboard() {
   const [productos, setProductos] = useState<productos[]>([]);
   const [categorias, setCategorias] = useState<categorias[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +44,8 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
   const [descuento, setDescuento] = useState<number>(0);
   const [costoAdicional, setCostoAdicional] = useState<number>(0);
   const [direccionEntrega, setDireccionEntrega] = useState("");
+  const searchParams = useSearchParams();
+  const ordenId = searchParams.get("ordenId"); // Simplicado - no necesita useMemo aquí
 
   // Estados para el paso de pago
   const [pasoActual, setPasoActual] = useState<PasoOrden>("carrito");
@@ -78,7 +75,7 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
   const [procesandoOrden, setProcesandoOrden] = useState(false);
 
   // Estados para el modo de edición
-  const [modoEdicion, _setModoEdicion] = useState(!!searchParams.ordenId);
+  const [modoEdicion, _setModoEdicion] = useState(!!ordenId);
   const [ordenExistente, setOrdenExistente] = useState<{
     id: string;
     tipo_orden: string;
@@ -99,10 +96,11 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
     orden_items?: Array<{
       cantidad: number;
       notas?: string;
-      producto: productos;
+      productos: productos;
     }>;
   } | null>(null);
-  const [cargandoOrden, setCargandoOrden] = useState(!!searchParams.ordenId);
+  const [cargandoOrden, setCargandoOrden] = useState(!!ordenId);
+  const [ordenCargada, setOrdenCargada] = useState(false); // ✅ Nuevo estado para evitar re-loads
 
   // Obtener la sucursal y usuario autenticado
   const { sucursal } = useSucursal();
@@ -124,22 +122,11 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
     }>
   >([]);
 
-  // Unificar fetch de meseros, categorías y productos en un solo useEffect
+  // Cargar datos básicos (categorías y productos) - separado de meseros
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchBasicData = async () => {
       setLoading(true);
       try {
-        // Meseros
-        if (hubMesero) {
-          const resMeseros = await fetch(
-            "/api/usuarios?rol=MESERO&activo=true",
-          );
-          const dataMeseros = await resMeseros.json();
-          if (dataMeseros.success) {
-            setMeseros(dataMeseros.usuarios);
-          }
-        }
-
         // Categorías
         const resCategorias = await fetch("/api/categorias");
         const dataCategorias = await resCategorias.json();
@@ -159,99 +146,108 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
           setProductos(dataProductos.productos);
         }
       } catch (error) {
-        console.error("Error al cargar datos:", error);
+        console.error("Error al cargar datos básicos:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hubMesero, searchTerm, categoriaSeleccionada]);
+    fetchBasicData();
+  }, [searchTerm, categoriaSeleccionada]); // ✅ Solo re-ejecutar cuando cambie búsqueda o categoría
 
-  // useEffect para cargar orden existente en modo de edición
+  // Cargar meseros solo cuando sea necesario
   useEffect(() => {
-    const cargarOrdenExistente = async () => {
-      if (!searchParams.ordenId) return;
+    const fetchMeseros = async () => {
+      if (!hubMesero) {
+        setMeseros([]);
+        return;
+      }
 
-      setCargandoOrden(true);
       try {
-        const response = await authenticatedFetch(`/api/ordenes/${searchParams.ordenId}`);
-        if (!response.ok) {
-          throw new Error('Error al cargar la orden');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success && data.orden) {
-          const orden = data.orden;
-          setOrdenExistente(orden);
-
-          // Precargar datos en el formulario
-          setTipoOrden(orden.tipo_orden || "llevar");
-          setEspecificaciones(orden.especificaciones || "");
-          setDescuento(orden.descuento || 0);
-          setCostoAdicional(orden.costo_adicional || 0);
-          setDireccionEntrega(orden.direccion_entrega || "");
-          
-          // Precargar mesa si existe
-          if (orden.mesa) {
-            setMesaSeleccionada(orden.mesa);
-          }
-
-          // Precargar mesero si existe
-          if (orden.mesero) {
-            setMeseroSeleccionado({
-              id: orden.mesero.id,
-              nombre_completo: orden.mesero.nombre_completo,
-              email: orden.mesero.correo
-            });
-            setHubMesero(true);
-          }
-
-          // Precargar productos en el carrito
-          if (orden.orden_items && orden.orden_items.length > 0) {
-            const productosCarrito = orden.orden_items.map((item: { cantidad: number; notas?: string; producto: productos }) => ({
-              ...item.producto,
-              cantidad: item.cantidad,
-              notas: item.notas || ""
-            }));
-            setCarrito(productosCarrito);
-            setMostrarAside(true);
-          }
-
-          // Precargar cliente si existe
-          if (orden.cliente) {
-            setClienteSeleccionado({
-              id: orden.cliente.id,
-              nombre: orden.cliente.nombre,
-              telefono: orden.cliente.telefono,
-              correo: orden.cliente.correo,
-              tipo_identificacion: orden.cliente.tipo_identificacion,
-              numero_identificacion: orden.cliente.numero_identificacion
-            });
-          }
-
-          addToast({
-            title: "Orden cargada",
-            description: `Orden #${orden.id.slice(-8)} cargada para edición`,
-            color: "success",
-          });
+        const resMeseros = await fetch("/api/usuarios?rol=MESERO&activo=true");
+        const dataMeseros = await resMeseros.json();
+        if (dataMeseros.success) {
+          setMeseros(dataMeseros.usuarios);
         }
       } catch (error) {
-        console.error("Error al cargar la orden:", error);
-        addToast({
-          title: "Error",
-          description: "No se pudo cargar la orden para edición",
-          color: "danger",
-        });
-      } finally {
-        setCargandoOrden(false);
+        console.error("Error al cargar meseros:", error);
       }
     };
 
-    cargarOrdenExistente();
-  }, [searchParams.ordenId, authenticatedFetch]);
+    fetchMeseros();
+  }, [hubMesero]); // ✅ Solo cargar meseros cuando se active la opción
+
+  const cargarOrdenExistente = useCallback(async () => {
+    if (!ordenId || ordenCargada) return; // ✅ Evitar recargas innecesarias
+
+    setCargandoOrden(true);
+    try {
+      const response = await authenticatedFetch(`/api/ordenes/${ordenId}`);
+      if (!response.ok) throw new Error("Error al cargar la orden");
+
+      const data = await response.json();
+      if (data.success && data.orden) {
+        const orden = data.orden;
+
+        console.log(orden)
+        setOrdenExistente(orden);
+
+        setTipoOrden(orden.tipo_orden.toLowerCase() || "llevar");
+        setEspecificaciones(orden.especificaciones || "");
+        setDescuento(orden.descuento || 0);
+        setCostoAdicional(orden.costo_adicional || 0);
+        setDireccionEntrega(orden.direccion_entrega || "");
+
+        if (orden.mesa) setMesaSeleccionada(orden.mesa);
+
+        if (orden.mesero) {
+          setMeseroSeleccionado({
+            id: orden.mesero.id,
+            nombre_completo: orden.mesero.nombre_completo,
+            email: orden.mesero.correo,
+          });
+          setHubMesero(true);
+        }
+
+        if (orden.orden_items?.length > 0) {
+          const productosCarrito = orden.orden_items.map((item: {
+            cantidad: number;
+            notas?: string;
+            productos: productos;
+          }) => ({
+            ...item.productos,
+            cantidad: item.cantidad,
+            notas: item.notas || "",
+          }));
+          setCarrito(productosCarrito);
+          setMostrarAside(true);
+        }
+
+        if (orden.cliente) {
+          setClienteSeleccionado({
+            id: orden.cliente.id,
+            nombre: orden.cliente.nombre,
+            telefono: orden.cliente.telefono,
+            correo: orden.cliente.correo,
+            tipo_identificacion: orden.cliente.tipo_identificacion,
+            numero_identificacion: orden.cliente.numero_identificacion,
+          });
+        }
+
+        setOrdenCargada(true); // ✅ Marcar como cargada
+      }
+    } catch (error) {
+      console.error("Error al cargar la orden:", error);
+    } finally {
+      setCargandoOrden(false);
+    }
+  }, [authenticatedFetch, ordenId, ordenCargada]); // ✅ Dependencias estables
+
+  useEffect(() => {
+    if (ordenId && !ordenCargada) {
+      cargarOrdenExistente();
+    }
+  }, [ordenId, ordenCargada, cargarOrdenExistente]); // ✅ Solo se ejecuta cuando sea necesario
 
   useEffect(() => {
     // Abort controller para cancelar peticiones pendientes
@@ -282,13 +278,7 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
         if (error instanceof Error && error.name === 'AbortError') {
           return;
         }
-
-        console.error("Error buscando clientes:", error);
-        addToast({
-          title: "Error",
-          description: "No se pudo buscar los clientes",
-          color: "danger",
-        });
+        console.error("Error al buscar clientes:", error);
       } finally {
         setBuscandoClientes(false);
       }
@@ -304,7 +294,8 @@ export default function OrderDashboard({ searchParams }: OrderDashboardProps) {
       clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [busquedaCliente]); // addToast debería ser estable (de un context o useCallback)
+  }, [busquedaCliente]); // ✅ Solo dependencia necesaria
+
   // useEffect para cerrar dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

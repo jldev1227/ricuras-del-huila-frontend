@@ -209,6 +209,9 @@ export default function ModalDetalleOrden({
     addText(`Fecha: ${fecha}\n`);
     addText(`Tipo: ${orden.tipo_orden}\n`);
     addText(`Mesero: ${orden.usuarios?.nombre_completo || "N/A"}\n`);
+    if (orden.metodo_pago) {
+      addText(`Metodo pago: ${orden.metodo_pago}\n`);
+    }
 
     // Mesa (si es LOCAL)
     if (orden.tipo_orden === "LOCAL" && orden.mesas) {
@@ -481,6 +484,9 @@ export default function ModalDetalleOrden({
                       <div>
                         Mesero: {orden.usuarios?.nombre_completo || "N/A"}
                       </div>
+                      {orden.metodo_pago && (
+                        <div>Método pago: {orden.metodo_pago}</div>
+                      )}
 
                       {/* Mesa */}
                       {orden.tipo_orden === "LOCAL" && orden.mesas && (
@@ -726,7 +732,7 @@ export default function ModalDetalleOrden({
               ) : (
                 <div className="space-y-6">
                   {/* Información general */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="flex items-center gap-3">
                         <div className="text-3xl">
@@ -750,6 +756,20 @@ export default function ModalDetalleOrden({
                           <p className="text-sm text-gray-600">Atendido por</p>
                           <p className="font-semibold text-gray-900">
                             {orden.usuarios?.nombre_completo || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <Receipt className="text-green-600" size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Método de pago</p>
+                          <p className="font-semibold text-gray-900">
+                            {orden.metodo_pago || "No especificado"}
                           </p>
                         </div>
                       </div>

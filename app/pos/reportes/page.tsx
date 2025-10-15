@@ -871,14 +871,6 @@ export default function ReportsPage() {
                 <Download size={16} />
                 <span className="hidden sm:inline">Exportar CSV</span>
               </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Download size={16} />
-                <span className="hidden sm:inline">Imprimir</span>
-              </button>
             </div>
           </div>
         </div>
