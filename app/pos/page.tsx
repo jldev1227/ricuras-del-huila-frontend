@@ -18,11 +18,13 @@ import { useState, useCallback, useEffect } from "react";
 import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import ModalCrearCliente from "@/components/cliente/ModalCrearCliente";
+import ProductImage from "@/components/productos/ProductImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 import { useAuthenticatedFetch } from "@/lib/api-client";
 import { formatCOP } from "@/utils/formatCOP";
 import { useSearchParams } from "next/navigation"; // si no estás recibiendo searchParams como prop
+import { getProductImageUrl } from "@/lib/supabase";
 
 interface Carrito extends productos {
   cantidad: number;
@@ -704,24 +706,12 @@ export default function OrderDashboard() {
                     className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:border-wine/20"
                   >
                     <div className="relative bg-gray-100 aspect-square overflow-hidden">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-                        <Image
-                          fill
-                          src={producto.imagen || "/placeholder-producto.png"}
-                          alt={producto.nombre}
-                          className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${producto.imagen ? "" : "opacity-60"}`}
-                          loading="lazy"
-                          draggable={false}
-                        />
-                        {!producto.imagen && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
-                            <CircleQuestionMark
-                              size={56}
-                              className="text-white opacity-80"
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <ProductImage
+                        imagePath={getProductImageUrl(producto.imagen)}
+                        productName={producto.nombre}
+                        className="rounded-xl"
+                        fill
+                      />
                       {producto.categoria_id && (
                         <div className="absolute top-2 left-2">
                           <span className="bg-white/95 backdrop-blur-sm px-2 py-0.5 lg:px-3 lg:py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
@@ -847,20 +837,12 @@ export default function OrderDashboard() {
                     >
                       <div className="flex gap-3">
                         <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-lg flex-shrink-0 overflow-hidden bg-gray-100">
-                          <Image
+                          <ProductImage
+                            imagePath={item.imagen}
+                            productName={item.nombre}
+                            className="rounded-lg"
                             fill
-                            src={item.imagen || "/placeholder-producto.png"}
-                            alt={item.nombre}
-                            className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${item.imagen ? "" : "opacity-60"}`}
                           />
-                          {!item.imagen && (
-                            <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
-                              <CircleQuestionMark
-                                size={24}
-                                className="text-white"
-                              />
-                            </div>
-                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-gray-900 mb-1 truncate text-sm lg:text-base">

@@ -1,0 +1,8 @@
+<svg width="300" height="200" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="300" height="200" fill="#F3F4F6"/>
+<path d="M120 70H180V80H175V85H180V95H175V100H180V110H175V115H180V125H175V130H120V125H125V115H120V110H125V100H120V95H125V85H120V80H125V70Z" fill="#9CA3AF"/>
+<path d="M140 95C140 90.0294 144.029 86 149 86C153.971 86 158 90.0294 158 95V105C158 109.971 153.971 114 149 114C144.029 114 140 109.971 140 105V95Z" fill="#6B7280"/>
+<text x="150" y="150" text-anchor="middle" fill="#6B7280" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500">
+Imagen no disponible
+</text>
+</svg>

@@ -17,6 +17,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https' as const,
+        hostname: 'sdtoftiqytveugixeliv.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      }
+    ],
+  },
 };
 
 export default withPWA(nextConfig);

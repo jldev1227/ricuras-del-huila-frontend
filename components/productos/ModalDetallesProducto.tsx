@@ -10,6 +10,7 @@ import {
 import { Button } from "@heroui/react";
 import Image from "next/image";
 import type { ProductoConCategoria } from "@/types/producto";
+import { getProductImageUrl } from "@/lib/supabase";
 
 interface ModalDetallesProductoProps {
   isOpen: boolean;
@@ -70,7 +71,7 @@ export default function ModalDetallesProducto({
                   <div className="relative h-80 bg-gray-100 rounded-lg overflow-hidden">
                     {producto.imagen ? (
                       <Image
-                        src={producto.imagen}
+                        src={getProductImageUrl(producto.imagen)}
                         alt={producto.nombre}
                         fill
                         className="object-cover"

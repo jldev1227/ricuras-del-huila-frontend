@@ -867,7 +867,7 @@ export default function ModalDetalleOrden({
                                 fill
                                 src={
                                   item.productos.imagen ||
-                                  "/placeholder-producto.png"
+                                  "/placeholder-product.png"
                                 }
                                 alt={item.productos.nombre}
                                 className={`rounded-xl transition-opacity duration-300 ${item.productos.imagen ? "" : "opacity-60"

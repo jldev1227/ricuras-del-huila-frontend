@@ -1,38 +1,7 @@
-import { existsSync } from "node:fs";
-import { unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
+import { deleteProductImage } from "@/lib/supabase";
 
-/**
- * Procesa la imagen según el formato recibido:
- * - Si ya viene como ruta ("/productos/..."), la devuelve igual.
- * - Si viene en base64, la guarda con UUID en /public/productos/
- *   y devuelve la ruta con prefijo "/productos/".
- */
-async function procesarImagen(imagen: string): Promise<string> {
-  // 🟢 Caso 1: si ya es una ruta válida
-  if (imagen.startsWith("/productos/")) {
-    return imagen;
-  }
-
-  // 🟢 Caso 2: si viene en base64
-  const matches = imagen.match(/^data:(.+);base64,(.+)$/);
-  if (!matches) throw new Error("Formato de imagen inválido");
-
-  const ext = matches[1].split("/")[1]; // png, jpg, etc.
-  const buffer = Buffer.from(matches[2], "base64");
-
-  // Genera nombre único y ruta física
-  const filename = `${uuidv4()}.${ext}`;
-  const imagePath = join(process.cwd(), "public", "productos", filename);
-
-  await writeFile(imagePath, buffer);
-
-  // 🟢 Se guarda con prefijo para usar directamente en el frontend
-  return `/productos/${filename}`;
-}
 
 export async function PUT(
   request: NextRequest,
@@ -68,28 +37,6 @@ export async function PUT(
       );
     }
 
-    let nuevaImagen = productoActual.imagen;
-
-    // 🧠 Solo procesar si hay imagen nueva
-    if (imagen && imagen !== productoActual.imagen) {
-      // Si había una imagen anterior, eliminarla
-      if (productoActual.imagen?.startsWith("/productos/")) {
-        const oldPath = join(
-          process.cwd(),
-          "public",
-          productoActual.imagen.replace("/productos/", ""),
-        );
-        if (existsSync(oldPath)) {
-          await unlink(oldPath).catch((err) =>
-            console.warn("No se pudo eliminar la imagen anterior:", err),
-          );
-        }
-      }
-
-      // Procesar nueva imagen (ruta o base64)
-      nuevaImagen = await procesarImagen(imagen);
-    }
-
     // Actualizar en la base de datos
     const producto = await prisma.productos.update({
       where: { id },
@@ -99,7 +46,7 @@ export async function PUT(
         precio,
         costo_produccion: costo_produccion,
         categoria_id: categoria_id,
-        imagen: nuevaImagen, // ✅ ya tiene /productos/
+        imagen, // ✅ ya tiene /productos/
         disponible,
         destacado,
         actualizado_en: new Date(),
@@ -145,13 +92,10 @@ export async function DELETE(
       where: { id },
     });
 
-    // Si el producto tenía imagen, eliminarla del sistema de archivos
+    // Si el producto tenía imagen, eliminarla de Supabase Storage
     if (producto.imagen) {
       try {
-        const imagePath = join(process.cwd(), "public", producto.imagen);
-        if (existsSync(imagePath)) {
-          await unlink(imagePath);
-        }
+        await deleteProductImage(producto.imagen);
       } catch (imageError) {
         console.error("Error al eliminar imagen del producto:", imageError);
         // No fallar la eliminación del producto si hay error al eliminar la imagen
@@ -162,11 +106,38 @@ export async function DELETE(
       success: true,
       message: "Producto eliminado exitosamente",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al eliminar producto:", error);
+    
+    // Manejar específicamente el error de constraint violation (órdenes relacionadas)
+    if (error?.code === "P2011" || error?.message?.includes("Null constraint violation")) {
+      return NextResponse.json(
+        { 
+          message: "No se puede eliminar este producto porque tiene órdenes relacionadas. Para eliminarlo, primero debe eliminar todas las órdenes que incluyen este producto.",
+          error: "CONSTRAINT_VIOLATION",
+          details: "Este producto está siendo utilizado en órdenes existentes"
+        },
+        { status: 400 }
+      );
+    }
+
+    // Otros errores de Prisma
+    if (error?.code) {
+      return NextResponse.json(
+        { 
+          message: "Error de base de datos al eliminar el producto",
+          error: "DATABASE_ERROR" 
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { message: "Error al eliminar producto" },
-      { status: 500 },
+      { 
+        message: "Error interno del servidor al eliminar producto",
+        error: "INTERNAL_ERROR" 
+      },
+      { status: 500 }
     );
   }
 }

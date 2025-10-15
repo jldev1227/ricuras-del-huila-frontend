@@ -471,7 +471,7 @@ export default function MeseroNuevaOrden() {
                       <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
                         <Image
                           fill
-                          src={producto.imagen || "/placeholder-producto.png"}
+                          src={producto.imagen || "/placeholder-product.png"}
                           alt={producto.nombre}
                           className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${
                             producto.imagen ? "" : "opacity-60"
@@ -592,7 +592,7 @@ export default function MeseroNuevaOrden() {
                     <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-lg flex-shrink-0 overflow-hidden bg-gray-100">
                       <Image
                         fill
-                        src={item.imagen || "/placeholder-producto.png"}
+                        src={item.imagen || "/placeholder-product.png"}
                         alt={item.nombre}
                         className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${
                           item.imagen ? "" : "opacity-60"

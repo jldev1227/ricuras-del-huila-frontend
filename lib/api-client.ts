@@ -16,10 +16,13 @@ export class ApiClient {
   ): Promise<Response> {
     const authHeaders = ApiClient.getAuthHeaders();
     
+    // No incluir Content-Type si el body es FormData (para uploads de archivos)
+    const isFormData = options.body instanceof FormData;
+    
     const mergedOptions: RequestInit = {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...authHeaders,
         ...options.headers,
       },
@@ -37,10 +40,14 @@ export class ApiClient {
     data?: Record<string, unknown> | string | FormData,
     options: RequestInit = {}
   ): Promise<Response> {
+    const body = data instanceof FormData ? data : 
+                 typeof data === 'string' ? data : 
+                 data ? JSON.stringify(data) : undefined;
+                 
     return ApiClient.fetch(url, {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -49,10 +56,14 @@ export class ApiClient {
     data?: Record<string, unknown> | string | FormData,
     options: RequestInit = {}
   ): Promise<Response> {
+    const body = data instanceof FormData ? data : 
+                 typeof data === 'string' ? data : 
+                 data ? JSON.stringify(data) : undefined;
+                 
     return ApiClient.fetch(url, {
       ...options,
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -61,10 +72,14 @@ export class ApiClient {
     data?: Record<string, unknown> | string | FormData,
     options: RequestInit = {}
   ): Promise<Response> {
+    const body = data instanceof FormData ? data : 
+                 typeof data === 'string' ? data : 
+                 data ? JSON.stringify(data) : undefined;
+                 
     return ApiClient.fetch(url, {
       ...options,
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -77,18 +92,49 @@ export class ApiClient {
  * Hook para realizar peticiones autenticadas
  */
 export function useAuthenticatedFetch() {
-  const { token } = useAuthStore();
+  const store = useAuthStore();
 
   const authenticatedFetch = async (
     url: string | URL | Request,
     options: RequestInit = {}
   ): Promise<Response> => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    // Esperar a que el store se hidrate si es necesario
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!store._hasHydrated && attempts < maxAttempts) {
+      console.log(`⏳ [api-client] Esperando hidratación... intento ${attempts + 1}`);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    const { token } = store;
+    
+    // No incluir Content-Type si el body es FormData (para uploads de archivos)
+    const isFormData = options.body instanceof FormData;
+    
+    console.log('🔐 [api-client] useAuthenticatedFetch llamado:', {
+      url: url.toString(),
+      method: options.method || 'GET',
+      hasToken: !!token,
+      tokenLength: token?.length || 0,
+      isFormData,
+      bodyType: options.body?.constructor.name,
+      hydrated: store._hasHydrated
+    })
+    
+    const headers: Record<string, string> = {};
+    
+    // Solo agregar Content-Type si no es FormData
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
+      console.log('✅ [api-client] Token agregado al header')
+    } else {
+      console.log('❌ [api-client] No hay token disponible')
     }
 
     // Agregar headers adicionales de las opciones

@@ -11,6 +11,8 @@ import { Button } from "@heroui/react";
 import { Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { useAuthenticatedFetch } from "@/lib/api-client";
+import { getProductImageUrl } from "@/lib/supabase";
 import type { ProductoConCategoria } from "@/types/producto";
 
 interface Categoria {
@@ -26,7 +28,7 @@ interface ProductoForm {
   descripcion: string;
   precio: number;
   costo_produccion: number;
-  categoriaId: string; // ← String, no objeto
+  categoria_id: string; // ← String, no objeto
   imagen: string;
   disponible: boolean;
   destacado: boolean;
@@ -45,6 +47,7 @@ export default function ModalFormProducto({
   producto,
   onSuccess,
 }: ModalFormProductoProps) {
+  const authenticatedFetch = useAuthenticatedFetch();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -57,7 +60,7 @@ export default function ModalFormProducto({
     descripcion: "",
     precio: 0,
     costo_produccion: 0,
-    categoriaId: "",
+    categoria_id: "",
     imagen: "",
     disponible: true,
     destacado: false,
@@ -69,7 +72,7 @@ export default function ModalFormProducto({
       descripcion: "",
       precio: 0,
       costo_produccion: 0,
-      categoriaId: "",
+      categoria_id: "",
       imagen: "",
       disponible: true,
       destacado: false,
@@ -112,17 +115,24 @@ export default function ModalFormProducto({
   // Función para subir imagen
   const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
-    const response = await fetch("/api/productos/upload-image", {
+    console.log('🚀 [ModalFormProducto] Iniciando upload con authenticatedFetch');
+
+    const response = await authenticatedFetch("/api/productos/upload-image", {
       method: "POST",
       body: formData,
     });
 
     const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.error || "Error al subir imagen");
+    if (!response.ok) {
+      throw new Error(data.message || "Error al subir imagen");
     }
+
+    // Actualizar el preview con la URL completa de Supabase
+    const supabaseUrl = getProductImageUrl(data.imagePath);
+    setImagePreview(supabaseUrl);
+    console.log('🖼️ [ModalFormProducto] Preview actualizado con URL de Supabase:', supabaseUrl);
 
     return data.imagePath;
   };
@@ -130,12 +140,15 @@ export default function ModalFormProducto({
   // Función para eliminar imagen
   const deleteImage = async (imagePath: string) => {
     try {
-      await fetch(
-        `/api/productos/upload-image?path=${encodeURIComponent(imagePath)}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const response = await authenticatedFetch("/api/productos/upload-image", {
+        method: "DELETE",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imagePath }),
+      });
+      
+      if (!response.ok) {
+        console.error("Error al eliminar imagen:", await response.text());
+      }
     } catch (error) {
       console.error("Error al eliminar imagen:", error);
     }
@@ -151,7 +164,7 @@ export default function ModalFormProducto({
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const response = await fetch("/api/categorias");
+        const response = await authenticatedFetch("/api/categorias");
         const data = await response.json();
         if (data.success) {
           setCategorias(data.categorias);
@@ -172,15 +185,17 @@ export default function ModalFormProducto({
         descripcion: producto.descripcion || "",
         precio: Number(producto.precio),
         costo_produccion: Number(producto.costo_produccion),
-        categoriaId: producto.categorias.id, // ✅ Extraer el ID
+        categoria_id: producto.categorias.id, // ✅ Extraer el ID
         imagen: producto.imagen || "",
         disponible: producto.disponible,
         destacado: producto.destacado,
       });
 
-      // Si el producto tiene imagen, establecer preview
+      // Si el producto tiene imagen, establecer preview usando getProductImageUrl
       if (producto.imagen) {
-        setImagePreview(producto.imagen);
+        const supabaseUrl = getProductImageUrl(producto.imagen);
+        setImagePreview(supabaseUrl);
+        console.log('🖼️ [ModalFormProducto] Preview cargado desde Supabase:', supabaseUrl);
       } else {
         setImagePreview(null);
       }
@@ -191,58 +206,86 @@ export default function ModalFormProducto({
   }, [producto, resetForm]);
 
   const handleSubmit = async () => {
+    console.log('🚀 [ModalFormProducto] Iniciando handleSubmit');
     setError("");
 
     // Validaciones de campos requeridos
     const nombreValido = formData.nombre.trim().length > 0;
-    const categoriaValida = formData.categoriaId.trim().length > 0;
+    const categoriaValida = formData.categoria_id.trim().length > 0;
     const precioValido =
       typeof formData.precio === "number" && formData.precio > 0;
     const costoValido =
       typeof formData.costo_produccion === "number" &&
       formData.costo_produccion > 0;
 
+    console.log('📋 [ModalFormProducto] Validaciones:', {
+      nombreValido,
+      categoriaValida,
+      precioValido,
+      costoValido,
+      formData: { ...formData }
+    });
+
     if (!nombreValido) {
+      console.error('❌ [ModalFormProducto] Error: Nombre vacío');
       setError("El nombre del producto es obligatorio.");
       return;
     }
     if (!categoriaValida) {
+      console.error('❌ [ModalFormProducto] Error: Categoría vacía');
       setError("La categoría es obligatoria.");
       return;
     }
     if (!precioValido) {
+      console.error('❌ [ModalFormProducto] Error: Precio inválido');
       setError("El precio de venta debe ser mayor a 0.");
       return;
     }
     if (!costoValido) {
+      console.error('❌ [ModalFormProducto] Error: Costo inválido');
       setError("El costo de producción debe ser mayor a 0.");
       return;
     }
 
+    console.log('✅ [ModalFormProducto] Validaciones pasadas, iniciando proceso');
     setLoading(true);
 
     try {
       const finalFormData = { ...formData };
+      console.log('📦 [ModalFormProducto] FormData inicial:', finalFormData);
 
       // Si hay una nueva imagen seleccionada, subirla primero
       if (imageFile) {
+        console.log('🖼️ [ModalFormProducto] Subiendo nueva imagen:', {
+          fileName: imageFile.name,
+          fileSize: imageFile.size,
+          fileType: imageFile.type
+        });
+        
         setUploadingImage(true);
         try {
           const imagePath = await uploadImage(imageFile);
+          console.log('✅ [ModalFormProducto] Imagen subida exitosamente:', imagePath);
 
           // Si estamos editando y tenía imagen anterior, eliminarla
           if (producto?.imagen && producto.imagen !== imagePath) {
+            console.log('🗑️ [ModalFormProducto] Eliminando imagen anterior:', producto.imagen);
             await deleteImage(producto.imagen);
+            console.log('✅ [ModalFormProducto] Imagen anterior eliminada');
           }
 
           finalFormData.imagen = imagePath;
+          console.log('📦 [ModalFormProducto] FormData con nueva imagen:', finalFormData);
         } catch (imageError) {
+          console.error('❌ [ModalFormProducto] Error al subir imagen:', imageError);
           throw new Error(
             `Error al subir imagen: ${imageError instanceof Error ? imageError.message : "Error desconocido"}`,
           );
         } finally {
           setUploadingImage(false);
         }
+      } else {
+        console.log('📷 [ModalFormProducto] No hay nueva imagen para subir');
       }
 
       const url = producto?.id
@@ -251,24 +294,52 @@ export default function ModalFormProducto({
 
       const method = producto?.id ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      console.log('🌐 [ModalFormProducto] Enviando request:', {
+        url,
+        method,
+        isEdit: !!producto?.id,
+        productoId: producto?.id,
+        finalFormData
+      });
+
+      const response = await authenticatedFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalFormData),
       });
 
+      console.log('📡 [ModalFormProducto] Response recibido:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
       const data = await response.json();
+      console.log('📄 [ModalFormProducto] Response data:', data);
 
       if (!response.ok) {
+        console.error('❌ [ModalFormProducto] Error en response:', {
+          status: response.status,
+          message: data.message,
+          data
+        });
         throw new Error(data.message || "Error al guardar producto");
       }
 
+      console.log('✅ [ModalFormProducto] Producto guardado exitosamente');
       onSuccess();
       onOpenChange(false);
       resetForm();
+      console.log('🎉 [ModalFormProducto] Proceso completado exitosamente');
     } catch (err) {
+      console.error('💥 [ModalFormProducto] Error en handleSubmit:', {
+        error: err,
+        message: err instanceof Error ? err.message : "Error desconocido",
+        stack: err instanceof Error ? err.stack : undefined
+      });
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
+      console.log('🏁 [ModalFormProducto] Finalizando handleSubmit');
       setLoading(false);
     }
   };
@@ -352,9 +423,9 @@ export default function ModalFormProducto({
                     </label>
                     <select
                       id="categoria"
-                      value={formData.categoriaId}
+                      value={formData.categoria_id}
                       onChange={(e) =>
-                        handleChange("categoriaId", e.target.value)
+                        handleChange("categoria_id", e.target.value)
                       }
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"

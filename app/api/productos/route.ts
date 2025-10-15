@@ -4,35 +4,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 
-/**
- * Procesa la imagen según el formato recibido:
- * - Si ya viene como ruta ("/productos/..."), la devuelve igual.
- * - Si viene en base64, la guarda con UUID en /public/productos/
- *   y devuelve la ruta con prefijo "/productos/".
- */
-async function procesarImagen(imagen: string): Promise<string> {
-  // 🟢 Caso 1: si ya es una ruta válida
-  if (imagen.startsWith("/productos/")) {
-    return imagen;
-  }
-
-  // 🟢 Caso 2: si viene en base64
-  const matches = imagen.match(/^data:(.+);base64,(.+)$/);
-  if (!matches) throw new Error("Formato de imagen inválido");
-
-  const ext = matches[1].split("/")[1]; // png, jpg, etc.
-  const buffer = Buffer.from(matches[2], "base64");
-
-  // Genera nombre único y ruta física
-  const filename = `${uuidv4()}.${ext}`;
-  const imagePath = join(process.cwd(), "public", "productos", filename);
-
-  await writeFile(imagePath, buffer);
-
-  // 🟢 Se guarda con prefijo para usar directamente en el frontend
-  return `/productos/${filename}`;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -105,6 +76,9 @@ export async function POST(request: NextRequest) {
       disponible = true,
       destacado = false,
     } = body;
+
+
+    console.log(imagen, "Imagen dele body")
 
     // 🔍 Validaciones mejoradas
     if (!nombre || typeof nombre !== "string" || nombre.trim().length === 0) {
@@ -180,23 +154,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🖼️ Procesar imagen si se proporciona
-    let imagenProcesada = null;
-    if (imagen && imagen.trim() !== "") {
-      try {
-        imagenProcesada = await procesarImagen(imagen);
-      } catch (_error) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Error al procesar la imagen. Verifica que sea un formato válido.",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
     // 💾 Crear el producto
     const producto = await prisma.productos.create({
       data: {
@@ -206,7 +163,7 @@ export async function POST(request: NextRequest) {
         precio,
         costo_produccion,
         categoria_id: categoria_id,
-        imagen: imagenProcesada,
+        imagen,
         disponible: Boolean(disponible),
         destacado: Boolean(destacado),
         creado_en: new Date(),

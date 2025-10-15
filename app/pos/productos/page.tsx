@@ -1,11 +1,13 @@
 "use client";
 
 import { Button, useDisclosure } from "@heroui/react";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import ModalConfirmarEliminar from "@/components/productos/ModalConfirmarEliminar";
 import ModalDetallesProducto from "@/components/productos/ModalDetallesProducto";
 import ModalFormProducto from "@/components/productos/ModalFormProducto";
+import { getProductImageUrl } from "@/lib/supabase";
 import type { ProductoConCategoria } from "@/types/producto";
 
 interface Categoria {
@@ -35,6 +37,11 @@ export default function ProductosPage() {
     onOpen: onOpenDetails,
     onOpenChange: onOpenChangeDetails,
   } = useDisclosure();
+  const {
+    isOpen: isOpenDelete,
+    onOpen: onOpenDelete,
+    onOpenChange: onOpenChangeDelete,
+  } = useDisclosure();
 
   const [selectedProducto, setSelectedProducto] =
     useState<ProductoConCategoria | null>(null);
@@ -59,6 +66,11 @@ export default function ProductosPage() {
   const handleEditFromDetails = (producto: ProductoConCategoria) => {
     setSelectedProducto(producto);
     onOpenForm();
+  };
+
+  const handleDelete = (producto: ProductoConCategoria) => {
+    setSelectedProducto(producto);
+    onOpenDelete();
   };
 
   useEffect(() => {
@@ -262,10 +274,15 @@ export default function ProductosPage() {
                   <div className="relative h-48 bg-gray-100">
                     {producto.imagen ? (
                       <Image
-                        src={producto.imagen}
+                        src={getProductImageUrl(producto.imagen)}
                         alt={producto.nombre}
                         fill
                         className="object-cover"
+                        onError={(e) => {
+                          console.error('Error loading image:', producto.imagen);
+                          // Ocultar imagen si falla
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full text-gray-400">
@@ -304,6 +321,20 @@ export default function ProductosPage() {
                       >
                         {producto.disponible ? "Disponible" : "Agotado"}
                       </span>
+                    </div>
+
+                    {/* Botón de eliminar */}
+                    <div className="absolute top-2 left-2">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        color="danger"
+                        variant="solid"
+                        onPress={() => handleDelete(producto)}
+                        className="bg-red-500/90 hover:bg-red-600 backdrop-blur-sm"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
                     </div>
                   </div>
 
@@ -397,6 +428,13 @@ export default function ProductosPage() {
         onOpenChange={onOpenChangeDetails}
         producto={selectedProducto}
         onEdit={handleEditFromDetails}
+      />
+
+      <ModalConfirmarEliminar
+        isOpen={isOpenDelete}
+        onOpenChange={onOpenChangeDelete}
+        producto={selectedProducto}
+        onSuccess={fetchProductos}
       />
     </div>
   );
