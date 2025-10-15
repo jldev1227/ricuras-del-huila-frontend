@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { uploadProductImage, deleteProductImage } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/auth-server'
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       )
     }
 
-    let uploadResult;
+    let uploadResult: { path: string } | null = null;
 
     if (productId) {
       // Caso 1: Producto existente - verificar que existe y actualizar

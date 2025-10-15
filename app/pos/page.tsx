@@ -4,7 +4,6 @@ import { addToast, Button, Card, Spinner } from "@heroui/react";
 import type { categorias, mesas, productos } from "@prisma/client";
 import {
   ArrowLeft,
-  CircleQuestionMark,
   ClipboardCheck,
   Minus,
   Plus,
@@ -13,7 +12,6 @@ import {
   User,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { useState, useCallback, useEffect } from "react";
 import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";

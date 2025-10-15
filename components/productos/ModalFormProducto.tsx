@@ -175,7 +175,7 @@ export default function ModalFormProducto({
     };
 
     fetchCategorias();
-  }, []);
+  }, [authenticatedFetch]);
 
   useEffect(() => {
     if (producto) {

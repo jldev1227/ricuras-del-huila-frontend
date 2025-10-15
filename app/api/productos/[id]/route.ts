@@ -106,11 +106,14 @@ export async function DELETE(
       success: true,
       message: "Producto eliminado exitosamente",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error al eliminar producto:", error);
     
+    // Type guard para errores de Prisma
+    const prismaError = error as { code?: string; message?: string };
+    
     // Manejar específicamente el error de constraint violation (órdenes relacionadas)
-    if (error?.code === "P2011" || error?.message?.includes("Null constraint violation")) {
+    if (prismaError?.code === "P2011" || prismaError?.message?.includes("Null constraint violation")) {
       return NextResponse.json(
         { 
           message: "No se puede eliminar este producto porque tiene órdenes relacionadas. Para eliminarlo, primero debe eliminar todas las órdenes que incluyen este producto.",
@@ -122,7 +125,7 @@ export async function DELETE(
     }
 
     // Otros errores de Prisma
-    if (error?.code) {
+    if (prismaError?.code) {
       return NextResponse.json(
         { 
           message: "Error de base de datos al eliminar el producto",

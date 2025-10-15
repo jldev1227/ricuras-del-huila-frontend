@@ -29,10 +29,10 @@ export default function ImageUpload({
   const { token } = useAuthStore()
 
   const handleDebugAuth = () => {
-    console.log('🔍 [ImageUpload] Debug Auth:', {
+    console.log('� [ImageUpload] Token info:', {
       hasToken: !!token,
       tokenLength: token?.length || 0,
-      tokenPrefix: token?.substring(0, 10) + '...'
+      tokenPrefix: `${token?.substring(0, 10)}...`
     })
   }
 

@@ -30,8 +30,6 @@ export default function ModalConfirmarEliminar({
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (!producto) return null;
-
   // Limpiar errores cuando se abra o cierre el modal
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +44,8 @@ export default function ModalConfirmarEliminar({
     setIsDeleting(false);
     onOpenChange(false);
   };
+
+  if (!producto) return null;
 
   const handleDelete = async () => {
     if (!producto?.id) return;
@@ -96,7 +96,7 @@ export default function ModalConfirmarEliminar({
       hideCloseButton={isDeleting}
     >
       <ModalContent>
-        {(onClose) => (
+        {(_onClose) => (
           <>
             <ModalHeader className="flex items-center gap-3">
               <AlertTriangle className="text-red-500" size={24} />
@@ -131,7 +131,10 @@ export default function ModalConfirmarEliminar({
                               strokeWidth={1.5}
                               stroke="currentColor"
                               className="w-8 h-8"
+                              aria-label="Imagen no disponible"
+                              role="img"
                             >
+                              <title>Imagen no disponible</title>
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"

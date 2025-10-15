@@ -23,7 +23,7 @@ export const prisma =
 
 // Event listeners para logs más detallados
 if (process.env.NODE_ENV === "development") {
-  prisma.$on('query', (e: any) => {
+  prisma.$on('query', (e: { query: string; params: string; duration: number }) => {
     console.log('📊 [PRISMA QUERY]', {
       query: e.query,
       params: e.params,
@@ -33,7 +33,7 @@ if (process.env.NODE_ENV === "development") {
   });
 }
 
-prisma.$on('error', (e: any) => {
+prisma.$on('error', (e: { message: string; target?: string; timestamp: Date }) => {
   console.error('❌ [PRISMA ERROR]', {
     message: e.message,
     target: e.target,
@@ -41,7 +41,7 @@ prisma.$on('error', (e: any) => {
   });
 });
 
-prisma.$on('warn', (e: any) => {
+prisma.$on('warn', (e: { message: string; target?: string; timestamp: Date }) => {
   console.warn('⚠️ [PRISMA WARNING]', {
     message: e.message,
     target: e.target,
@@ -49,7 +49,7 @@ prisma.$on('warn', (e: any) => {
   });
 });
 
-prisma.$on('info', (e: any) => {
+prisma.$on('info', (e: { message: string; target?: string; timestamp: Date }) => {
   console.info('ℹ️ [PRISMA INFO]', {
     message: e.message,
     target: e.target,
@@ -91,7 +91,7 @@ export async function verificarConexionDB() {
         current_database() as database_name,
         current_user as current_user,
         version() as postgres_version
-    ` as any[];
+    ` as { database_name: string; current_user: string; postgres_version: string }[];
     
     console.log('🗄️ [DATABASE] Información:', {
       nombre: dbInfo[0]?.database_name,
