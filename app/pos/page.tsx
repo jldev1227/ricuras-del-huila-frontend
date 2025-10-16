@@ -571,7 +571,7 @@ export default function OrderDashboard() {
       )}
 
       {/* Panel Principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {/* Header con búsqueda y categorías */}
         <div className="bg-white border-b shadow-sm flex-shrink-0">
           <div className="px-4 lg:px-6 py-3 lg:py-4">
@@ -664,7 +664,7 @@ export default function OrderDashboard() {
         )}
 
         {/* Sección de productos */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1">
           <div className="p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4 lg:mb-6">
               <div>
