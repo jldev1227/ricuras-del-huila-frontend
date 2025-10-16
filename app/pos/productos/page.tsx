@@ -3,26 +3,20 @@
 import { Button, useDisclosure } from "@heroui/react";
 import { PlusIcon, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ModalConfirmarEliminar from "@/components/productos/ModalConfirmarEliminar";
 import ModalDetallesProducto from "@/components/productos/ModalDetallesProducto";
 import ModalFormProducto from "@/components/productos/ModalFormProducto";
+import useCategorias from "@/hooks/useCategorias";
 import { getProductImageUrl } from "@/lib/supabase";
 import type { ProductoConCategoria } from "@/types/producto";
 
-interface Categoria {
-  id: string;
-  nombre: string;
-  icono: string | null;
-  _count: {
-    productos: number;
-  };
-}
-
 export default function ProductosPage() {
   const [productos, setProductos] = useState<ProductoConCategoria[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Usar el hook centralizado de categorías
+  const { categorias } = useCategorias();
 
   const [searchNombre, setSearchNombre] = useState("");
   const [selectedCategoria, setSelectedCategoria] = useState("");
@@ -45,6 +39,16 @@ export default function ProductosPage() {
 
   const [selectedProducto, setSelectedProducto] =
     useState<ProductoConCategoria | null>(null);
+
+  // Ref para prevenir múltiples calls simultáneos
+  const isLoadingRef = useRef(false);
+
+  // Memorizar filtros para evitar re-renders innecesarios
+  const filters = useMemo(() => ({
+    nombre: searchNombre,
+    categoriaId: selectedCategoria,
+    disponible: selectedDisponible,
+  }), [searchNombre, selectedCategoria, selectedDisponible]);
 
   // Función para abrir modal de edición
   const handleEdit = (producto: ProductoConCategoria) => {
@@ -73,46 +77,24 @@ export default function ProductosPage() {
     onOpenDelete();
   };
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        // Fetch categorías
-        const categoriasRes = await fetch("/api/categorias");
-        const categoriasData = await categoriasRes.json();
-        if (categoriasData.success) {
-          setCategorias(categoriasData.categorias);
-        }
+  // Función estable para cargar productos (sin dependencias de filtros)
+  const loadProductos = useCallback(async (searchFilters?: typeof filters) => {
+    // Usar filtros pasados como parámetro o los actuales
+    const activeFilters = searchFilters || filters;
+    
+    // Prevenir múltiples llamadas simultáneas
+    if (isLoadingRef.current) {
+      return;
+    }
 
-        // Fetch productos con filtros
-        const params = new URLSearchParams();
-        if (searchNombre) params.append("nombre", searchNombre);
-        if (selectedCategoria) params.append("categoriaId", selectedCategoria);
-        if (selectedDisponible) params.append("disponible", selectedDisponible);
-
-        const productosRes = await fetch(`/api/productos?${params}`);
-        const productosData = await productosRes.json();
-        if (productosData.success) {
-          setProductos(productosData.productos);
-        }
-      } catch (error) {
-        console.error("Error al cargar datos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchNombre, selectedCategoria, selectedDisponible]);
-
-  const fetchProductos = async () => {
+    isLoadingRef.current = true;
     setLoading(true);
+    
     try {
       const params = new URLSearchParams();
-      if (searchNombre) params.append("nombre", searchNombre);
-      if (selectedCategoria) params.append("categoriaId", selectedCategoria);
-      if (selectedDisponible) params.append("disponible", selectedDisponible);
+      if (activeFilters.nombre) params.append("nombre", activeFilters.nombre);
+      if (activeFilters.categoriaId) params.append("categoriaId", activeFilters.categoriaId);
+      if (activeFilters.disponible) params.append("disponible", activeFilters.disponible);
 
       const response = await fetch(`/api/productos?${params}`);
       const data = await response.json();
@@ -124,8 +106,29 @@ export default function ProductosPage() {
       console.error("Error al cargar productos:", error);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
-  };
+  }, []);
+
+  // Función con dependencias para uso interno
+  const fetchProductos = useCallback(async () => {
+    await loadProductos(filters);
+  }, [loadProductos, filters]);
+
+  // Función estable para los modales (sin dependencias de filtros)
+  const refreshProductos = useCallback(async () => {
+    // Usar la función estable que acepta filtros como parámetro
+    await loadProductos();
+  }, [loadProductos]);
+
+  // Efecto para cargar productos cuando cambian los filtros (con debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchProductos();
+    }, 100); // Debounce de 100ms para evitar múltiples llamadas rápidas
+
+    return () => clearTimeout(timeoutId);
+  }, [fetchProductos]);
 
   const limpiarFiltros = () => {
     setSearchNombre("");
@@ -420,7 +423,8 @@ export default function ProductosPage() {
         isOpen={isOpenForm}
         onOpenChange={onOpenChangeForm}
         producto={selectedProducto}
-        onSuccess={fetchProductos}
+        categorias={categorias}
+        onSuccess={refreshProductos}
       />
 
       <ModalDetallesProducto
@@ -434,7 +438,7 @@ export default function ProductosPage() {
         isOpen={isOpenDelete}
         onOpenChange={onOpenChangeDelete}
         producto={selectedProducto}
-        onSuccess={fetchProductos}
+        onSuccess={refreshProductos}
       />
     </div>
   );

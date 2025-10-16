@@ -38,6 +38,7 @@ interface ModalFormProductoProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   producto?: ProductoConCategoria | null;
+  categorias: Categoria[];
   onSuccess: () => void;
 }
 
@@ -45,10 +46,10 @@ export default function ModalFormProducto({
   isOpen,
   onOpenChange,
   producto,
+  categorias,
   onSuccess,
 }: ModalFormProductoProps) {
   const authenticatedFetch = useAuthenticatedFetch();
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -160,22 +161,6 @@ export default function ModalFormProducto({
     setImagePreview(null);
     setFormData((prev) => ({ ...prev, imagen: "" }));
   };
-
-  useEffect(() => {
-    const fetchCategorias = async () => {
-      try {
-        const response = await authenticatedFetch("/api/categorias");
-        const data = await response.json();
-        if (data.success) {
-          setCategorias(data.categorias);
-        }
-      } catch (error) {
-        console.error("Error al cargar categorías:", error);
-      }
-    };
-
-    fetchCategorias();
-  }, [authenticatedFetch]);
 
   useEffect(() => {
     if (producto) {

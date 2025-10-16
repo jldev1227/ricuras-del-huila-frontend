@@ -98,14 +98,9 @@ export function useAuthenticatedFetch() {
     url: string | URL | Request,
     options: RequestInit = {}
   ): Promise<Response> => {
-    // Esperar a que el store se hidrate si es necesario
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    while (!store._hasHydrated && attempts < maxAttempts) {
-      console.log(`⏳ [api-client] Esperando hidratación... intento ${attempts + 1}`);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
+    // Si no está hidratado, usar el estado actual sin esperar
+    if (!store._hasHydrated) {
+      console.log('⚠️ [api-client] Store no hidratado, usando estado actual');
     }
 
     const { token } = store;

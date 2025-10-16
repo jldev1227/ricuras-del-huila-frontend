@@ -22,7 +22,6 @@ import { useSucursal } from "@/hooks/useSucursal";
 import { useAuthenticatedFetch } from "@/lib/api-client";
 import { formatCOP } from "@/utils/formatCOP";
 import { useSearchParams } from "next/navigation"; // si no estás recibiendo searchParams como prop
-import { getProductImageUrl } from "@/lib/supabase";
 
 interface Carrito extends productos {
   cantidad: number;
@@ -125,6 +124,7 @@ export default function OrderDashboard() {
   // Cargar datos básicos (categorías y productos) - separado de meseros
   useEffect(() => {
     const fetchBasicData = async () => {
+      console.log("🟡 [POS PAGE] Cargando datos básicos...");
       setLoading(true);
       try {
         // Categorías
@@ -132,6 +132,7 @@ export default function OrderDashboard() {
         const dataCategorias = await resCategorias.json();
         if (dataCategorias.success) {
           setCategorias(dataCategorias.categorias);
+          console.log("🟡 [POS PAGE] Categorías cargadas:", dataCategorias.categorias.length);
         }
 
         // Productos
@@ -705,7 +706,7 @@ export default function OrderDashboard() {
                   >
                     <div className="relative bg-gray-100 aspect-square overflow-hidden">
                       <ProductImage
-                        imagePath={getProductImageUrl(producto.imagen)}
+                        imagePath={producto.imagen}
                         productName={producto.nombre}
                         className="rounded-xl"
                         fill
