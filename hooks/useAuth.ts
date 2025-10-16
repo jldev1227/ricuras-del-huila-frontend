@@ -241,12 +241,42 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: AUTH_STORAGE_KEY,
+      version: 1, // Versión del schema del estado
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
         token: state.token,
         isOnline: state.isOnline,
       }),
+      migrate: (persistedState: any, version: number) => {
+        logger.log(`Migrando estado de versión ${version} a versión 1`);
+        
+        // Si es versión 0 o no tiene versión, es el estado legacy
+        if (version === 0 || !version) {
+          // Validar estructura básica del estado legacy
+          if (persistedState && typeof persistedState === 'object') {
+            // Si tiene la estructura esperada, mantenerla
+            if (persistedState.user && persistedState.token) {
+              return {
+                user: persistedState.user,
+                token: persistedState.token,
+                isOnline: persistedState.isOnline ?? true,
+              };
+            }
+          }
+          
+          // Si el estado está corrupto, retornar estado limpio
+          logger.log("Estado legacy corrupto, iniciando limpio");
+          return {
+            user: null,
+            token: null,
+            isOnline: true,
+          };
+        }
+        
+        // Para versiones futuras, retornar el estado tal como está
+        return persistedState;
+      },
       onRehydrateStorage: () => (state) => {
         logger.log("Rehidratando store de autenticación...");
         if (state) {

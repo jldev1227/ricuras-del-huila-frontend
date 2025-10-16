@@ -64,16 +64,56 @@ export default function Home() {
           return;
         }
 
-        const authData: AuthState = JSON.parse(authStorage);
+        let authData: AuthState;
+        
+        try {
+          authData = JSON.parse(authStorage);
+        } catch (parseError) {
+          console.error("Error al parsear auth-storage, limpiando localStorage:", parseError);
+          // Limpiar localStorage corrupto
+          localStorage.removeItem("auth-storage");
+          localStorage.removeItem("sucursal-actual");
+          setAuthLoading(false);
+          return;
+        }
 
+        // Validar estructura del estado
+        if (!authData || typeof authData !== 'object') {
+          console.error("Estructura de auth-storage inválida, limpiando localStorage");
+          localStorage.removeItem("auth-storage");
+          localStorage.removeItem("sucursal-actual");
+          setAuthLoading(false);
+          return;
+        }
+
+        // Validar que existe el state
+        if (!authData.state || typeof authData.state !== 'object') {
+          console.error("Estado interno de auth-storage inválido, limpiando localStorage");
+          localStorage.removeItem("auth-storage");
+          localStorage.removeItem("sucursal-actual");
+          setAuthLoading(false);
+          return;
+        }
+
+        // Validar token y usuario
         if (!authData.state.token || !authData.state.user) {
+          console.log("No hay token o usuario válido en auth-storage");
+          setAuthLoading(false);
+          return;
+        }
+
+        // Validar estructura del usuario
+        if (!authData.state.user.id || !authData.state.user.nombre_completo || !authData.state.user.rol) {
+          console.error("Estructura de usuario inválida, limpiando localStorage");
+          localStorage.removeItem("auth-storage");
+          localStorage.removeItem("sucursal-actual");
           setAuthLoading(false);
           return;
         }
 
         setAuthUser(authData.state.user);
 
-        if (authData.state.sucursal) {
+        if (authData.state.sucursal && authData.state.sucursal.id && authData.state.sucursal.nombre) {
           // Redirigir según el rol del usuario
           if (authData.state.user?.rol === "ADMINISTRADOR") {
             router.push("/pos/ordenes");
@@ -89,6 +129,9 @@ export default function Home() {
         fetchSucursales();
       } catch (error) {
         console.error("Error al verificar autenticación:", error);
+        // En caso de error inesperado, limpiar localStorage
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("sucursal-actual");
         setAuthLoading(false);
       }
     };
@@ -104,9 +147,32 @@ export default function Home() {
 
     try {
       const authStorage = localStorage.getItem("auth-storage");
-      if (!authStorage) return;
+      if (!authStorage) {
+        console.error("No hay auth-storage disponible");
+        return;
+      }
 
-      const authData: AuthState = JSON.parse(authStorage);
+      let authData: AuthState;
+      
+      try {
+        authData = JSON.parse(authStorage);
+      } catch (parseError) {
+        console.error("Error al parsear auth-storage en handleSelectSucursal:", parseError);
+        // Limpiar localStorage corrupto y redirigir a login
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("sucursal-actual");
+        router.push("/auth/login");
+        return;
+      }
+
+      // Validar estructura del estado
+      if (!authData || !authData.state || !authData.state.user) {
+        console.error("Estructura de auth-storage inválida en handleSelectSucursal");
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("sucursal-actual");
+        router.push("/auth/login");
+        return;
+      }
 
       authData.state.sucursal = {
         id: sucursal.id,
@@ -115,14 +181,19 @@ export default function Home() {
 
       authData.version = (authData.version || 0) + 1;
 
-      localStorage.setItem("auth-storage", JSON.stringify(authData));
-      localStorage.setItem(
-        "sucursal-actual",
-        JSON.stringify({
-          id: sucursal.id,
-          nombre: sucursal.nombre,
-        }),
-      );
+      try {
+        localStorage.setItem("auth-storage", JSON.stringify(authData));
+        localStorage.setItem(
+          "sucursal-actual",
+          JSON.stringify({
+            id: sucursal.id,
+            nombre: sucursal.nombre,
+          }),
+        );
+      } catch (storageError) {
+        console.error("Error al guardar en localStorage:", storageError);
+        // Si no se puede guardar, continuar sin persistir
+      }
 
       setTimeout(() => {
         // Redirigir según el rol del usuario
@@ -134,6 +205,10 @@ export default function Home() {
       }, 400);
     } catch (error) {
       console.error("Error al guardar sucursal:", error);
+      // En caso de error inesperado, limpiar y redirigir
+      localStorage.removeItem("auth-storage");
+      localStorage.removeItem("sucursal-actual");
+      router.push("/auth/login");
     }
   };
 

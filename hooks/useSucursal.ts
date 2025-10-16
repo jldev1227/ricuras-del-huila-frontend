@@ -36,9 +36,23 @@ export function useSucursal() {
         const authStorage = localStorage.getItem("auth-storage");
 
         if (authStorage) {
-          const authData: AuthState = JSON.parse(authStorage);
+          let authData: AuthState;
+          
+          try {
+            authData = JSON.parse(authStorage);
+          } catch (parseError) {
+            console.error("Error al parsear auth-storage en useSucursal:", parseError);
+            // Limpiar localStorage corrupto
+            localStorage.removeItem("auth-storage");
+            localStorage.removeItem("sucursal-actual");
+            router.push("/auth/login");
+            setLoading(false);
+            return;
+          }
 
-          if (authData.state.sucursal) {
+          // Validar estructura del estado
+          if (authData && authData.state && authData.state.sucursal && 
+              authData.state.sucursal.id && authData.state.sucursal.nombre) {
             setSucursal(authData.state.sucursal);
             setLoading(false);
             return;
@@ -49,8 +63,22 @@ export function useSucursal() {
         const sucursalActual = localStorage.getItem("sucursal-actual");
 
         if (sucursalActual) {
-          const sucursalData = JSON.parse(sucursalActual);
-          setSucursal(sucursalData);
+          try {
+            const sucursalData = JSON.parse(sucursalActual);
+            
+            // Validar estructura de sucursal
+            if (sucursalData && sucursalData.id && sucursalData.nombre) {
+              setSucursal(sucursalData);
+            } else {
+              console.error("Estructura de sucursal-actual inválida");
+              localStorage.removeItem("sucursal-actual");
+              router.push("/");
+            }
+          } catch (parseError) {
+            console.error("Error al parsear sucursal-actual:", parseError);
+            localStorage.removeItem("sucursal-actual");
+            router.push("/");
+          }
         } else {
           // Si no hay sucursal seleccionada, redirigir a la página de selección
           router.push("/");
@@ -59,6 +87,10 @@ export function useSucursal() {
         setLoading(false);
       } catch (error) {
         console.error("Error al cargar sucursal:", error);
+        // En caso de error inesperado, limpiar y redirigir
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("sucursal-actual");
+        router.push("/auth/login");
         setLoading(false);
       }
     };
@@ -72,10 +104,22 @@ export function useSucursal() {
       const authStorage = localStorage.getItem("auth-storage");
 
       if (authStorage) {
-        const authData: AuthState = JSON.parse(authStorage);
-        delete authData.state.sucursal;
-        authData.version = (authData.version || 0) + 1;
-        localStorage.setItem("auth-storage", JSON.stringify(authData));
+        try {
+          const authData: AuthState = JSON.parse(authStorage);
+          
+          // Validar estructura antes de modificar
+          if (authData && authData.state && typeof authData.state === 'object') {
+            delete authData.state.sucursal;
+            authData.version = (authData.version || 0) + 1;
+            localStorage.setItem("auth-storage", JSON.stringify(authData));
+          } else {
+            console.error("Estructura de auth-storage inválida en cambiarSucursal");
+            localStorage.removeItem("auth-storage");
+          }
+        } catch (parseError) {
+          console.error("Error al parsear auth-storage en cambiarSucursal:", parseError);
+          localStorage.removeItem("auth-storage");
+        }
       }
 
       // Limpiar sucursal-actual
@@ -85,23 +129,50 @@ export function useSucursal() {
       router.push("/");
     } catch (error) {
       console.error("Error al cambiar sucursal:", error);
+      // En caso de error, forzar limpieza y redirección
+      localStorage.removeItem("auth-storage");
+      localStorage.removeItem("sucursal-actual");
+      router.push("/auth/login");
     }
   };
 
   const actualizarSucursal = (nuevaSucursal: Sucursal) => {
     try {
+      // Validar datos de entrada
+      if (!nuevaSucursal || !nuevaSucursal.id || !nuevaSucursal.nombre) {
+        console.error("Datos de sucursal inválidos en actualizarSucursal");
+        return;
+      }
+
       // Actualizar auth-storage
       const authStorage = localStorage.getItem("auth-storage");
 
       if (authStorage) {
-        const authData: AuthState = JSON.parse(authStorage);
-        authData.state.sucursal = nuevaSucursal;
-        authData.version = (authData.version || 0) + 1;
-        localStorage.setItem("auth-storage", JSON.stringify(authData));
+        try {
+          const authData: AuthState = JSON.parse(authStorage);
+          
+          // Validar estructura antes de modificar
+          if (authData && authData.state && typeof authData.state === 'object') {
+            authData.state.sucursal = nuevaSucursal;
+            authData.version = (authData.version || 0) + 1;
+            localStorage.setItem("auth-storage", JSON.stringify(authData));
+          } else {
+            console.error("Estructura de auth-storage inválida en actualizarSucursal");
+            localStorage.removeItem("auth-storage");
+          }
+        } catch (parseError) {
+          console.error("Error al parsear auth-storage en actualizarSucursal:", parseError);
+          localStorage.removeItem("auth-storage");
+        }
       }
 
       // Actualizar sucursal-actual
-      localStorage.setItem("sucursal-actual", JSON.stringify(nuevaSucursal));
+      try {
+        localStorage.setItem("sucursal-actual", JSON.stringify(nuevaSucursal));
+      } catch (storageError) {
+        console.error("Error al guardar sucursal-actual:", storageError);
+        // Continuar sin persistir si hay error de almacenamiento
+      }
 
       // Actualizar estado local
       setSucursal(nuevaSucursal);

@@ -54,7 +54,7 @@ export default function ModalDetallesProducto({
     <Modal
       isOpen={isOpen}
       onOpenChange={onOpenChange}
-      size="2xl"
+      size="4xl"
       scrollBehavior="inside"
     >
       <ModalContent>
@@ -202,13 +202,13 @@ export default function ModalDetallesProducto({
 
                   {/* Información adicional */}
                   <div className="pt-4 border-t space-y-2">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-600">Creado el:</span>
                       <span className="text-gray-800">
                         {formatDate(producto.creado_en)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-600">
                         Última actualización:
                       </span>
@@ -216,7 +216,7 @@ export default function ModalDetallesProducto({
                         {formatDate(producto.actualizado_en)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-600">ID del producto:</span>
                       <span className="text-gray-400 font-mono text-xs">
                         {producto.id}
