@@ -30,44 +30,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 import { formatCOP } from "@/utils/formatCOP";
-
-interface Orden {
-  id: string;
-  numeroOrden: string;
-  tipoOrden: string;
-  estado: string;
-  total: number;
-  subtotal?: number;
-  descuento?: number;
-  mesa?: {
-    numero: number;
-    capacidad: number;
-  };
-  cliente?: {
-    nombre: string;
-    telefono?: string;
-    email?: string;
-  };
-  nombreCliente?: string;
-  direccionEntrega?: string;
-  especificaciones?: string;
-  notas?: string;
-  creadoEn: string;
-  actualizadoEn?: string;
-  items?: {
-    id: string;
-    cantidad: number;
-    precioUnitario: number;
-    producto: {
-      id: string;
-      nombre: string;
-      imagen?: string;
-    };
-  }[];
-  _count: {
-    items: number;
-  };
-}
+import type { orden_items, ordenes } from "@prisma/client";
+import ProductImage from "@/components/productos/ProductImage";
 
 interface Stats {
   ordenesHoy: number;
@@ -82,7 +46,7 @@ export default function MeseroPage() {
   const { sucursal } = useSucursal();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const [ordenes, setOrdenes] = useState<Orden[]>([]);
+  const [ordenes, setOrdenes] = useState<ordenes[]>([]);
   const [stats, setStats] = useState<Stats>({
     ordenesHoy: 0,
     ordenesActivas: 0,
@@ -90,7 +54,7 @@ export default function MeseroPage() {
     promedioOrden: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [ordenSeleccionada, setOrdenSeleccionada] = useState<Orden | null>(
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState<ordenes | null>(
     null,
   );
   const [_loadingDetalles, setLoadingDetalles] = useState(false);
@@ -110,16 +74,16 @@ export default function MeseroPage() {
 
         // Calcular estadísticas
         const today = new Date().toISOString().split("T")[0];
-        const ordenesHoy = data.ordenes.filter((orden: Orden) =>
-          orden.creadoEn.startsWith(today),
+        const ordenesHoy = data.ordenes.filter((orden: ordenes) =>
+          orden.creado_en.startsWith(today),
         );
 
-        const ordenesActivas = data.ordenes.filter((orden: Orden) =>
+        const ordenesActivas = data.ordenes.filter((orden: ordenes) =>
           ["PENDIENTE", "EN_PREPARACION"].includes(orden.estado),
         );
 
         const ventasHoy = ordenesHoy.reduce(
-          (sum: number, orden: Orden) => sum + Number(orden.total),
+          (sum: number, orden: ordenes) => sum + Number(orden.total),
           0,
         );
 
@@ -151,6 +115,7 @@ export default function MeseroPage() {
         const data = await response.json();
         if (data.success) {
           setOrdenSeleccionada(data.orden);
+          console.log(data.orden)
           onOpen();
         }
       }
@@ -345,9 +310,6 @@ export default function MeseroPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">
-                            #{orden.numeroOrden || orden.id.slice(-6)}
-                          </span>
                           <Chip
                             size="sm"
                             color={getEstadoColor(orden.estado)}
@@ -357,18 +319,18 @@ export default function MeseroPage() {
                           </Chip>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                          <span className="capitalize">{orden.tipoOrden}</span>
-                          {orden.mesa && (
+                          <span className="capitalize">{orden.tipo_orden}</span>
+                          {orden.mesas && (
                             <>
                               <span>•</span>
-                              <span>Mesa {orden.mesa.numero}</span>
+                              <span>Mesa {orden.mesas.numero}</span>
                             </>
                           )}
-                          {(orden.cliente?.nombre || orden.nombreCliente) && (
+                          {(orden.cliente?.nombre || orden.nombre_cliente) && (
                             <>
                               <span>•</span>
                               <span>
-                                {orden.cliente?.nombre || orden.nombreCliente}
+                                {orden.cliente?.nombre || orden.nombre_cliente}
                               </span>
                             </>
                           )}
@@ -382,17 +344,17 @@ export default function MeseroPage() {
                           {formatCOP(orden.total)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {orden._count.items} producto
-                          {orden._count.items !== 1 ? "s" : ""}
+                          {orden._count.orden_items} producto
+                          {orden._count.orden_items !== 1 ? "s" : ""}
                         </p>
                       </div>
 
                       <div className="hidden sm:block text-right">
                         <p className="text-sm text-gray-500">
-                          {new Date(orden.creadoEn).toLocaleDateString()}
+                          {new Date(orden.creado_en).toLocaleDateString()}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(orden.creadoEn).toLocaleTimeString([], {
+                          {new Date(orden.creado_en).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
@@ -457,14 +419,14 @@ export default function MeseroPage() {
                             </Chip>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                            {orden.mesa && (
-                              <span>Mesa {orden.mesa.numero}</span>
+                            {orden.mesas && (
+                              <span>Mesa {orden.mesas.numero}</span>
                             )}
-                            {(orden.cliente?.nombre || orden.nombreCliente) && (
+                            {(orden.cliente?.nombre || orden.nombre_cliente) && (
                               <>
-                                {orden.mesa && <span>•</span>}
+                                {orden.mesas && <span>•</span>}
                                 <span>
-                                  {orden.cliente?.nombre || orden.nombreCliente}
+                                  {orden.cliente?.nombre || orden.nombre_cliente}
                                 </span>
                               </>
                             )}
@@ -478,7 +440,7 @@ export default function MeseroPage() {
                             {formatCOP(orden.total)}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {new Date(orden.creadoEn).toLocaleTimeString([], {
+                            {new Date(orden.creado_en).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
@@ -530,7 +492,7 @@ export default function MeseroPage() {
                           {getEstadoTexto(ordenSeleccionada.estado)}
                         </Chip>
                         <span className="text-sm text-gray-500 capitalize">
-                          {ordenSeleccionada.tipoOrden}
+                          {ordenSeleccionada.tipo_orden}
                         </span>
                       </div>
                     )}
@@ -552,11 +514,11 @@ export default function MeseroPage() {
                           </span>
                           <p className="font-medium">
                             {new Date(
-                              ordenSeleccionada.creadoEn,
+                              ordenSeleccionada.creado_en,
                             ).toLocaleDateString()}{" "}
                             -{" "}
                             {new Date(
-                              ordenSeleccionada.creadoEn,
+                              ordenSeleccionada.creado_en,
                             ).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
@@ -564,37 +526,35 @@ export default function MeseroPage() {
                           </p>
                         </div>
 
-                        {ordenSeleccionada.mesa && (
+                        {ordenSeleccionada.mesas && (
                           <div>
                             <span className="text-sm text-gray-500">Mesa:</span>
                             <p className="font-medium">
-                              Mesa {ordenSeleccionada.mesa.numero}
-                              {ordenSeleccionada.mesa.capacidad &&
-                                ` (${ordenSeleccionada.mesa.capacidad} personas)`}
+                              Mesa {ordenSeleccionada.mesas.numero}
                             </p>
                           </div>
                         )}
 
                         {(ordenSeleccionada.cliente?.nombre ||
-                          ordenSeleccionada.nombreCliente) && (
-                          <div>
-                            <span className="text-sm text-gray-500">
-                              Cliente:
-                            </span>
-                            <p className="font-medium">
-                              {ordenSeleccionada.cliente?.nombre ||
-                                ordenSeleccionada.nombreCliente}
-                            </p>
-                          </div>
-                        )}
+                          ordenSeleccionada.nombre_cliente) && (
+                            <div>
+                              <span className="text-sm text-gray-500">
+                                Cliente:
+                              </span>
+                              <p className="font-medium">
+                                {ordenSeleccionada.cliente?.nombre ||
+                                  ordenSeleccionada.nombre_cliente}
+                              </p>
+                            </div>
+                          )}
 
-                        {ordenSeleccionada.direccionEntrega && (
+                        {ordenSeleccionada.direccion && (
                           <div>
                             <span className="text-sm text-gray-500">
                               Dirección de entrega:
                             </span>
                             <p className="font-medium">
-                              {ordenSeleccionada.direccionEntrega}
+                              {ordenSeleccionada.direccion}
                             </p>
                           </div>
                         )}
@@ -602,26 +562,26 @@ export default function MeseroPage() {
                     </div>
 
                     {/* Productos */}
-                    {ordenSeleccionada.items &&
-                      ordenSeleccionada.items.length > 0 && (
+                    {ordenSeleccionada.orden_items &&
+                      ordenSeleccionada.orden_items.length > 0 && (
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-3">
                             Productos
                           </h4>
                           <div className="space-y-3">
-                            {ordenSeleccionada.items.map((item) => (
+                            {ordenSeleccionada.orden_items.map((item: orden_items) => (
                               <div
                                 key={item.id}
                                 className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"
                               >
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  {item.producto.imagen ? (
-                                    <Image
-                                      src={item.producto.imagen}
-                                      alt={item.producto.nombre}
-                                      width={48}
-                                      height={48}
-                                      className="w-full h-full object-cover rounded-lg"
+                                  {item.productos.imagen ? (
+                                    <ProductImage
+                                      imagePath={item.productos.imagen}
+                                      productName={item.productos.nombre}
+                                      width={200}
+                                      height={150}
+                                      className="rounded-lg"
                                     />
                                   ) : (
                                     <Package className="w-6 h-6 text-gray-400" />
@@ -629,17 +589,17 @@ export default function MeseroPage() {
                                 </div>
                                 <div className="flex-1">
                                   <h5 className="font-medium text-gray-900">
-                                    {item.producto.nombre}
+                                    {item.productos.nombre}
                                   </h5>
                                   <p className="text-sm text-gray-500">
-                                    {formatCOP(item.precioUnitario)} x{" "}
+                                    {formatCOP(item.precio_unitario)} x{" "}
                                     {item.cantidad}
                                   </p>
                                 </div>
                                 <div className="text-right">
                                   <p className="font-semibold text-gray-900">
                                     {formatCOP(
-                                      item.precioUnitario * item.cantidad,
+                                      item.precio_unitario * item.cantidad,
                                     )}
                                   </p>
                                 </div>
@@ -652,32 +612,32 @@ export default function MeseroPage() {
                     {/* Especificaciones y notas */}
                     {(ordenSeleccionada.especificaciones ||
                       ordenSeleccionada.notas) && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">
-                          Especificaciones y Notas
-                        </h4>
-                        {ordenSeleccionada.especificaciones && (
-                          <div className="mb-3">
-                            <span className="text-sm text-gray-500">
-                              Especificaciones:
-                            </span>
-                            <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">
-                              {ordenSeleccionada.especificaciones}
-                            </p>
-                          </div>
-                        )}
-                        {ordenSeleccionada.notas && (
-                          <div>
-                            <span className="text-sm text-gray-500">
-                              Notas:
-                            </span>
-                            <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">
-                              {ordenSeleccionada.notas}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-3">
+                            Especificaciones y Notas
+                          </h4>
+                          {ordenSeleccionada.especificaciones && (
+                            <div className="mb-3">
+                              <span className="text-sm text-gray-500">
+                                Especificaciones:
+                              </span>
+                              <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">
+                                {ordenSeleccionada.especificaciones}
+                              </p>
+                            </div>
+                          )}
+                          {ordenSeleccionada.notas && (
+                            <div>
+                              <span className="text-sm text-gray-500">
+                                Notas:
+                              </span>
+                              <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">
+                                {ordenSeleccionada.notas}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                     {/* Resumen financiero */}
                     <div className="bg-primary/20 p-4 rounded-lg">

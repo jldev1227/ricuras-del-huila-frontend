@@ -1,5 +1,6 @@
 "use client";
 
+
 import {
   addToast,
   Button,
@@ -12,6 +13,7 @@ import {
   Spinner,
   useDisclosure,
 } from "@heroui/react";
+import type { ordenes, sucursales, usuarios } from "@prisma/client";
 import {
   AlertTriangle,
   Building2,
@@ -29,45 +31,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ModalDetalleOrden from "@/components/orden/ModalDetalleOrden";
 import { formatCOP } from "@/utils/formatCOP";
-
-interface Sucursal {
-  id: string;
-  nombre: string;
-}
-
-interface Orden {
-  id: string;
-  tipoOrden: string;
-  estado: string;
-  total: number;
-  subtotal: number;
-  descuento: number;
-  creado_en: string;
-  mesa?: {
-    numero: number;
-    ubicacion: string;
-  };
-  mesero?: {
-    nombre_completo: string;
-  };
-  cliente?: {
-    nombre: string;
-  };
-  sucursal: {
-    id: string;
-    nombre: string;
-  };
-  items: Array<{
-    cantidad: number;
-    precioUnitario: number;
-    producto: {
-      nombre: string;
-    };
-  }>;
-  _count?: {
-    items: number;
-  };
-}
 
 export default function OrdenesPage() {
   const router = useRouter();
@@ -117,7 +80,7 @@ export default function OrdenesPage() {
     onClose: onEliminarClose,
   } = useDisclosure();
 
-  const [ordenAccion, setOrdenAccion] = useState<Orden | null>(null);
+  const [ordenAccion, setOrdenAccion] = useState<ordenes | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -331,12 +294,13 @@ export default function OrdenesPage() {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      orden.meseros?.nombre_completo.toLowerCase().includes(search) ||
+      orden.usuarios?.nombre_completo.toLowerCase().includes(search) ||
       orden.mesas?.numero.toString().includes(search) ||
       orden.clientes?.nombre.toLowerCase().includes(search) ||
       orden.sucursales?.nombre.toLowerCase().includes(search)
     );
   });
+
 
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleString("es-CO", {
@@ -629,7 +593,7 @@ export default function OrdenesPage() {
                         </p>
                       )}
                       <p className="text-sm text-gray-700">
-                        Mesero: {orden.mesero?.nombre_completo || "Sin asignar"}
+                        Mesero: {orden.usuarios?.nombre_completo || "Sin asignar"}
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
                         {orden._count?.orden_items ?? 0} producto
@@ -802,7 +766,7 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <p className="text-sm text-gray-700">
-                            {orden.mesero?.nombre_completo || "Sin asignar"}
+                            {orden.usuarios?.nombre_completo || "Sin asignar"}
                           </p>
                         </td>
                         <td className="py-4">

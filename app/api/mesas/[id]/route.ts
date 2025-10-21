@@ -82,7 +82,7 @@ export async function PUT(
   try {
     const { id } = params;
     const body = await request.json();
-    const { numero, capacidad, sucursalId, ubicacion, notas, disponible } =
+    const { numero, sucursalId, ubicacion, notas, disponible } =
       body;
 
     // Validar que la mesa exista
@@ -122,7 +122,6 @@ export async function PUT(
       where: { id },
       data: {
         numero: numero ? parseInt(numero, 10) : undefined,
-        capacidad: capacidad ? parseInt(capacidad, 10) : undefined,
         sucursal_id: sucursalId || undefined,
         ubicacion: ubicacion !== undefined ? ubicacion : undefined,
         notas: notas !== undefined ? notas : undefined,

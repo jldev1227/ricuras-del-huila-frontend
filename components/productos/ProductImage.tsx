@@ -27,8 +27,6 @@ export default function ProductImage({
   const [imageError, setImageError] = useState(false)
   
   const imageUrl = getProductImageUrl(imagePath)
-
-  console.log(imageUrl)
   
   // Si hay error o no hay imagen, mostrar placeholder
   if (imageError) {

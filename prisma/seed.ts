@@ -154,7 +154,6 @@ async function main() {
   for (let i = 1; i <= 10; i++) {
     mesasCentro.push({
       numero: i,
-      capacidad: i % 3 === 0 ? 6 : 4,
       disponible: true,
       sucursal_id: sucursalCentro.id,
       ubicacion: i <= 4 ? "Interior" : i <= 7 ? "Terraza" : "VIP",
@@ -168,7 +167,6 @@ async function main() {
   for (let i = 1; i <= 8; i++) {
     mesasNorte.push({
       numero: i,
-      capacidad: i % 2 === 0 ? 6 : 4,
       disponible: true,
       sucursal_id: sucursalNorte.id,
       ubicacion: i <= 3 ? "Interior" : "Terraza",
@@ -182,7 +180,6 @@ async function main() {
   for (let i = 1; i <= 6; i++) {
     mesasSur.push({
       numero: i,
-      capacidad: i % 2 === 0 ? 4 : 2,
       disponible: true,
       sucursal_id: sucursalSur.id,
       ubicacion: i <= 3 ? "Interior" : "Terraza",

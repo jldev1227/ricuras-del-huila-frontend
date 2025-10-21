@@ -44,7 +44,6 @@ model clientes {
 model mesas {
   id              String     @id @db.Uuid
   numero          Int
-  capacidad       Int        @default(4)
   disponible      Boolean    @default(true)
   sucursal_id     String     @db.Uuid
   ubicacion       String?

@@ -21,7 +21,6 @@ import { useEffect, useState } from "react";
 interface Mesa {
   id: string;
   numero: number;
-  capacidad: number;
   disponible: boolean;
   sucursal_id: string;
   ubicacion?: string | null;
@@ -34,7 +33,6 @@ interface Mesa {
 // Interface para formulario de mesa
 interface FormMesa {
   numero: number;
-  capacidad: number;
   disponible: boolean;
   ubicacion: string;
   notas: string;
@@ -70,7 +68,6 @@ const MesaIlustracion = ({
           onClick({
             id: "",
             numero,
-            capacidad: 0,
             disponible: estado,
             sucursal_id: "",
             ubicacion: null,
@@ -147,7 +144,6 @@ export default function ModalSeleccionarMesa({
   // Estados para el formulario de nueva mesa
   const [formData, setFormData] = useState<FormMesa>({
     numero: 1,
-    capacidad: 4,
     disponible: true,
     ubicacion: "",
     notas: "",
@@ -222,7 +218,6 @@ export default function ModalSeleccionarMesa({
 
     setFormData({
       numero: 1,
-      capacidad: 4,
       disponible: true,
       ubicacion: "",
       notas: "",
@@ -238,12 +233,7 @@ export default function ModalSeleccionarMesa({
       newErrors.numero = 1; // Usar number como mock de error
     }
 
-    if (!formData.capacidad || formData.capacidad <= 0) {
-      newErrors.capacidad = 1;
-    }
-
     // La sucursal_id siempre estará presente desde localStorage, no necesita validación
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -303,7 +293,6 @@ export default function ModalSeleccionarMesa({
     
     setFormData({
       numero: 1,
-      capacidad: 4,
       disponible: true,
       ubicacion: "",
       notas: "",
@@ -439,25 +428,6 @@ export default function ModalSeleccionarMesa({
                 }
                 isInvalid={!!errors.numero}
                 errorMessage={errors.numero ? "Número de mesa requerido" : ""}
-                isRequired
-              />
-
-              <Input
-                label="Capacidad"
-                type="number"
-                value={formData.capacidad.toString()}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    capacidad: parseInt(e.target.value, 10) || 0,
-                  }))
-                }
-                isInvalid={!!errors.capacidad}
-                errorMessage={
-                  errors.capacidad
-                    ? "Capacidad requerida y debe ser mayor a 0"
-                    : ""
-                }
                 isRequired
               />
             </div>

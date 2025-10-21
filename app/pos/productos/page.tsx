@@ -77,47 +77,56 @@ export default function ProductosPage() {
     onOpenDelete();
   };
 
-  // Función estable para cargar productos (sin dependencias de filtros)
-  const loadProductos = useCallback(async (searchFilters?: typeof filters) => {
-    // Usar filtros pasados como parámetro o los actuales
-    const activeFilters = searchFilters || filters;
-    
-    // Prevenir múltiples llamadas simultáneas
-    if (isLoadingRef.current) {
-      return;
-    }
+  const filtersRef = useRef(filters);
 
-    isLoadingRef.current = true;
-    setLoading(true);
-    
-    try {
-      const params = new URLSearchParams();
-      if (activeFilters.nombre) params.append("nombre", activeFilters.nombre);
-      if (activeFilters.categoriaId) params.append("categoriaId", activeFilters.categoriaId);
-      if (activeFilters.disponible) params.append("disponible", activeFilters.disponible);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
-      const response = await fetch(`/api/productos?${params}`);
-      const data = await response.json();
+  const loadProductos = useCallback(
+    async (searchFilters?: typeof filters) => {
+      // Usar filtros pasados como parámetro o los actuales
+      const activeFilters = searchFilters || filtersRef.current;
 
-      if (data.success) {
-        setProductos(data.productos);
+      // Prevenir múltiples llamadas simultáneas
+      if (isLoadingRef.current) {
+        return;
       }
-    } catch (error) {
-      console.error("Error al cargar productos:", error);
-    } finally {
-      setLoading(false);
-      isLoadingRef.current = false;
-    }
-  }, []);
+
+      isLoadingRef.current = true;
+      setLoading(true);
+
+      try {
+        const params = new URLSearchParams();
+        if (activeFilters.nombre) params.append("nombre", activeFilters.nombre);
+        if (activeFilters.categoriaId)
+          params.append("categoriaId", activeFilters.categoriaId);
+        if (activeFilters.disponible)
+          params.append("disponible", activeFilters.disponible);
+
+        const response = await fetch(`/api/productos?${params}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setProductos(data.productos);
+        }
+      } catch (error) {
+        console.error("Error al cargar productos:", error);
+      } finally {
+        setLoading(false);
+        isLoadingRef.current = false;
+      }
+    },
+    [] // ✅ Sin dependencias - la ref siempre tiene el valor actual
+  );
 
   // Función con dependencias para uso interno
   const fetchProductos = useCallback(async () => {
-    await loadProductos(filters);
-  }, [loadProductos, filters]);
+    await loadProductos(filtersRef.current);
+  }, [loadProductos]);
 
   // Función estable para los modales (sin dependencias de filtros)
   const refreshProductos = useCallback(async () => {
-    // Usar la función estable que acepta filtros como parámetro
     await loadProductos();
   }, [loadProductos]);
 
@@ -316,11 +325,10 @@ export default function ProductosPage() {
                         </span>
                       )}
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          producto.disponible
-                            ? "bg-green-500 text-white"
-                            : "bg-red-500 text-white"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${producto.disponible
+                          ? "bg-green-500 text-white"
+                          : "bg-red-500 text-white"
+                          }`}
                       >
                         {producto.disponible ? "Disponible" : "Agotado"}
                       </span>

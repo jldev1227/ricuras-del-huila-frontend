@@ -167,8 +167,9 @@ export default function OrderDashboard() {
       try {
         const resMeseros = await fetch("/api/usuarios?rol=MESERO&activo=true");
         const dataMeseros = await resMeseros.json();
+
         if (dataMeseros.success) {
-          setMeseros(dataMeseros.usuarios);
+          setMeseros(dataMeseros.data);
         }
       } catch (error) {
         console.error("Error al cargar meseros:", error);
@@ -190,7 +191,6 @@ export default function OrderDashboard() {
       if (data.success && data.orden) {
         const orden = data.orden;
 
-        console.log(orden)
         setOrdenExistente(orden);
 
         setTipoOrden(orden.tipo_orden.toLowerCase() || "llevar");
@@ -791,7 +791,7 @@ export default function OrderDashboard() {
           </div>
 
           {pasoActual === "carrito" && (
-            <div className="grid grid-cols-3 gap-1.5 lg:gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { value: "llevar", label: "Llevar" },
                 { value: "domicilio", label: "Domicilio" },

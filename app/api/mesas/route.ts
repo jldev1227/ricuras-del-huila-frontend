@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numero, capacidad, sucursal_id, ubicacion, notas, disponible } =
+    const { numero, sucursal_id, ubicacion, notas, disponible } =
       body;
 
     // Validar datos requeridos
@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
       data: {
         id: crypto.randomUUID(),
         numero: parseInt(numero, 10),
-        capacidad: parseInt(capacidad, 10) || 4,
         sucursal_id,
         ubicacion: ubicacion || null,
         notas: notas || null,

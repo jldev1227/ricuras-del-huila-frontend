@@ -72,7 +72,7 @@ interface TransformedOrder {
 }
 
 export default function ReportsPage() {
-  const [allOrders, setAllOrders] = useState<OrderData[]>([]);
+  const [allOrders, setAllOrders] = useState<TransformedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("mes-actual");
   const [startDate, setStartDate] = useState("");
@@ -94,7 +94,6 @@ export default function ReportsPage() {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        // Define a type for the transformed order with 'fecha'
         type TransformedOrder = {
           id: string;
           fecha: Date;
@@ -109,6 +108,16 @@ export default function ReportsPage() {
           descuento: number;
           itemsCount: number;
           cliente?: string;
+          metodoPago?: string;
+          items: Array<{
+            cantidad: number;
+            precioUnitario: number;
+            producto: {
+              id: string;
+              nombre: string;
+              precio: number;
+            };
+          }>;
         };
 
         let allFetchedOrders: TransformedOrder[] = [];
@@ -120,57 +129,54 @@ export default function ReportsPage() {
           const data = await response.json();
 
           if (data.success && data.ordenes.length > 0) {
-            type OrdenWithRelations = {
-              id: string;
-              creadoEn: string;
-              sucursalId: string;
-              tipoOrden: string;
-              estado: string;
-              total: number;
-              descuento?: number;
-              metodoPago?: string;
-              sucursal?: { id: string; nombre: string };
-              mesero?: { id: string; nombre_completo: string };
-              mesa?: { id: string; numero: number };
-              cliente?: { id: string; nombre: string };
-              orden_items?: Array<{
-                cantidad: number;
-                precio_unitario: number;
-                productos: {
-                  id: string;
-                  nombre: string;
-                  precio: number;
-                };
-              }>;
-              _count?: { orden_items: number };
-            };
-
             const transformedOrders: TransformedOrder[] = data.ordenes.map(
-              (orden: OrdenWithRelations) => ({
-                id: orden.id,
-                fecha: new Date(orden.creadoEn),
-                sucursal: orden.sucursal?.nombre || "Sin sucursal",
-                sucursalId: orden.sucursal?.id || orden.sucursalId,
-                mesero: orden.mesero?.nombre_completo || "Sin mesero",
-                tipoOrden: orden.tipoOrden,
-                mesa: orden.mesa ? `Mesa ${orden.mesa.numero}` : null,
-                mesaNumero: orden.mesa?.numero,
-                estado: orden.estado,
-                total: Number(orden.total),
-                descuento: Number(orden.descuento ?? 0),
-                itemsCount: orden._count?.orden_items ?? 0,
-                cliente: orden.cliente?.nombre,
-                metodoPago: orden.metodoPago || "EFECTIVO",
-                items: orden.orden_items?.map(item => ({
-                  cantidad: item.cantidad,
-                  precioUnitario: Number(item.precio_unitario),
-                  producto: {
-                    id: item.productos.id,
-                    nombre: item.productos.nombre,
-                    precio: Number(item.productos.precio),
-                  }
-                })) || [],
-              }),
+              (orden: any) => {
+                // ✅ CORREGIDO: Usar 'fecha' que viene del backend (no 'creadoEn')
+                const fechaParsed = orden.fecha
+                  ? new Date(orden.fecha)
+                  : null;
+
+                // ✅ Validar que la fecha sea válida
+                if (!fechaParsed || isNaN(fechaParsed.getTime())) {
+                  console.warn(
+                    `⚠️ Orden ${orden.id} tiene fecha inválida:`,
+                    orden.fecha
+                  );
+                }
+
+                return {
+                  id: orden.id,
+                  // ✅ CORREGIDO: Usar 'fecha' en lugar de 'creadoEn'
+                  fecha: fechaParsed || new Date(),
+                  // ✅ CORREGIDO: Usar 'sucursales' que es la relación en Prisma
+                  sucursal: orden.sucursales?.nombre || "Sin sucursal",
+                  sucursalId: orden.sucursales?.id || "unknown",
+                  // ✅ CORREGIDO: Usar 'usuarios' que es la relación en Prisma
+                  mesero: orden.usuarios?.nombre_completo || "Sin mesero",
+                  // ✅ CORREGIDO: Usar 'tipo_orden' del backend
+                  tipoOrden: orden.tipo_orden || "COMIDA",
+                  // ✅ CORREGIDO: Usar 'mesas' que es la relación en Prisma
+                  mesa: orden.mesas ? `Mesa ${orden.mesas.numero}` : null,
+                  mesaNumero: orden.mesas?.numero,
+                  estado: orden.estado,
+                  total: Number(orden.total) || 0,
+                  descuento: Number(orden.descuento ?? 0),
+                  // ✅ CORREGIDO: Usar '_count.orden_items'
+                  itemsCount: orden._count?.orden_items ?? 0,
+                  cliente: orden.clientes?.nombre,
+                  metodoPago: orden.metodo_pago || "EFECTIVO",
+                  // ✅ CORREGIDO: Usar 'orden_items' que es la relación en Prisma
+                  items: orden.orden_items?.map((item: any) => ({
+                    cantidad: item.cantidad,
+                    precioUnitario: Number(item.precio_unitario),
+                    producto: {
+                      id: item.productos?.id,
+                      nombre: item.productos?.nombre,
+                      precio: Number(item.productos?.precio),
+                    },
+                  })) || [],
+                };
+              }
             );
 
             allFetchedOrders = [...allFetchedOrders, ...transformedOrders];
@@ -185,9 +191,13 @@ export default function ReportsPage() {
           }
         }
 
+        console.log("📦 Órdenes cargadas:", allFetchedOrders.length);
+        console.log("🔍 Primera orden:", allFetchedOrders[0]);
+
         setAllOrders(allFetchedOrders);
       } catch (error) {
-        console.error("Error fetching orders:", error);
+        console.error("❌ Error fetching orders:", error);
+        setAllOrders([]);
       } finally {
         setLoading(false);
       }
@@ -205,60 +215,138 @@ export default function ReportsPage() {
   }, [allOrders]);
 
   const filteredOrders = useMemo(() => {
-    let filtered = allOrders.filter((order) => order.estado === "ENTREGADA");
+    console.log("=== INICIO FILTRADO ===");
+    console.log("Total órdenes:", allOrders.length);
+    console.log("Sucursal seleccionada:", selectedSucursal);
+    console.log("Tipo de filtro:", filterType);
 
-    if (selectedSucursal !== "todas") {
-      filtered = filtered.filter(
-        (o) => (o.sucursal ?? o.sucursalId) === selectedSucursal,
+    // 1. Validar y normalizar fechas
+    const normalizarFecha = (fecha: any): Date => {
+      if (fecha instanceof Date) return fecha;
+      if (typeof fecha === "string") return new Date(fecha);
+      console.warn("Fecha inválida:", fecha);
+      return new Date(0);
+    };
+
+    // 2. Comparar solo la fecha sin hora
+    const mismaFecha = (fecha1: Date, fecha2: Date): boolean => {
+      return (
+        fecha1.getFullYear() === fecha2.getFullYear() &&
+        fecha1.getMonth() === fecha2.getMonth() &&
+        fecha1.getDate() === fecha2.getDate()
       );
+    };
+
+    // 3. Filtrar por estado ENTREGADA
+    let filtered = allOrders.filter((order) => order.estado === "ENTREGADA");
+    console.log("Después de filtrar por estado:", filtered.length);
+
+    // 4. Filtrar por sucursal
+    if (selectedSucursal && selectedSucursal !== "todas") {
+      filtered = filtered.filter((o) => {
+        const sucursalOrder = o.sucursal ?? o.sucursalId;
+        const match = sucursalOrder === selectedSucursal;
+        return match;
+      });
+      console.log(`Después de filtrar por sucursal "${selectedSucursal}":`, filtered.length);
     }
 
     const now = new Date();
+    console.log("Fecha actual:", now.toISOString());
 
     switch (filterType) {
-      case "dia-especifico":
-        if (specificDate) {
-          const targetDate = new Date(specificDate);
-          filtered = filtered.filter(
-            (o) => o.fecha.toDateString() === targetDate.toDateString(),
-          );
+      case "dia-especifico": {
+        if (!specificDate) {
+          console.warn("Filtro 'dia-especifico' seleccionado pero no hay specificDate");
+          break;
         }
-        break;
+        console.log("specificDate recibido:", specificDate);
 
-      case "rango-fechas":
-        if (startDate && endDate) {
-          const start = new Date(startDate);
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          filtered = filtered.filter((o) => o.fecha >= start && o.fecha <= end);
-        }
-        break;
+        const targetDate = new Date(specificDate);
+        console.log("targetDate normalizada:", targetDate.toISOString());
 
-      case "semana-especifica": {
-        const weekNum = parseInt(selectedWeek, 10);
-        const monthForWeek = now.getMonth();
-        const yearForWeek = parseInt(selectedYear, 10);
         filtered = filtered.filter((o) => {
-          if (
-            o.fecha.getMonth() !== monthForWeek ||
-            o.fecha.getFullYear() !== yearForWeek
-          )
-            return false;
-          const dayOfMonth = o.fecha.getDate();
-          const weekStart = (weekNum - 1) * 7 + 1;
-          const weekEnd = weekNum * 7;
-          return dayOfMonth >= weekStart && dayOfMonth <= weekEnd;
+          const orderDate = normalizarFecha(o.fecha);
+          const match = mismaFecha(orderDate, targetDate);
+          return match;
         });
+        console.log("Después de filtro día específico:", filtered.length);
         break;
       }
 
-      case "mes-actual":
-        filtered = filtered.filter(
-          (o) =>
-            o.fecha.getMonth() === now.getMonth() &&
-            o.fecha.getFullYear() === now.getFullYear(),
-        );
+      case "rango-fechas": {
+        if (!startDate || !endDate) {
+          console.warn("Filtro 'rango-fechas' pero faltan startDate o endDate", {
+            startDate,
+            endDate,
+          });
+          break;
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        console.log("Rango de fechas:", {
+          inicio: start.toISOString(),
+          fin: end.toISOString(),
+        });
+
+        filtered = filtered.filter((o) => {
+          const orderDate = normalizarFecha(o.fecha);
+          const match = orderDate >= start && orderDate <= end;
+          return match;
+        });
+        console.log("Después de filtro rango de fechas:", filtered.length);
         break;
+      }
+
+      case "semana-especifica": {
+        if (!selectedWeek || !selectedYear) {
+          console.warn("Filtro 'semana-especifica' pero faltan selectedWeek o selectedYear");
+          break;
+        }
+
+        const weekNum = parseInt(selectedWeek, 10);
+        const yearForWeek = parseInt(selectedYear, 10);
+        const monthForWeek = now.getMonth();
+
+        console.log("Filtrando por semana:", { weekNum, yearForWeek, monthForWeek });
+
+        filtered = filtered.filter((o) => {
+          const orderDate = normalizarFecha(o.fecha);
+
+          if (
+            orderDate.getMonth() !== monthForWeek ||
+            orderDate.getFullYear() !== yearForWeek
+          ) {
+            return false;
+          }
+
+          const dayOfMonth = orderDate.getDate();
+          const weekStart = (weekNum - 1) * 7 + 1;
+          const weekEnd = weekNum * 7;
+
+          const match = dayOfMonth >= weekStart && dayOfMonth <= weekEnd;
+          return match;
+        });
+        console.log("Después de filtro semana específica:", filtered.length);
+        break;
+      }
+
+      case "mes-actual": {
+        console.log("Filtrando mes actual");
+
+        filtered = filtered.filter((o) => {
+          const orderDate = normalizarFecha(o.fecha);
+          const match =
+            orderDate.getMonth() === now.getMonth() &&
+            orderDate.getFullYear() === now.getFullYear();
+          return match;
+        });
+        console.log("Después de filtro mes actual:", filtered.length);
+        break;
+      }
 
       case "hace-un-mes": {
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -271,31 +359,69 @@ export default function ReportsPage() {
           59,
           999,
         );
-        filtered = filtered.filter(
-          (o) => o.fecha >= lastMonth && o.fecha <= lastMonthEnd,
-        );
+
+        console.log("Filtrando hace un mes:", {
+          inicio: lastMonth.toISOString(),
+          fin: lastMonthEnd.toISOString(),
+        });
+
+        filtered = filtered.filter((o) => {
+          const orderDate = normalizarFecha(o.fecha);
+          const match = orderDate >= lastMonth && orderDate <= lastMonthEnd;
+          return match;
+        });
+        console.log("Después de filtro hace un mes:", filtered.length);
         break;
       }
 
-      case "mes-especifico":
-        if (selectedMonth) {
-          const [year, month] = selectedMonth.split("-");
-          filtered = filtered.filter(
-            (o) =>
-              o.fecha.getMonth() === parseInt(month, 10) - 1 &&
-              o.fecha.getFullYear() === parseInt(year, 10),
-          );
+      case "mes-especifico": {
+        if (!selectedMonth) {
+          console.warn("Filtro 'mes-especifico' pero no hay selectedMonth");
+          break;
         }
-        break;
 
-      case "año-especifico":
-        if (selectedYear) {
-          filtered = filtered.filter(
-            (o) => o.fecha.getFullYear() === parseInt(selectedYear, 10),
-          );
-        }
+        const [year, month] = selectedMonth.split("-");
+        console.log("Filtrando mes específico:", { year, month });
+
+        const yearNum = parseInt(year, 10);
+        const monthNum = parseInt(month, 10) - 1;
+
+        filtered = filtered.filter((o) => {
+          const orderDate = normalizarFecha(o.fecha);
+          const match =
+            orderDate.getMonth() === monthNum &&
+            orderDate.getFullYear() === yearNum;
+          return match;
+        });
+        console.log("Después de filtro mes específico:", filtered.length);
         break;
+      }
+
+      case "año-especifico": {
+        if (!selectedYear) {
+          console.warn("Filtro 'año-especifico' pero no hay selectedYear");
+          break;
+        }
+
+        const yearNum = parseInt(selectedYear, 10);
+        console.log("Filtrando año específico:", yearNum);
+
+        filtered = filtered.filter((o) => {
+          const orderDate = normalizarFecha(o.fecha);
+          const match = orderDate.getFullYear() === yearNum;
+          return match;
+        });
+        console.log("Después de filtro año específico:", filtered.length);
+        break;
+      }
+
+      default:
+        console.warn("Tipo de filtro no reconocido:", filterType);
     }
+
+    console.log("=== RESULTADO FINAL ===");
+    console.log("Órdenes filtradas:", filtered.length);
+    console.log("Primeras 3 órdenes:", filtered.slice(0, 3));
 
     return filtered;
   }, [
@@ -316,6 +442,8 @@ export default function ReportsPage() {
       (sum, o) => sum + o.descuento,
       0,
     );
+    console.log(filteredOrders, 'filteredOrders');
+
     const totalCostos = totalVentas * 0.4;
     const gananciaBruta = totalVentas - totalCostos;
     const promedioTicket =
@@ -338,7 +466,7 @@ export default function ReportsPage() {
     const grouped: { [key: string]: DiaVentas } = {};
     filteredOrders.forEach((order) => {
       // Use 'fecha' if present, otherwise fallback to 'creadoEn'
-      const orderDate = (order as OrderData).fecha ?? (order as OrderData).creadoEn;
+      const orderDate = (order as TransformedOrder).fecha ?? (order as TransformedOrder).fecha;
       const dateObj =
         typeof orderDate === "string" ? new Date(orderDate) : orderDate;
       const dateKey = dateObj.toISOString().split("T")[0];
@@ -347,7 +475,7 @@ export default function ReportsPage() {
       }
       grouped[dateKey].ventas +=
         typeof order.total === "object" && "toNumber" in order.total
-          ? order.total.toNumber()
+          ? order.total
           : Number(order.total);
       grouped[dateKey].ordenes += 1;
     });
@@ -380,7 +508,7 @@ export default function ReportsPage() {
       }
       grouped[order.tipoOrden].ventas +=
         typeof order.total === "object" && "toNumber" in order.total
-          ? order.total.toNumber()
+          ? order.total
           : Number(order.total);
       grouped[order.tipoOrden].ordenes += 1;
     });
@@ -418,17 +546,17 @@ export default function ReportsPage() {
       grouped[metodo].ventas += Number(order.total);
       grouped[metodo].ordenes += 1;
     });
-    
+
     const totalVentas = Object.values(grouped).reduce(
       (sum, item) => sum + item.ventas,
       0,
     );
-    
+
     Object.values(grouped).forEach((item) => {
       item.porcentaje =
         totalVentas > 0 ? ((item.ventas / totalVentas) * 100).toFixed(1) : 0;
     });
-    
+
     return Object.values(grouped).sort((a, b) => b.ordenes - a.ordenes);
   }, [filteredOrders]);
 
@@ -584,7 +712,7 @@ export default function ReportsPage() {
         order.items.forEach((item) => {
           const productoId = item.producto.id;
           const ventasItem = item.cantidad * item.precioUnitario;
-          
+
           if (!productosAgrupados[productoId]) {
             productosAgrupados[productoId] = {
               nombre: item.producto.nombre,
@@ -592,7 +720,7 @@ export default function ReportsPage() {
               cantidad: 0,
             };
           }
-          
+
           productosAgrupados[productoId].ventas += ventasItem;
           productosAgrupados[productoId].cantidad += item.cantidad;
         });
@@ -663,9 +791,9 @@ export default function ReportsPage() {
         cambio:
           ordenesAnterior > 0 && ventasAnterior > 0
             ? ((ventasActual / ordenesActual -
-                ventasAnterior / ordenesAnterior) /
-                (ventasAnterior / ordenesAnterior)) *
-              100
+              ventasAnterior / ordenesAnterior) /
+              (ventasAnterior / ordenesAnterior)) *
+            100
             : 0,
       },
     };
@@ -1158,11 +1286,10 @@ export default function ReportsPage() {
                 {formatCurrency(metricsComparativas.ventas.actual)}
               </p>
               <div
-                className={`flex items-center justify-center gap-1 text-sm ${
-                  metricsComparativas.ventas.cambio >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
+                className={`flex items-center justify-center gap-1 text-sm ${metricsComparativas.ventas.cambio >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+                  }`}
               >
                 <TrendingUp
                   size={14}
@@ -1183,11 +1310,10 @@ export default function ReportsPage() {
                 {metricsComparativas.ordenes.actual}
               </p>
               <div
-                className={`flex items-center justify-center gap-1 text-sm ${
-                  metricsComparativas.ordenes.cambio >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
+                className={`flex items-center justify-center gap-1 text-sm ${metricsComparativas.ordenes.cambio >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+                  }`}
               >
                 <TrendingUp
                   size={14}
@@ -1208,11 +1334,10 @@ export default function ReportsPage() {
                 {formatCurrency(metricsComparativas.ticketPromedio.actual)}
               </p>
               <div
-                className={`flex items-center justify-center gap-1 text-sm ${
-                  metricsComparativas.ticketPromedio.cambio >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
+                className={`flex items-center justify-center gap-1 text-sm ${metricsComparativas.ticketPromedio.cambio >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+                  }`}
               >
                 <TrendingUp
                   size={14}
@@ -1249,7 +1374,7 @@ export default function ReportsPage() {
                       {comparacionFechas.periodo1.ventas > 0 ? (
                         <>
                           {comparacionFechas.periodo2.ventas >
-                          comparacionFechas.periodo1.ventas
+                            comparacionFechas.periodo1.ventas
                             ? "+"
                             : ""}
                           {(
@@ -1273,7 +1398,7 @@ export default function ReportsPage() {
                       {comparacionFechas.periodo1.ordenes > 0 ? (
                         <>
                           {comparacionFechas.periodo2.ordenes >
-                          comparacionFechas.periodo1.ordenes
+                            comparacionFechas.periodo1.ordenes
                             ? "+"
                             : ""}
                           {(
@@ -1427,7 +1552,7 @@ export default function ReportsPage() {
                       key={entry.tipo}
                       fill={
                         CHART_COLORS[
-                          ventasPorTipo.indexOf(entry) % CHART_COLORS.length
+                        ventasPorTipo.indexOf(entry) % CHART_COLORS.length
                         ]
                       }
                     />
@@ -1482,7 +1607,7 @@ export default function ReportsPage() {
                       key={entry.metodo}
                       fill={
                         CHART_COLORS[
-                          ventasPorMetodoPago.indexOf(entry) % CHART_COLORS.length
+                        ventasPorMetodoPago.indexOf(entry) % CHART_COLORS.length
                         ]
                       }
                     />
@@ -1503,9 +1628,9 @@ export default function ReportsPage() {
                       style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
                     ></div>
                     <p className="text-xs text-gray-600">
-                      {metodo.metodo === 'EFECTIVO' ? 'Efectivo' : 
-                       metodo.metodo === 'TARJETA' ? 'Tarjeta' : 
-                       metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
+                      {metodo.metodo === 'EFECTIVO' ? 'Efectivo' :
+                        metodo.metodo === 'TARJETA' ? 'Tarjeta' :
+                          metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
                     </p>
                   </div>
                   <p className="text-base lg:text-lg font-bold text-gray-900">
@@ -1877,9 +2002,9 @@ export default function ReportsPage() {
                             style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                           ></div>
                           <span className="text-sm font-medium text-gray-900">
-                            {metodo.metodo === 'EFECTIVO' ? 'Efectivo' : 
-                             metodo.metodo === 'TARJETA' ? 'Tarjeta' : 
-                             metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
+                            {metodo.metodo === 'EFECTIVO' ? 'Efectivo' :
+                              metodo.metodo === 'TARJETA' ? 'Tarjeta' :
+                                metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
                           </span>
                         </div>
                       </td>
@@ -1900,7 +2025,7 @@ export default function ReportsPage() {
                 </tbody>
               </table>
             </div>
-            
+
             {/* Insights de Métodos de Pago */}
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-primary/5 rounded-lg p-4">
@@ -1908,22 +2033,22 @@ export default function ReportsPage() {
                   Método Más Popular
                 </h3>
                 <p className="text-2xl font-bold text-primary mb-1">
-                  {ventasPorMetodoPago[0]?.metodo === 'EFECTIVO' ? 'Efectivo' : 
-                   ventasPorMetodoPago[0]?.metodo === 'TARJETA' ? 'Tarjeta' : 
-                   ventasPorMetodoPago[0]?.metodo === 'TRANSFERENCIA' ? 'Transferencia' : 
-                   ventasPorMetodoPago[0]?.metodo || 'N/A'}
+                  {ventasPorMetodoPago[0]?.metodo === 'EFECTIVO' ? 'Efectivo' :
+                    ventasPorMetodoPago[0]?.metodo === 'TARJETA' ? 'Tarjeta' :
+                      ventasPorMetodoPago[0]?.metodo === 'TRANSFERENCIA' ? 'Transferencia' :
+                        ventasPorMetodoPago[0]?.metodo || 'N/A'}
                 </p>
                 <p className="text-xs text-gray-600">
                   {ventasPorMetodoPago[0]?.ordenes || 0} órdenes ({ventasPorMetodoPago[0]?.porcentaje || 0}%)
                 </p>
               </div>
-              
+
               <div className="bg-wine/5 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">
                   Mayor Ticket Promedio
                 </h3>
                 <p className="text-2xl font-bold text-wine mb-1">
-                  {ventasPorMetodoPago.length > 0 
+                  {ventasPorMetodoPago.length > 0
                     ? formatCurrency(Math.max(...ventasPorMetodoPago.map(m => m.ventas / m.ordenes)))
                     : formatCurrency(0)
                   }
@@ -1931,13 +2056,13 @@ export default function ReportsPage() {
                 <p className="text-xs text-gray-600">
                   {ventasPorMetodoPago.length > 0
                     ? (() => {
-                        const maxTicket = ventasPorMetodoPago.reduce((max, metodo) => 
-                          (metodo.ventas / metodo.ordenes) > (max.ventas / max.ordenes) ? metodo : max
-                        );
-                        return `${maxTicket.metodo === 'EFECTIVO' ? 'Efectivo' : 
-                               maxTicket.metodo === 'TARJETA' ? 'Tarjeta' : 
-                               maxTicket.metodo === 'TRANSFERENCIA' ? 'Transferencia' : maxTicket.metodo}`;
-                      })()
+                      const maxTicket = ventasPorMetodoPago.reduce((max, metodo) =>
+                        (metodo.ventas / metodo.ordenes) > (max.ventas / max.ordenes) ? metodo : max
+                      );
+                      return `${maxTicket.metodo === 'EFECTIVO' ? 'Efectivo' :
+                        maxTicket.metodo === 'TARJETA' ? 'Tarjeta' :
+                          maxTicket.metodo === 'TRANSFERENCIA' ? 'Transferencia' : maxTicket.metodo}`;
+                    })()
                     : 'N/A'
                   }
                 </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import ModalConfirmarEliminarSucursal from "@/components/productos/ModalConfirmarEliminarSucursal";
 import {
   addToast,
   Button,
@@ -56,6 +57,7 @@ interface Sucursal {
 }
 
 interface ConfiguracionEmpresa {
+  id: string;
   nit: string;
   razon_social: string;
   telefono: string;
@@ -102,6 +104,7 @@ const ConfiguracionPage = () => {
   // Estados para empresa
   const [configuracionEmpresa, setConfiguracionEmpresa] =
     useState<ConfiguracionEmpresa>({
+      id: "",
       nit: "",
       razon_social: "Ricuras Del Huila",
       telefono: "",
@@ -120,6 +123,15 @@ const ConfiguracionPage = () => {
     onOpen: abrirModalSucursal,
     onClose: cerrarModalSucursal,
   } = useDisclosure();
+
+  const [modalEliminarOpen, setModalEliminarOpen] = useState(false);
+  const [sucursalAEliminar, setSucursalAEliminar] = useState<Sucursal | null>(null);
+
+  // Función para abrir el modal
+  const abrirModalEliminar = (sucursal: Sucursal) => {
+    setSucursalAEliminar(sucursal);
+    setModalEliminarOpen(true);
+  };
 
   // Funciones de validación
   const validarPerfil = useCallback(() => {
@@ -434,6 +446,7 @@ const ConfiguracionPage = () => {
 
       const data = await response.json();
       setConfiguracionEmpresa({
+        id: data.id,
         nit: data.nit || "",
         razon_social: data.razon_social || "Ricuras Del Huila",
         telefono: data.telefono || "",
@@ -709,8 +722,8 @@ const ConfiguracionPage = () => {
         return;
       }
 
-      const response = await fetch("/api/configuracion/empresa", {
-        method: "POST",
+      const response = await fetch(`/api/configuracion/empresa`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...configuracionEmpresa,
@@ -1123,7 +1136,7 @@ const ConfiguracionPage = () => {
                                 color="danger"
                                 variant="flat"
                                 startContent={<Trash2 className="w-3 h-3" />}
-                                onPress={() => eliminarSucursal(sucursal.id)}
+                                onPress={() => abrirModalEliminar(sucursal)}
                               >
                                 Eliminar
                               </Button>
@@ -1432,6 +1445,20 @@ const ConfiguracionPage = () => {
           )}
         </ModalContent>
       </Modal>
+
+      <ModalConfirmarEliminarSucursal
+        isOpen={modalEliminarOpen}
+        onOpenChange={setModalEliminarOpen}
+        sucursal={sucursalAEliminar}
+        onSuccess={() => {
+          cargarSucursales();
+          addToast({
+            title: "Éxito",
+            description: "Sucursal eliminada correctamente",
+            color: "success",
+          });
+        }}
+      />
     </div>
   );
 };

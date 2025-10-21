@@ -26,7 +26,6 @@ interface Sucursal {
 interface MesaConRelaciones {
   id: string;
   numero: number;
-  capacidad: number;
   disponible: boolean;
   ubicacion: string | null;
   notas: string | null;
@@ -43,7 +42,6 @@ interface MesaConRelaciones {
 // Interfaces para formularios
 interface FormMesa {
   numero: number;
-  capacidad: number;
   disponible: boolean;
   ubicacion: string;
   notas: string;
@@ -76,7 +74,6 @@ export default function MesasPage() {
   // Estados para formularios
   const [formData, setFormData] = useState<FormMesa>({
     numero: 0,
-    capacidad: 4,
     disponible: true,
     ubicacion: "",
     notas: "",
@@ -133,7 +130,6 @@ export default function MesasPage() {
   const resetForm = useCallback(() => {
     setFormData({
       numero: 0,
-      capacidad: 4,
       disponible: true,
       ubicacion: "",
       notas: "",
@@ -148,10 +144,6 @@ export default function MesasPage() {
 
     if (!formData.numero || formData.numero <= 0) {
       newErrors.numero = 1; // Usar number como mock de error
-    }
-
-    if (!formData.capacidad || formData.capacidad <= 0) {
-      newErrors.capacidad = 1;
     }
 
     if (!formData.sucursal_id) {
@@ -215,7 +207,6 @@ export default function MesasPage() {
       setEditingMesa(mesa);
       setFormData({
         numero: mesa.numero,
-        capacidad: mesa.capacidad,
         disponible: mesa.disponible,
         ubicacion: mesa.ubicacion || "",
         notas: mesa.notas || "",
@@ -494,8 +485,6 @@ export default function MesasPage() {
                   <div className="space-y-2.5 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-700">
                       <Users className="text-gray-400" size={16} />
-                      <span className="font-medium">{mesa.capacidad}</span>
-                      <span className="text-gray-500">personas</span>
                     </div>
 
                     {mesa.ubicacion && (
@@ -571,25 +560,6 @@ export default function MesasPage() {
                 }
                 isInvalid={!!errors.numero}
                 errorMessage={errors.numero ? "Número de mesa requerido" : ""}
-                isRequired
-              />
-
-              <Input
-                label="Capacidad"
-                type="number"
-                value={formData.capacidad.toString()}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    capacidad: parseInt(e.target.value, 10) || 0,
-                  }))
-                }
-                isInvalid={!!errors.capacidad}
-                errorMessage={
-                  errors.capacidad
-                    ? "Capacidad requerida y debe ser mayor a 0"
-                    : ""
-                }
                 isRequired
               />
             </div>
@@ -689,25 +659,6 @@ export default function MesasPage() {
                 }
                 isInvalid={!!errors.numero}
                 errorMessage={errors.numero ? "Número de mesa requerido" : ""}
-                isRequired
-              />
-
-              <Input
-                label="Capacidad"
-                type="number"
-                value={formData.capacidad.toString()}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    capacidad: parseInt(e.target.value, 10) || 0,
-                  }))
-                }
-                isInvalid={!!errors.capacidad}
-                errorMessage={
-                  errors.capacidad
-                    ? "Capacidad requerida y debe ser mayor a 0"
-                    : ""
-                }
                 isRequired
               />
             </div>

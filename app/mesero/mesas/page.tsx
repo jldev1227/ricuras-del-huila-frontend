@@ -31,7 +31,6 @@ import { formatCOP } from "@/utils/formatCOP";
 interface Mesa {
   id: string;
   numero: number;
-  capacidad: number;
   disponible: boolean;
   activa: boolean;
   ordenActual?: {
@@ -291,8 +290,6 @@ export default function MeseroMesasPage() {
                 <div className="space-y-2.5 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <Users className="text-gray-400" size={16} />
-                    <span className="font-medium">{mesa.capacidad}</span>
-                    <span className="text-gray-500">personas</span>
                   </div>
 
                   {mesa.ordenActual && (
@@ -375,8 +372,6 @@ export default function MeseroMesasPage() {
                 <div className="space-y-2.5 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <Users className="text-gray-400" size={16} />
-                    <span className="font-medium">{mesa.capacidad}</span>
-                    <span className="text-gray-500">personas</span>
                   </div>
                 </div>
 
@@ -430,8 +425,6 @@ export default function MeseroMesasPage() {
                 <div className="space-y-2.5 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <Users className="text-gray-400" size={16} />
-                    <span className="font-medium">{mesa.capacidad}</span>
-                    <span className="text-gray-500">personas</span>
                   </div>
 
                   {mesa.ordenActual && (
@@ -496,9 +489,6 @@ export default function MeseroMesasPage() {
                       Mesa {mesaSeleccionada?.numero}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-500">
-                        Capacidad: {mesaSeleccionada?.capacidad} personas
-                      </span>
                       {mesaSeleccionada?.ordenActual && (
                         <Chip
                           size="sm"

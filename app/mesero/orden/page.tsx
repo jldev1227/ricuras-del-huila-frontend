@@ -1,5 +1,6 @@
 "use client";
 
+import type { categorias, mesas, productos } from "@prisma/client";
 import {
   addToast,
   Button,
@@ -27,33 +28,9 @@ import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
 import { formatCOP } from "@/utils/formatCOP";
+import ProductImage from "@/components/productos/ProductImage";
 
-interface Producto {
-  id: string;
-  nombre: string;
-  precio: number;
-  imagen?: string;
-  disponible: boolean;
-  categoriaId: string;
-  categoria?: {
-    id: string;
-    nombre: string;
-  };
-}
-
-interface Categoria {
-  id: string;
-  nombre: string;
-}
-
-interface Mesa {
-  id: string;
-  numero: number;
-  capacidad: number;
-  disponible: boolean;
-}
-
-interface Carrito extends Producto {
+interface Carrito extends productos {
   cantidad: number;
 }
 
@@ -63,13 +40,13 @@ export default function MeseroNuevaOrden() {
   const { user } = useAuth();
   const { sucursal } = useSucursal();
 
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [productos, setProductos] = useState<productos[]>([]);
+  const [categorias, setCategorias] = useState<categorias[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
   const [carrito, setCarrito] = useState<Carrito[]>([]);
   const [tipoOrden, setTipoOrden] = useState("local");
-  const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState<mesas | null>(null);
   const [nombreCliente, setNombreCliente] = useState("");
   const [loading, setLoading] = useState(true);
   const [mostrarAside, setMostrarAside] = useState(false);
@@ -98,12 +75,7 @@ export default function MeseroNuevaOrden() {
             }
 
             // Si la mesa está disponible, seleccionarla
-            setMesaSeleccionada({
-              id: data.mesa.id,
-              numero: data.mesa.numero,
-              capacidad: data.mesa.capacidad,
-              disponible: data.mesa.disponible,
-            });
+            setMesaSeleccionada(data.mesa);
           } else {
             // Mesa no encontrada
             addToast({
@@ -144,7 +116,7 @@ export default function MeseroNuevaOrden() {
         const params = new URLSearchParams();
         if (searchTerm) params.append("nombre", searchTerm);
         if (categoriaSeleccionada)
-          params.append("categoriaId", categoriaSeleccionada);
+          params.append("categoria_id", categoriaSeleccionada);
 
         const resProductos = await fetch(`/api/productos?${params}`);
         const dataProductos = await resProductos.json();
@@ -166,13 +138,13 @@ export default function MeseroNuevaOrden() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchCategoria = categoriaSeleccionada
-      ? producto.categoriaId === categoriaSeleccionada
+      ? producto.categoria_id === categoriaSeleccionada
       : true;
     return matchSearch && matchCategoria && producto.disponible;
   });
 
   // Funciones del carrito
-  const agregarAlCarrito = (producto: Producto) => {
+  const agregarAlCarrito = (producto: productos) => {
     const existente = carrito.find((item) => item.id === producto.id);
     if (existente) {
       setCarrito(
@@ -264,6 +236,8 @@ export default function MeseroNuevaOrden() {
         especificaciones,
       };
 
+      console.log(orden)
+
       const response = await fetch("/api/ordenes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -296,7 +270,7 @@ export default function MeseroNuevaOrden() {
     }
   };
 
-  const onSelectMesa = async (mesa: Mesa | null) => {
+  const onSelectMesa = async (mesa: mesas) => {
     if (mesa) {
       // Verificar en tiempo real si la mesa sigue disponible
       try {
@@ -345,7 +319,7 @@ export default function MeseroNuevaOrden() {
       )}
 
       {/* Panel Principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="bg-white border-b shadow-sm flex-shrink-0">
           <div className="px-4 lg:px-6 py-3 lg:py-4">
@@ -394,11 +368,10 @@ export default function MeseroNuevaOrden() {
               <button
                 type="button"
                 onClick={() => setCategoriaSeleccionada("")}
-                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
-                  !categoriaSeleccionada
-                    ? "bg-wine text-white shadow-md"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${!categoriaSeleccionada
+                  ? "bg-wine text-white shadow-md"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
               >
                 Todos
               </button>
@@ -413,11 +386,10 @@ export default function MeseroNuevaOrden() {
                         : categoria.id,
                     )
                   }
-                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${
-                    categoriaSeleccionada === categoria.id
-                      ? "bg-wine text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg font-medium whitespace-nowrap transition-all text-sm lg:text-base ${categoriaSeleccionada === categoria.id
+                    ? "bg-wine text-white shadow-md"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   {categoria.nombre}
                 </button>
@@ -427,7 +399,7 @@ export default function MeseroNuevaOrden() {
         </div>
 
         {/* Sección de productos */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1">
           <div className="p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4 lg:mb-6">
               <div>
@@ -469,29 +441,22 @@ export default function MeseroNuevaOrden() {
                   >
                     <div className="relative bg-gray-100 aspect-square overflow-hidden">
                       <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-                        <Image
+                        <ProductImage
+                          imagePath={producto.imagen}
+                          productName={producto.nombre}
+                          className="rounded-lg"
                           fill
-                          src={producto.imagen || "/placeholder-product.png"}
-                          alt={producto.nombre}
-                          className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${
-                            producto.imagen ? "" : "opacity-60"
-                          }`}
-                          loading="lazy"
-                          draggable={false}
                         />
-                        {!producto.imagen && (
-                          <Package className="w-8 h-8 text-gray-400 absolute" />
-                        )}
                       </div>
-                      {producto.categoria && (
+                      {producto.categoria_id && (
                         <div className="absolute top-2 left-2">
-                          <Chip
-                            size="sm"
-                            variant="flat"
-                            className="text-xs text-wine"
-                          >
-                            {producto.categoria.nombre}
-                          </Chip>
+                          <span className="bg-white/95 backdrop-blur-sm px-2 py-0.5 lg:px-3 lg:py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+                            {
+                              categorias.find(
+                                (c) => c.id === producto.categoria_id,
+                              )?.nombre
+                            }
+                          </span>
                         </div>
                       )}
                     </div>
@@ -520,12 +485,11 @@ export default function MeseroNuevaOrden() {
 
       {/* Aside - Panel de Orden */}
       <div
-        className={`fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[30rem] bg-white border-l shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
-          mostrarAside ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed inset-y-0 right-0 w-full sm:w-96 lg:w-[30rem] bg-white border-l shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${mostrarAside ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         {/* Header */}
-        <div className="p-4 lg:p-6 border-b bg-gradient-to-r from-wine to-wine-700 flex-shrink-0">
+        <div className="p-4 lg:p-6 border-b bg-gradient-to-r from-wine to-wine/90 flex-shrink-0">
           <div className="flex items-center justify-between mb-3 lg:mb-4">
             <div className="flex items-center gap-2 lg:gap-3">
               <div className="flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -550,21 +514,19 @@ export default function MeseroNuevaOrden() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 lg:gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {[
-              { value: "local", label: "Local", icon: UtensilsCrossed },
-              { value: "llevar", label: "Llevar", icon: Package },
+              { value: "local", label: "Local" },
+              { value: "llevar", label: "Llevar" },
             ].map((tipo) => (
               <Button
                 key={tipo.value}
                 onPress={() => setTipoOrden(tipo.value)}
-                className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all flex items-center gap-2 ${
-                  tipoOrden === tipo.value
-                    ? "bg-white text-wine shadow-lg scale-105"
-                    : "bg-white/20 text-white hover:bg-white/30"
-                }`}
+                className={`py-2 lg:py-2.5 px-2 lg:px-3 rounded-lg font-medium text-xs lg:text-sm transition-all flex items-center gap-2 ${tipoOrden === tipo.value
+                  ? "bg-white text-wine shadow-lg scale-105"
+                  : "bg-white/20 text-white hover:bg-white/30"
+                  }`}
               >
-                <tipo.icon size={16} />
                 {tipo.label}
               </Button>
             ))}
@@ -572,7 +534,7 @@ export default function MeseroNuevaOrden() {
         </div>
 
         {/* Lista de productos */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50">
+        <div className="flex-1 p-4 lg:p-6 bg-gray-50">
           {carrito.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <ShoppingBag size={48} className="mb-4 opacity-30" />
@@ -590,13 +552,11 @@ export default function MeseroNuevaOrden() {
                 >
                   <div className="flex gap-3">
                     <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-lg flex-shrink-0 overflow-hidden bg-gray-100">
-                      <Image
+                      <ProductImage
+                        imagePath={item.imagen}
+                        productName={item.nombre}
+                        className="rounded-lg"
                         fill
-                        src={item.imagen || "/placeholder-product.png"}
-                        alt={item.nombre}
-                        className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${
-                          item.imagen ? "" : "opacity-60"
-                        }`}
                       />
                       {!item.imagen && (
                         <Package className="w-6 h-6 text-gray-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
@@ -708,9 +668,6 @@ export default function MeseroNuevaOrden() {
                         <div>
                           <p className="font-medium text-green-900">
                             Mesa {mesaSeleccionada.numero}
-                          </p>
-                          <p className="text-xs text-green-700">
-                            Capacidad: {mesaSeleccionada.capacidad} personas
                           </p>
                         </div>
                       </div>
