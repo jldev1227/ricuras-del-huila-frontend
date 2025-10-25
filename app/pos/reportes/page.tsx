@@ -96,7 +96,8 @@ export default function ReportsPage() {
       try {
         type TransformedOrder = {
           id: string;
-          fecha: Date;
+          fecha: Date; // ✅ Mantener como Date
+          fechaFormateada: string; // ✅ Agregar campo para string formateado
           sucursal: string;
           sucursalId: string;
           mesero: string;
@@ -131,41 +132,46 @@ export default function ReportsPage() {
           if (data.success && data.ordenes.length > 0) {
             const transformedOrders: TransformedOrder[] = data.ordenes.map(
               (orden: any) => {
-                // ✅ CORREGIDO: Usar 'fecha' que viene del backend (no 'creadoEn')
-                const fechaParsed = orden.fecha
-                  ? new Date(orden.fecha)
-                  : null;
+                // ✅ Parsear la fecha desde creado_en_utc (viene como ISO string)
+                const fechaDate = orden.creado_en_utc
+                  ? new Date(orden.creado_en_utc)
+                  : new Date();
 
                 // ✅ Validar que la fecha sea válida
-                if (!fechaParsed || isNaN(fechaParsed.getTime())) {
+                if (isNaN(fechaDate.getTime())) {
                   console.warn(
                     `⚠️ Orden ${orden.id} tiene fecha inválida:`,
-                    orden.fecha
+                    orden.creado_en_utc
                   );
                 }
 
+                // ✅ Formatear para mostrar al usuario
+                const fechaFormateada = fechaDate.toLocaleString("es-CO", {
+                  timeZone: "America/Bogota",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                });
+
                 return {
                   id: orden.id,
-                  // ✅ CORREGIDO: Usar 'fecha' en lugar de 'creadoEn'
-                  fecha: fechaParsed || new Date(),
-                  // ✅ CORREGIDO: Usar 'sucursales' que es la relación en Prisma
+                  fecha: fechaDate, // ✅ Guardar como Date para filtros
+                  fechaFormateada, // ✅ Guardar string formateado para mostrar
                   sucursal: orden.sucursales?.nombre || "Sin sucursal",
                   sucursalId: orden.sucursales?.id || "unknown",
-                  // ✅ CORREGIDO: Usar 'usuarios' que es la relación en Prisma
                   mesero: orden.usuarios?.nombre_completo || "Sin mesero",
-                  // ✅ CORREGIDO: Usar 'tipo_orden' del backend
                   tipoOrden: orden.tipo_orden || "COMIDA",
-                  // ✅ CORREGIDO: Usar 'mesas' que es la relación en Prisma
                   mesa: orden.mesas ? `Mesa ${orden.mesas.numero}` : null,
                   mesaNumero: orden.mesas?.numero,
                   estado: orden.estado,
                   total: Number(orden.total) || 0,
                   descuento: Number(orden.descuento ?? 0),
-                  // ✅ CORREGIDO: Usar '_count.orden_items'
                   itemsCount: orden._count?.orden_items ?? 0,
                   cliente: orden.clientes?.nombre,
                   metodoPago: orden.metodo_pago || "EFECTIVO",
-                  // ✅ CORREGIDO: Usar 'orden_items' que es la relación en Prisma
                   items: orden.orden_items?.map((item: any) => ({
                     cantidad: item.cantidad,
                     precioUnitario: Number(item.precio_unitario),
@@ -262,11 +268,14 @@ export default function ReportsPage() {
         }
         console.log("specificDate recibido:", specificDate);
 
-        const targetDate = new Date(specificDate);
+        // ✅ Crear fecha en zona horaria de Colombia
+        const targetDate = new Date(specificDate + "T00:00:00-05:00");
+
         console.log("targetDate normalizada:", targetDate.toISOString());
 
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
+          console.log(orderDate, targetDate, "DATES");
           const match = mismaFecha(orderDate, targetDate);
           return match;
         });
@@ -283,9 +292,9 @@ export default function ReportsPage() {
           break;
         }
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        // ✅ Crear fechas en zona horaria de Colombia
+        const start = new Date(startDate + "T00:00:00-05:00");
+        const end = new Date(endDate + "T23:59:59-05:00");
 
         console.log("Rango de fechas:", {
           inicio: start.toISOString(),

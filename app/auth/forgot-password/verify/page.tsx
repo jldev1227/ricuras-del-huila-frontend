@@ -18,7 +18,7 @@ export default function Page() {
     // Verificar que venimos del paso anterior
     const storedId = sessionStorage.getItem("reset_identificacion");
     if (!storedId) {
-      router.push("/forgot-password");
+      router.push("/auth/forgot-password");
       return;
     }
     setIdentificacion(storedId);
@@ -89,7 +89,7 @@ export default function Page() {
         </div>
 
         <div className="flex items-center gap-2 mb-8">
-          <Button isIconOnly color="primary" as={Link} href="/forgot-password">
+          <Button isIconOnly color="primary" as={Link} href="/auth/forgot-password">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"

@@ -96,9 +96,9 @@ export default function OrdenesPage() {
         // Fetch ordenes
         const params = new URLSearchParams();
         if (estadoFiltro) params.append("estado", estadoFiltro);
-        if (tipoOrdenFiltro) params.append("tipoOrden", tipoOrdenFiltro);
+        if (tipoOrdenFiltro) params.append("tipo_orden", tipoOrdenFiltro);
         if (fechaFiltro) params.append("fecha", fechaFiltro);
-        if (sucursalFiltro) params.append("sucursalId", sucursalFiltro);
+        if (sucursalFiltro) params.append("sucursal_id", sucursalFiltro);
         params.append("page", page.toString());
         params.append("limit", "20");
 
@@ -126,9 +126,9 @@ export default function OrdenesPage() {
     try {
       const params = new URLSearchParams();
       if (estadoFiltro) params.append("estado", estadoFiltro);
-      if (tipoOrdenFiltro) params.append("tipoOrden", tipoOrdenFiltro);
+      if (tipoOrdenFiltro) params.append("tipo_orden", tipoOrdenFiltro);
       if (fechaFiltro) params.append("fecha", fechaFiltro);
-      if (sucursalFiltro) params.append("sucursalId", sucursalFiltro);
+      if (sucursalFiltro) params.append("sucursal_id", sucursalFiltro);
       params.append("page", page.toString());
       params.append("limit", "20");
 
@@ -301,17 +301,18 @@ export default function OrdenesPage() {
     );
   });
 
-
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleString("es-CO", {
+      timeZone: "America/Bogota",
       year: "numeric",
-      month: "short",
+      month: "long", // "octubre" en lugar de "oct"
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false, // formato 24 horas (17:33 en lugar de 5:33 PM)
     });
   };
-
+  
   const handleOpenDetalle = (ordenId: string) => {
     setOrdenSeleccionada(ordenId);
     abrirDetalle();
@@ -424,13 +425,13 @@ export default function OrdenesPage() {
               {/* Tipo de orden */}
               <div>
                 <label
-                  htmlFor="tipoOrden"
+                  htmlFor="tipo_orden"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
                   Tipo de orden
                 </label>
                 <select
-                  id="tipoOrden"
+                  id="tipo_orden"
                   value={tipoOrdenFiltro}
                   onChange={(e) => setTipoOrdenFiltro(e.target.value)}
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all appearance-none bg-white"
@@ -560,10 +561,10 @@ export default function OrdenesPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">
-                          {getTipoOrdenIcon(orden.tipoOrden)}
+                          {getTipoOrdenIcon(orden.tipo_orden)}
                         </span>
                         <span className="text-sm text-gray-700">
-                          {orden.tipoOrden}
+                          {orden.tipo_orden}
                         </span>
                       </div>
                       <Chip
@@ -757,10 +758,10 @@ export default function OrdenesPage() {
                         <td className="py-4">
                           <div className="flex items-center gap-2">
                             <span className="text-xl">
-                              {getTipoOrdenIcon(orden.tipoOrden)}
+                              {getTipoOrdenIcon(orden.tipo_orden)}
                             </span>
                             <span className="text-sm text-gray-700">
-                              {orden.tipoOrden}
+                              {orden.tipo_orden}
                             </span>
                           </div>
                         </td>
@@ -949,7 +950,7 @@ export default function OrdenesPage() {
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Tipo:</span>{" "}
-                      {ordenAccion.tipoOrden}
+                      {ordenAccion.tipo_orden}
                     </p>
                     {ordenAccion.mesa && (
                       <p className="text-sm">

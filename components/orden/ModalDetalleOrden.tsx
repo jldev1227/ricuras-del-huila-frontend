@@ -20,9 +20,9 @@ import {
   User,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { formatCOP } from "@/utils/formatCOP";
+import ProductImage from "../productos/ProductImage";
 
 type OrdenCompleta = Prisma.ordenesGetPayload<{
   include: {
@@ -144,61 +144,47 @@ export default function ModalDetalleOrden({
     }
   }, [isOpen, ordenId]);
 
-  // Genera comandos ESC/POS manualmente
-  const generateESCPOS = (orden: OrdenCompleta): Uint8Array => {
+  // utils/printTicket.ts
+  const generateESCPOS = async (orden: OrdenCompleta): Promise<Uint8Array> => {
     const encoder = new TextEncoder();
     const commands: number[] = [];
 
-    // Comandos ESC/POS básicos
+    // --- Constantes ESC/POS ---
     const ESC = 0x1b;
     const GS = 0x1d;
-    const INIT = [ESC, 0x40]; // Inicializar impresora
-    const CENTER = [ESC, 0x61, 0x01]; // Alinear centro
-    const LEFT = [ESC, 0x61, 0x00]; // Alinear izquierda
-    const BOLD_ON = [ESC, 0x45, 0x01]; // Negrita ON
-    const BOLD_OFF = [ESC, 0x45, 0x00]; // Negrita OFF
-    const SIZE_NORMAL = [GS, 0x21, 0x00]; // Tamaño normal
-    const SIZE_DOUBLE = [GS, 0x21, 0x11]; // Tamaño doble
-    const SIZE_LARGE = [GS, 0x21, 0x22]; // Tamaño grande
-    const CUT = [GS, 0x56, 0x00]; // Cortar papel
+    const INIT = [ESC, 0x40];
+    const CENTER = [ESC, 0x61, 0x01];
+    const LEFT = [ESC, 0x61, 0x00];
+    const BOLD_ON = [ESC, 0x45, 0x01];
+    const BOLD_OFF = [ESC, 0x45, 0x00];
+    const SIZE_NORMAL = [GS, 0x21, 0x00];
+    const SIZE_DOUBLE = [GS, 0x21, 0x11];
+    const CUT = [GS, 0x56, 0x00];
 
-    const addText = (text: string) => {
-      commands.push(...Array.from(encoder.encode(text)));
-    };
-
-    const addLine = (char = "-", length = 42) => {
-      addText(`${char.repeat(length)}\n`);
-    };
-
-    const addRow = (left: string, right: string, width = 42) => {
+    const addText = (text: string) => commands.push(...Array.from(encoder.encode(text)));
+    const addLine = (char = "-", length = 40) => addText(`${char.repeat(length)}\n`);
+    const addRow = (left: string, right: string, width = 40) => {
       const spaces = width - left.length - right.length;
-      addText(`${left + " ".repeat(Math.max(spaces, 1)) + right}\n`);
+      addText(`${left}${" ".repeat(Math.max(spaces, 1))}${right}\n`);
     };
 
-    // Inicializar
     commands.push(...INIT);
 
-    // Header
-    commands.push(...CENTER, ...SIZE_LARGE, ...BOLD_ON);
+    // === 🖼️ IMAGEN DEL LOGO ===
+    const logoBytes = await generateLogoESC("/logo_print.png", 240); // 240 px ≈ 3 cm
+    commands.push(...logoBytes);
+
+    // === 🧾 ENCABEZADO ===
+    commands.push(...CENTER, ...SIZE_DOUBLE, ...BOLD_ON);
     addText(`${configEmpresa?.razon_social || "RICURAS DEL HUILA"}\n`);
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
-    addText(`${orden.sucursales?.nombre || "Sucursal Principal"}\n`);
-    if (configEmpresa?.telefono) {
-      addText(`Tel: ${configEmpresa.telefono}\n`);
-    }
-    if (configEmpresa?.nit) {
-      addText(`NIT: ${configEmpresa.nit}\n`);
-    }
-    if (configEmpresa?.direccion) {
-      addText(`${configEmpresa.direccion}\n`);
-    }
+    addText(`SEDE: ${orden.sucursales?.nombre || "Principal"}\n`);
+    addText(`Tel: ${configEmpresa?.telefono || ""}\n`);
+    addText(`NIT: ${configEmpresa?.nit || ""}\n`);
+    addText(`${configEmpresa?.direccion || ""}\n`);
     addLine("=");
 
-    // Información de la orden
-    commands.push(...LEFT, ...BOLD_ON);
-    addText(`ORDEN #${orden.id.slice(0, 8).toUpperCase()}\n`);
-    commands.push(...BOLD_OFF);
-
+    // === INFORMACIÓN ORDEN ===
     const fecha = new Date(orden.creado_en).toLocaleString("es-CO", {
       day: "2-digit",
       month: "2-digit",
@@ -206,19 +192,16 @@ export default function ModalDetalleOrden({
       hour: "2-digit",
       minute: "2-digit",
     });
+
+    commands.push(...LEFT);
+    addText(`ORDEN #${orden.id.slice(0, 8)}\n`);
     addText(`Fecha: ${fecha}\n`);
     addText(`Tipo: ${orden.tipo_orden}\n`);
     addText(`Mesero: ${orden.usuarios?.nombre_completo || "N/A"}\n`);
-    if (orden.metodo_pago) {
-      addText(`Metodo pago: ${orden.metodo_pago}\n`);
-    }
+    addText(`Método: ${orden.metodo_pago}\n`);
+    if (orden.mesas) addText(`Mesa: ${orden.mesas.numero}\n`);
+    addLine("-");
 
-    // Mesa (si es LOCAL)
-    if (orden.tipo_orden === "LOCAL" && orden.mesas) {
-      addText(`Mesa: ${orden.mesas.numero} - ${orden.mesas.ubicacion || ""}\n`);
-    }
-
-    // Dirección (si es DOMICILIO)
     if (orden.tipo_orden === "DOMICILIO" && orden.direccion_entrega) {
       commands.push(...BOLD_ON);
       addText("DOMICILIO:\n");
@@ -228,22 +211,19 @@ export default function ModalDetalleOrden({
       if (orden.telefono_cliente) addText(`Tel: ${orden.telefono_cliente}\n`);
     }
 
-    // Cliente registrado
     if (orden.clientes) {
       commands.push(...BOLD_ON);
       addText("CLIENTE:\n");
       commands.push(...BOLD_OFF);
       addText(`${orden.clientes.nombre} ${orden.clientes.apellido}\n`);
       if (orden.clientes.numero_identificacion) {
-        addText(
-          `${orden.clientes.tipo_identificacion}: ${orden.clientes.numero_identificacion}\n`,
-        );
+        addText(`${orden.clientes.tipo_identificacion}: ${orden.clientes.numero_identificacion}\n`);
       }
     }
 
     addLine("=");
 
-    // Items
+    // === PRODUCTOS ===
     commands.push(...BOLD_ON);
     addText("PRODUCTOS\n");
     commands.push(...BOLD_OFF);
@@ -257,18 +237,12 @@ export default function ModalDetalleOrden({
       const subtotal = formatCOP(Number(item.subtotal));
       addRow(cantidad, subtotal);
 
-      if (item.notas) {
-        addText(`  Nota: ${item.notas}\n`);
-      }
-
-      if (index < orden.orden_items.length - 1) {
-        addText("\n");
-      }
+      if (item.notas) addText(`  Nota: ${item.notas}\n`);
+      if (index < orden.orden_items.length - 1) addText("\n");
     });
 
     addLine("-");
 
-    // Especificaciones
     if (orden.especificaciones) {
       commands.push(...BOLD_ON);
       addText("ESPECIFICACIONES:\n");
@@ -276,7 +250,6 @@ export default function ModalDetalleOrden({
       addText(`${orden.especificaciones}\n\n`);
     }
 
-    // Notas
     if (orden.notas) {
       commands.push(...BOLD_ON);
       addText("NOTAS:\n");
@@ -284,21 +257,14 @@ export default function ModalDetalleOrden({
       addText(`${orden.notas}\n\n`);
     }
 
-    // Totales
     addLine("=");
     addRow("Subtotal:", formatCOP(Number(orden.subtotal)));
 
-    if (Number(orden.descuento) > 0) {
-      addRow("Descuento:", `-${formatCOP(Number(orden.descuento))}`);
-    }
-
-    if (orden.costo_envio && Number(orden.costo_envio) > 0) {
-      addRow("Costo envio:", formatCOP(Number(orden.costo_envio)));
-    }
-
-    if (orden.costo_adicional && Number(orden.costo_adicional) > 0) {
+    if (Number(orden.descuento) > 0) addRow("Descuento:", `-${formatCOP(Number(orden.descuento))}`);
+    if (orden.costo_envio && Number(orden.costo_envio) > 0)
+      addRow("Costo envío:", formatCOP(Number(orden.costo_envio)));
+    if (orden.costo_adicional && Number(orden.costo_adicional) > 0)
       addRow("Costo adicional:", formatCOP(Number(orden.costo_adicional)));
-    }
 
     addLine("=");
 
@@ -307,59 +273,84 @@ export default function ModalDetalleOrden({
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
 
     addLine("=");
-
-    // Estado
     commands.push(...CENTER, ...BOLD_ON);
     addText(`ESTADO: ${orden.estado.replace("_", " ")}\n`);
     commands.push(...BOLD_OFF);
-
-    addText("\n");
-    addText("Gracias por su compra!\n");
-    addText("\n\n\n");
-
-    // Cortar papel
+    addText("\nGracias por su compra!\n\n\n");
     commands.push(...CUT);
 
     return new Uint8Array(commands);
   };
 
-  const handlePrint = async () => {
-    if (!orden) return;
+  // === 🎨 Convertir logo a bytes ESC/POS ===
+  const generateLogoESC = async (src: string, width: number): Promise<number[]> => {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
 
-    setPrinting(true);
-    try {
-      const escposData = generateESCPOS(orden);
+    // --- Dibujar en canvas ---
+    const canvas = document.createElement("canvas");
+    const aspect = img.width / img.height;
+    canvas.width = width;
+    canvas.height = Math.round(width / aspect);
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Intentar imprimir con Web Serial API
-      if ("serial" in navigator) {
-        try {
-          const port = await (
-            navigator as { serial: { requestPort: () => Promise<unknown> } }
-          ).serial.requestPort();
-          await port.open({ baudRate: 9600 });
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const bytes: number[] = [];
 
-          const writer = port.writable.getWriter();
-          await writer.write(escposData);
-          writer.releaseLock();
-
-          await port.close();
-
-          alert("✓ Ticket impreso correctamente");
-          return;
-        } catch (err: unknown) {
-          if (err instanceof Error && err.name === "NotFoundError") {
-            console.log("Usuario canceló la selección de puerto");
-          } else {
-            console.error("Error al imprimir:", err);
+    // ESC/POS Header
+    bytes.push(0x1b, 0x61, 0x01); // Centrar
+    for (let y = 0; y < canvas.height; y += 24) {
+      bytes.push(0x1b, 0x2a, 33, canvas.width & 0xff, (canvas.width >> 8) & 0xff);
+      for (let x = 0; x < canvas.width; x++) {
+        for (let k = 0; k < 3; k++) {
+          let byte = 0;
+          for (let b = 0; b < 8; b++) {
+            const yy = y + k * 8 + b;
+            const idx = (yy * canvas.width + x) * 4;
+            if (yy >= canvas.height) continue;
+            const [r, g, bl] = [imageData[idx], imageData[idx + 1], imageData[idx + 2]];
+            const gray = 0.3 * r + 0.59 * g + 0.11 * bl;
+            if (gray < 128) byte |= 1 << (7 - b);
           }
+          bytes.push(byte);
         }
       }
+      bytes.push(0x0a);
+    }
+    bytes.push(0x0a);
+    return bytes;
+  };
 
-      // Si Web Serial no está disponible o falló, descargar archivo
-      downloadReceipt(escposData);
-    } catch (error) {
-      console.error("Error al generar ticket:", error);
-      alert("✗ Error al generar el ticket");
+  const handlePrint = async () => {
+    if (!orden) return;
+    setPrinting(true);
+    try {
+      const escposData = await generateESCPOS(orden);
+
+      if ("serial" in navigator) {
+        const ports = await navigator.serial.getPorts();
+        let port = ports[0];
+        if (!port) port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+        const writer = port.writable.getWriter();
+        await writer.write(escposData);
+        writer.releaseLock();
+        await port.close();
+        alert("🖨️ Ticket impreso correctamente");
+      } else {
+        const blob = new Blob([escposData], { type: "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ticket-${orden.id}.bin`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("⚠️ Error al imprimir");
     } finally {
       setPrinting(false);
     }
@@ -451,12 +442,12 @@ export default function ModalDetalleOrden({
                       {/* Logo */}
                       <div className="text-center mb-2">
                         <div className="w-20 h-20 mx-auto mb-2 relative">
-                          <Image
+                          {/* <Image
                             src="/logo.png"
                             alt="Logo"
                             fill
                             className="object-contain"
-                          />
+                          /> */}
                         </div>
                       </div>
 
@@ -677,12 +668,12 @@ export default function ModalDetalleOrden({
                   <div className="flex items-center gap-4">
                     {/* Logo */}
                     <div className="w-12 h-12 relative flex-shrink-0">
-                      <Image
+                      {/* <Image
                         src="/logo.png"
                         alt="Logo"
                         fill
                         className="object-contain"
-                      />
+                      /> */}
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">
@@ -863,17 +854,12 @@ export default function ModalDetalleOrden({
                         >
                           <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                             <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-                              <Image
-                                fill
-                                src={
-                                  item.productos.imagen ||
-                                  "/placeholder-product.png"
-                                }
-                                alt={item.productos.nombre}
-                                className={`rounded-xl transition-opacity duration-300 ${item.productos.imagen ? "" : "opacity-60"
-                                  }`}
-                                loading="lazy"
-                                draggable={false}
+                              <ProductImage
+                                imagePath={item.productos.imagen}
+                                productName={item.productos.nombre}
+                                width={200}
+                                height={150}
+                                className="rounded-lg"
                               />
                               {!item.productos.imagen && (
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">

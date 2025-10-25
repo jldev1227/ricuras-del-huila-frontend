@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
     if (sincronizado) where.sincronizado = sincronizado === "true";
 
     if (fecha) {
-      const startDate = new Date(fecha);
-      const endDate = new Date(fecha);
+      // Convertir la fecha a hora de Colombia (UTC-5)
+      const colombiaDate = new Date(fecha + "T00:00:00-05:00");
+      const startDate = new Date(colombiaDate);
+      const endDate = new Date(colombiaDate);
       endDate.setDate(endDate.getDate() + 1);
 
       where.creado_en = {
@@ -118,9 +120,16 @@ export async function GET(request: NextRequest) {
       prisma.ordenes.count({ where }),
     ]);
 
+    // Formatear las fechas en la respuesta a hora de Colombia
+    const ordenesConFechaColombia = ordenes.map((orden) => ({
+      ...orden,
+      creado_en: orden.creado_en, // Dejar como Date/ISO string
+      creado_en_utc: orden.creado_en, // Mantener el original si lo necesitas
+    }));
+
     return NextResponse.json({
       success: true,
-      ordenes,
+      ordenes: ordenesConFechaColombia,
       pagination: {
         total,
         page,
@@ -292,7 +301,7 @@ export async function POST(request: NextRequest) {
         include: {
           orden_items: {
             include: {
-            productos: true,
+              productos: true,
             },
           },
           mesas: true,

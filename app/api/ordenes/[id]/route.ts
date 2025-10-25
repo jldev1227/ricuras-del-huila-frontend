@@ -439,41 +439,92 @@ export async function PATCH(
 
       default:
         // Actualización genérica de campos
-        ordenActualizada = await prisma.ordenes.update({
-          where: { id },
-          data: {
-            ...datos,
-            actualizado_por: finalUserId || null,
-            actualizado_en: new Date(),
-          },
-          include: {
-            orden_items: {
+        // Si se está cambiando el estado a ENTREGADA, liberar la mesa
+        if (datos.estado === "ENTREGADA" && ordenExistente.mesa_id) {
+          ordenActualizada = await prisma.$transaction(async (tx) => {
+            // Liberar la mesa
+            await tx.mesas.update({
+              where: { id: ordenExistente.mesa_id },
+              data: {
+                disponible: true,
+                actualizado_en: new Date(),
+              },
+            });
+
+            // Actualizar la orden
+            return await tx.ordenes.update({
+              where: { id },
+              data: {
+                ...datos,
+                actualizado_por: finalUserId || null,
+                actualizado_en: new Date(),
+              },
               include: {
-                productos: true,
+                orden_items: {
+                  include: {
+                    productos: true,
+                  },
+                },
+                mesas: true,
+                clientes: true,
+                usuarios: {
+                  select: {
+                    id: true,
+                    nombre_completo: true,
+                  },
+                },
+                creador: {
+                  select: {
+                    id: true,
+                    nombre_completo: true,
+                  },
+                },
+                actualizador: {
+                  select: {
+                    id: true,
+                    nombre_completo: true,
+                  },
+                },
+              },
+            });
+          });
+        } else {
+          ordenActualizada = await prisma.ordenes.update({
+            where: { id },
+            data: {
+              ...datos,
+              actualizado_por: finalUserId || null,
+              actualizado_en: new Date(),
+            },
+            include: {
+              orden_items: {
+                include: {
+                  productos: true,
+                },
+              },
+              mesas: true,
+              clientes: true,
+              usuarios: {
+                select: {
+                  id: true,
+                  nombre_completo: true,
+                },
+              },
+              creador: {
+                select: {
+                  id: true,
+                  nombre_completo: true,
+                },
+              },
+              actualizador: {
+                select: {
+                  id: true,
+                  nombre_completo: true,
+                },
               },
             },
-            mesas: true,
-            clientes: true,
-            usuarios: {
-              select: {
-                id: true,
-                nombre_completo: true,
-              },
-            },
-            creador: {
-              select: {
-                id: true,
-                nombre_completo: true,
-              },
-            },
-            actualizador: {
-              select: {
-                id: true,
-                nombre_completo: true,
-              },
-            },
-          },
-        });
+          });
+        }
     }
 
     return NextResponse.json({
@@ -494,66 +545,104 @@ export async function PATCH(
 
 // Función para cambiar estado de la orden
 async function cambiarEstado(
-  ordenId: string,
-  datos: EstadoUpdateData,
-  ordenExistente: OrdenExistente,
-  userId?: string | null,
+  id: string,
+  datos: any,
+  ordenExistente: any,
+  finalUserId: string | null,
 ) {
-  const { nuevoEstado, razon } = datos;
+  const { estado } = datos;
 
-  if (!nuevoEstado) {
-    throw new Error("Nuevo estado requerido");
-  }
-
-  // Validar transición de estados
-  const transicionesValidas: Record<string, string[]> = {
-    PENDIENTE: ["EN_PREPARACION", "CANCELADA"],
-    EN_PREPARACION: ["LISTA", "CANCELADA"],
-    LISTA: ["ENTREGADA", "CANCELADA"],
-    ENTREGADA: [], // No se puede cambiar desde entregada
-    CANCELADA: [], // No se puede cambiar desde cancelada
+  // Preparar datos de actualización
+  const dataToUpdate: any = {
+    estado,
+    actualizado_por: finalUserId || null,
+    actualizado_en: new Date(),
   };
 
-  if (!transicionesValidas[ordenExistente.estado].includes(nuevoEstado)) {
-    throw new Error(
-      `No se puede cambiar de ${ordenExistente.estado} a ${nuevoEstado}`,
-    );
-  }
-
-  return await prisma.$transaction(async (tx) => {
-    // Si el nuevo estado es ENTREGADA y tiene mesa, liberarla
-    if (nuevoEstado === "ENTREGADA" && ordenExistente.mesa_id) {
+  // Si el estado es ENTREGADA y la orden tiene mesa asignada, liberar la mesa
+  if (estado === "ENTREGADA" && ordenExistente.mesa_id) {
+    // Actualizar la orden y liberar la mesa en una transacción
+    return await prisma.$transaction(async (tx) => {
+      // Liberar la mesa
       await tx.mesas.update({
         where: { id: ordenExistente.mesa_id },
-        data: { disponible: true },
-      });
-    }
-
-    // Actualizar orden
-    return await tx.ordenes.update({
-      where: { id: ordenId },
-      data: {
-        estado: nuevoEstado as
-          | "PENDIENTE"
-          | "EN_PREPARACION"
-          | "LISTA"
-          | "ENTREGADA"
-          | "CANCELADA",
-        notas: (razon
-          ? `${ordenExistente.notas || ""}\n[Cambio de estado]: ${razon}`.trim()
-          : ordenExistente.notas) as string | null,
-        actualizado_por: userId || null,
-        actualizado_en: new Date(),
-      },
-      include: {
-        orden_items: {
-          include: { productos: true },
+        data: {
+          disponible: true,
+          actualizado_en: new Date(),
         },
-        mesas: true,
-        clientes: true,
-      },
+      });
+
+      // Actualizar la orden
+      const ordenActualizada = await tx.ordenes.update({
+        where: { id },
+        data: dataToUpdate,
+        include: {
+          orden_items: {
+            include: {
+              productos: true,
+            },
+          },
+          mesas: true,
+          clientes: true,
+          usuarios: {
+            select: {
+              id: true,
+              nombre_completo: true,
+            },
+          },
+          creador: {
+            select: {
+              id: true,
+              nombre_completo: true,
+            },
+          },
+          actualizador: {
+            select: {
+              id: true,
+              nombre_completo: true,
+            },
+          },
+        },
+      });
+
+      return ordenActualizada;
     });
+  }
+
+  // Si no es ENTREGADA o no tiene mesa, solo actualizar la orden
+  const ordenActualizada = await prisma.ordenes.update({
+    where: { id },
+    data: dataToUpdate,
+    include: {
+      orden_items: {
+        include: {
+          productos: true,
+        },
+      },
+      mesas: true,
+      clientes: true,
+      usuarios: {
+        select: {
+          id: true,
+          nombre_completo: true,
+        },
+      },
+      creador: {
+        select: {
+          id: true,
+          nombre_completo: true,
+        },
+      },
+      actualizador: {
+        select: {
+          id: true,
+          nombre_completo: true,
+        },
+      },
+    },
   });
+
+  return ordenActualizada;
 }
 
 // Función para cancelar orden
@@ -718,17 +807,6 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, message: "Orden no encontrada" },
         { status: 404 },
-      );
-    }
-
-    // Solo permitir eliminar órdenes en estado PENDIENTE
-    if (ordenExistente.estado !== "PENDIENTE") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Solo se pueden eliminar órdenes en estado PENDIENTE",
-        },
-        { status: 400 },
       );
     }
 

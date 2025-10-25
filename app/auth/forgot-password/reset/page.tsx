@@ -19,7 +19,7 @@ export default function Page() {
     // Verificar que venimos del paso anterior
     const token = sessionStorage.getItem("reset_token");
     if (!token) {
-      router.push("/forgot-password");
+      router.push("/auth/forgot-password");
       return;
     }
     setResetToken(token);
