@@ -15,7 +15,7 @@ import {
   Textarea,
   useDisclosure,
 } from "@heroui/react";
-import { Edit, Filter, MapPin, Plus, Search, Users, X } from "lucide-react";
+import { Edit, Filter, MapPin, Plus, Search, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 interface Sucursal {
@@ -33,7 +33,11 @@ interface MesaConRelaciones {
   creado_en: Date;
   actualizado_en: Date;
   ultima_limpieza: Date | null;
-  sucursal: Sucursal;
+  sucursales: Sucursal;
+  ordenActual?: {
+    id: string;
+    numeroOrden: string;
+  };
   _count: {
     ordenes: number;
   };
@@ -107,6 +111,8 @@ export default function MesasPage() {
         const mesasRes = await fetch(`/api/mesas?${params}`);
         const mesasData = await mesasRes.json();
         if (mesasData.success) {
+
+          console.log(mesasData)
           setMesas(mesasData.mesas);
         }
       } catch (error) {
@@ -483,10 +489,6 @@ export default function MesasPage() {
 
                   {/* Información */}
                   <div className="space-y-2.5 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Users className="text-gray-400" size={16} />
-                    </div>
-
                     {mesa.ubicacion && (
                       <div className="flex items-center gap-2 text-sm text-gray-700">
                         <MapPin className="text-gray-400" size={16} />
@@ -494,16 +496,14 @@ export default function MesasPage() {
                       </div>
                     )}
 
-                    {/* {mesa._count.ordenes > 0 && (
+                    {mesa.ordenActual && (
                       <div className="flex items-center gap-2 text-sm">
                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-blue-600 font-medium">
-                          {mesa._count.ordenes} orden
-                          {mesa._count.ordenes !== 1 ? "es" : ""} activa
-                          {mesa._count.ordenes !== 1 ? "s" : ""}
-                        </span>
+                        <p className="text-blue-600">
+                          Orden activa <span className="font-medium">#{mesa.ordenActual.numeroOrden}</span>
+                        </p>
                       </div>
-                    )} */}
+                    )}
                   </div>
 
                   {/* Notas si existen */}

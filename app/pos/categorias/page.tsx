@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  addToast,
   Button,
   Input,
   Modal,
@@ -125,6 +126,12 @@ export default function CategoriasPage() {
         setNuevaCategoria({ nombre: "", descripcion: "", icono: "" });
         setErrors({});
         setIsModalOpen(false);
+
+        addToast({
+          title: "Categoría creada",
+          description: "La categoría ha sido creada exitosamente.",
+          color: "success",
+        });
       } else {
         setErrors({ nombre: data.message });
       }
@@ -214,6 +221,13 @@ export default function CategoriasPage() {
         setCategorias((prev) => prev.filter((cat) => cat.id !== categoriaEliminar.id));
         setIsDeleteModalOpen(false);
         setCategoriaEliminar(null);
+
+        // Mostrar mensaje de éxito
+        addToast({
+          title: "Categoría eliminada",
+          description: "La categoría ha sido eliminada exitosamente.",
+          color: "success",
+        });
       } else {
         // Manejar error
         alert(data.message || "Error al eliminar la categoría");

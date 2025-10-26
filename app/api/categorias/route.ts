@@ -263,3 +263,80 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Obtener el ID desde los query parameters
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    // Validar que se proporcione el ID
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El ID de la categoría es requerido",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Verificar que la categoría existe
+    const categoriaExistente = await prisma.categorias.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            productos: true,
+          },
+        },
+      },
+    });
+
+    if (!categoriaExistente) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Categoría no encontrada",
+        },
+        { status: 404 },
+      );
+    }
+
+    // Verificar si la categoría tiene productos asociados
+    if (categoriaExistente._count.productos > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `No se puede eliminar la categoría porque tiene ${categoriaExistente._count.productos} producto(s) asociado(s)`,
+        },
+        { status: 409 },
+      );
+    }
+
+    // Eliminar la categoría (soft delete - cambiar activo a false)
+    await prisma.categorias.update({
+      where: { id },
+      data: { activo: false },
+    });
+
+    // Si prefieres eliminación física (hard delete), usa:
+    // await prisma.categorias.delete({
+    //   where: { id },
+    // });
+
+    return NextResponse.json({
+      success: true,
+      message: "Categoría eliminada exitosamente",
+    });
+  } catch (error) {
+    console.error("Error al eliminar categoría:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Error interno del servidor al eliminar la categoría",
+      },
+      { status: 500 },
+    );
+  }
+}
