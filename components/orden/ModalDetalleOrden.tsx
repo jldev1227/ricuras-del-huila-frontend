@@ -1,4 +1,5 @@
 import {
+  addToast,
   Button,
   Chip,
   Modal,
@@ -144,10 +145,67 @@ export default function ModalDetalleOrden({
     }
   }, [isOpen, ordenId]);
 
-  // utils/printTicket.ts
   const generateESCPOS = async (orden: OrdenCompleta): Promise<Uint8Array> => {
-    const encoder = new TextEncoder();
     const commands: number[] = [];
+
+    // ✅ FUNCIÓN DE CODIFICACIÓN MEJORADA CON MÁS CARACTERES
+    const encodeText = (text: string): number[] => {
+      const bytes: number[] = [];
+      for (let i = 0; i < text.length; i++) {
+        const char = text.charAt(i);
+        const code = text.charCodeAt(i);
+
+        // ⭐ ASCII básico (0-127) - INCLUYE ? @ # % & * ( ) etc
+        if (code < 128) {
+          bytes.push(code);
+          continue; // ⭐ IMPORTANTE: continuar con el siguiente carácter
+        }
+
+        // ⭐ Caracteres extendidos (128-255) - Mapeo para CP850
+        const map: { [key: string]: number } = {
+          // Vocales con tilde minúsculas
+          'á': 0xa0, 'é': 0x82, 'í': 0xa1, 'ó': 0xa2, 'ú': 0xa3,
+          // Vocales con tilde mayúsculas
+          'Á': 0xb5, 'É': 0x90, 'Í': 0xd6, 'Ó': 0xe0, 'Ú': 0xe9,
+          // Eñes
+          'ñ': 0xa4, 'Ñ': 0xa5,
+          // Símbolos especiales latinos
+          '¿': 0xa8,  // Interrogación invertida
+          '¡': 0xad,  // Exclamación invertida
+          '°': 0xf8,  // Grado
+          'º': 0xa7,  // Ordinal masculino
+          'ª': 0xa6,  // Ordinal femenino
+          // Monedas
+          '$': 0x24,  // Peso/Dólar (ya está en ASCII, pero por si acaso)
+          '€': 0xd5,  // Euro
+          '¢': 0x9b,  // Centavo
+          '£': 0x9c,  // Libra
+          '¥': 0x9d,  // Yen
+          // Fracciones comunes
+          '½': 0xab,  // Un medio
+          '¼': 0xac,  // Un cuarto
+          // Otros símbolos útiles
+          '«': 0xae,  // Comillas angulares izquierda
+          '»': 0xaf,  // Comillas angulares derecha
+          '±': 0xf1,  // Más/menos
+          '×': 0x9e,  // Multiplicación
+          '÷': 0xf6,  // División
+        };
+
+        // Si el carácter está en el mapa, usarlo
+        if (map[char] !== undefined) {
+          bytes.push(map[char]);
+        } else {
+          // ⭐ Si no está mapeado, usar un espacio en lugar de ?
+          // Esto evita que aparezcan ? confusos
+          bytes.push(0x20); // Espacio
+
+          // ⚠️ OPCIONAL: Para debugging, descomentar la siguiente línea
+          // console.warn(`Carácter no mapeado: "${char}" (U+${code.toString(16).toUpperCase().padStart(4, '0')})`);
+        }
+      }
+      return bytes;
+    };
 
     // --- Constantes ESC/POS ---
     const ESC = 0x1b;
@@ -160,18 +218,21 @@ export default function ModalDetalleOrden({
     const SIZE_NORMAL = [GS, 0x21, 0x00];
     const SIZE_DOUBLE = [GS, 0x21, 0x11];
     const CUT = [GS, 0x56, 0x00];
+    const SET_CP850 = [ESC, 0x74, 0x02];
 
-    const addText = (text: string) => commands.push(...Array.from(encoder.encode(text)));
+    const addText = (text: string) => commands.push(...encodeText(text));
     const addLine = (char = "-", length = 40) => addText(`${char.repeat(length)}\n`);
     const addRow = (left: string, right: string, width = 40) => {
       const spaces = width - left.length - right.length;
       addText(`${left}${" ".repeat(Math.max(spaces, 1))}${right}\n`);
     };
 
+    // ⚠️ FIX: Solo un INIT
     commands.push(...INIT);
+    commands.push(...SET_CP850);
 
     // === 🖼️ IMAGEN DEL LOGO ===
-    const logoBytes = await generateLogoESC("/logo_print.png", 240); // 240 px ≈ 3 cm
+    const logoBytes = await generateLogoESC("/logo_print.png", 240);
     commands.push(...logoBytes);
 
     // === 🧾 ENCABEZADO ===
@@ -185,12 +246,14 @@ export default function ModalDetalleOrden({
     addLine("=");
 
     // === INFORMACIÓN ORDEN ===
+    // ⭐ FIX: Formato de fecha sin tildes problemáticas
     const fecha = new Date(orden.creado_en).toLocaleString("es-CO", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false, // ⭐ Usar formato 24h para evitar a.m./p.m.
     });
 
     commands.push(...LEFT);
@@ -198,7 +261,8 @@ export default function ModalDetalleOrden({
     addText(`Fecha: ${fecha}\n`);
     addText(`Tipo: ${orden.tipo_orden}\n`);
     addText(`Mesero: ${orden.usuarios?.nombre_completo || "N/A"}\n`);
-    addText(`Método: ${orden.metodo_pago}\n`);
+    // ⭐ FIX: Sin tilde en "Metodo"
+    addText(`Metodo: ${orden.metodo_pago}\n`);
     if (orden.mesas) addText(`Mesa: ${orden.mesas.numero}\n`);
     addLine("-");
 
@@ -207,17 +271,19 @@ export default function ModalDetalleOrden({
       addText("DOMICILIO:\n");
       commands.push(...BOLD_OFF);
       addText(`${orden.direccion_entrega}\n`);
+      // ⭐ FIX: Fallback para datos null
       if (orden.nombre_cliente) addText(`Cliente: ${orden.nombre_cliente}\n`);
       if (orden.telefono_cliente) addText(`Tel: ${orden.telefono_cliente}\n`);
     }
 
+    // ⭐ FIX: Agregar fallback para datos de cliente null
     if (orden.clientes) {
       commands.push(...BOLD_ON);
       addText("CLIENTE:\n");
       commands.push(...BOLD_OFF);
-      addText(`${orden.clientes.nombre} ${orden.clientes.apellido}\n`);
+      addText(`${orden.clientes.nombre || ""} ${orden.clientes.apellido || ""}\n`);
       if (orden.clientes.numero_identificacion) {
-        addText(`${orden.clientes.tipo_identificacion}: ${orden.clientes.numero_identificacion}\n`);
+        addText(`${orden.clientes.tipo_identificacion || "ID"}: ${orden.clientes.numero_identificacion}\n`);
       }
     }
 
@@ -260,9 +326,10 @@ export default function ModalDetalleOrden({
     addLine("=");
     addRow("Subtotal:", formatCOP(Number(orden.subtotal)));
 
-    if (Number(orden.descuento) > 0) addRow("Descuento:", `-${formatCOP(Number(orden.descuento))}`);
+    if (Number(orden.descuento) > 0)
+      addRow("Descuento:", `-${formatCOP(Number(orden.descuento))}`);
     if (orden.costo_envio && Number(orden.costo_envio) > 0)
-      addRow("Costo envío:", formatCOP(Number(orden.costo_envio)));
+      addRow("Costo envio:", formatCOP(Number(orden.costo_envio)));
     if (orden.costo_adicional && Number(orden.costo_adicional) > 0)
       addRow("Costo adicional:", formatCOP(Number(orden.costo_adicional)));
 
@@ -273,10 +340,13 @@ export default function ModalDetalleOrden({
     commands.push(...SIZE_NORMAL, ...BOLD_OFF);
 
     addLine("=");
-    commands.push(...CENTER, ...BOLD_ON);
-    addText(`ESTADO: ${orden.estado.replace("_", " ")}\n`);
-    commands.push(...BOLD_OFF);
-    addText("\nGracias por su compra!\n\n\n");
+
+    // ⭐ FIX: Mover el mensaje de agradecimiento ANTES del corte
+    commands.push(...CENTER);
+    addText("\nGracias por su compra!\n");
+    addText("\n\n\n\n\n"); // Espacios para que el papel salga
+
+    // ⭐ FIX: CUT al final después del texto
     commands.push(...CUT);
 
     return new Uint8Array(commands);
@@ -338,7 +408,11 @@ export default function ModalDetalleOrden({
         await writer.write(escposData);
         writer.releaseLock();
         await port.close();
-        alert("🖨️ Ticket impreso correctamente");
+        addToast({
+          title: "🖨️ Ticket impreso correctamente",
+          description: "El ticket se ha enviado a la impresora.",
+          color: "success",
+        });
       } else {
         const blob = new Blob([escposData], { type: "application/octet-stream" });
         const url = URL.createObjectURL(blob);
@@ -350,26 +424,14 @@ export default function ModalDetalleOrden({
       }
     } catch (err) {
       console.error(err);
-      alert("⚠️ Error al imprimir");
+      addToast({
+        title: "⚠️ Error al imprimir",
+        description: "Ocurrió un error al intentar imprimir el ticket.",
+        color: "danger",
+      });
     } finally {
       setPrinting(false);
     }
-  };
-
-  const downloadReceipt = (data: Uint8Array) => {
-    const blob = new Blob([data as BlobPart], {
-      type: "application/octet-stream",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ticket-${orden?.id.slice(0, 8)}.bin`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    alert(
-      "📄 Ticket descargado como archivo .bin\n\nEnvíe este archivo a su impresora térmica para imprimir.",
-    );
   };
 
   const getEstadoColor = (estado: string) => {
