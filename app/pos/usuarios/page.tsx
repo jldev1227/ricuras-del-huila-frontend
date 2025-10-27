@@ -12,13 +12,17 @@ import {
   ModalHeader,
   Select,
   SelectItem,
+  Tooltip,
   useDisclosure,
 } from "@heroui/react";
 import {
+  Ban,
+  Check,
   EyeClosed,
   EyeIcon,
   PencilIcon,
   PlusIcon,
+  Trash2Icon,
   UserIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -253,6 +257,37 @@ const UsuariosPage = () => {
     }
   };
 
+  const handleToggleActive = async (usuarioId: string, nuevoEstado: boolean) => {
+    try {
+      const response = await fetch(`/api/usuarios?id=${usuarioId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          activo: nuevoEstado,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Actualizar el estado local
+        setUsuarios((prev) =>
+          prev.map((user) =>
+            user.id === usuarioId ? { ...user, activo: nuevoEstado } : user
+          )
+        );
+        alert(data.message);
+      } else {
+        alert(data.message || "Error al actualizar el usuario");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al actualizar el usuario");
+    }
+  };
+
   // Resetear formulario
   const resetForm = () => {
     setFormData({
@@ -296,7 +331,7 @@ const UsuariosPage = () => {
   };
 
   // Abrir modal de eliminación
-  const _openDeleteModal = (usuario: Usuario) => {
+  const openDeleteModal = (usuario: Usuario) => {
     setUsuarioSeleccionado(usuario);
     onOpenDelete();
   };
@@ -492,14 +527,12 @@ const UsuariosPage = () => {
                         </span>
                       </div>
                     )}
-                    {usuario.telefono && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Teléfono:</span>
-                        <span className="text-gray-800">
-                          {usuario.telefono}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Teléfono:</span>
+                      <span className="text-gray-800">
+                        {usuario.telefono ? usuario.telefono : <span className="text-gray-400 italic">No registrado</span>}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Fecha de creación */}
@@ -511,6 +544,22 @@ const UsuariosPage = () => {
 
                   {/* Acciones */}
                   <div className="flex gap-2">
+                    <Tooltip color={usuario.activo ? "success" : "danger"} content={usuario.activo ? "Activado" : "Desactivado"}>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        color={usuario.activo ? "success" : "danger"}
+                        variant="flat"
+                        onPress={() => handleToggleActive(usuario.id, !usuario.activo)}
+                        title="Cambiar estado"
+                      >
+                        {usuario.activo ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Ban className="h-4 w-4" />
+                        )}  
+                      </Button>
+                    </Tooltip>
                     <Button
                       size="sm"
                       variant="bordered"
@@ -527,6 +576,18 @@ const UsuariosPage = () => {
                     >
                       Ver detalles
                     </Button>
+                    <Tooltip color="danger" content="Eliminar">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        color="danger"
+                        variant="flat"
+                        onPress={() => openDeleteModal(usuario)}
+                        title="Eliminar"
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </Button>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
@@ -726,20 +787,6 @@ const UsuariosPage = () => {
                   </SelectItem>
                 ))}
               </Select>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="activo"
-                  checked={formData.activo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, activo: e.target.checked })
-                  }
-                  className="rounded border-gray-300"
-                />
-                <label htmlFor="activo" className="text-sm">
-                  Usuario activo
-                </label>
-              </div>
             </div>
           </ModalBody>
           <ModalFooter>

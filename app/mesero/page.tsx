@@ -236,37 +236,6 @@ export default function MeseroPage() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardBody className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Ventas Hoy</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCOP(stats.ventasHoy)}
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Promedio/Orden</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCOP(stats.promedioOrden)}
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
       </div>
 
       {/* Órdenes Recientes */}
@@ -326,11 +295,11 @@ export default function MeseroPage() {
                               <span>Mesa {orden.mesas.numero}</span>
                             </>
                           )}
-                          {(orden.cliente?.nombre || orden.nombre_cliente) && (
+                          {(orden.clientes?.nombre || orden.nombre_cliente) && (
                             <>
                               <span>•</span>
                               <span>
-                                {orden.cliente?.nombre || orden.nombre_cliente}
+                                {orden.clientes?.nombre || orden.nombre_cliente}
                               </span>
                             </>
                           )}
@@ -340,9 +309,6 @@ export default function MeseroPage() {
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="font-medium text-gray-900">
-                          {formatCOP(orden.total)}
-                        </p>
                         <p className="text-sm text-gray-500">
                           {orden._count.orden_items} producto
                           {orden._count.orden_items !== 1 ? "s" : ""}
@@ -436,9 +402,6 @@ export default function MeseroPage() {
 
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="font-medium text-gray-900">
-                            {formatCOP(orden.total)}
-                          </p>
                           <p className="text-sm text-gray-600">
                             {new Date(orden.creado_en).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -576,13 +539,16 @@ export default function MeseroPage() {
                               >
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                   {item.productos.imagen ? (
-                                    <ProductImage
-                                      imagePath={item.productos.imagen}
-                                      productName={item.productos.nombre}
-                                      width={200}
-                                      height={150}
-                                      className="rounded-lg"
-                                    />
+                                    <div className="w-full h-full relative">
+                                      <ProductImage
+                                        imagePath={item.productos.imagen}
+                                        productName={item.productos.nombre}
+                                        width={220}
+                                        height={220}
+                                        fill={true}
+                                        className="rounded-lg"
+                                      />
+                                    </div>
                                   ) : (
                                     <Package className="w-6 h-6 text-gray-400" />
                                   )}
@@ -591,16 +557,10 @@ export default function MeseroPage() {
                                   <h5 className="font-medium text-gray-900">
                                     {item.productos.nombre}
                                   </h5>
-                                  <p className="text-sm text-gray-500">
-                                    {formatCOP(item.precio_unitario)} x{" "}
-                                    {item.cantidad}
-                                  </p>
                                 </div>
                                 <div className="text-right">
                                   <p className="font-semibold text-gray-900">
-                                    {formatCOP(
-                                      item.precio_unitario * item.cantidad,
-                                    )}
+                                    x{item.cantidad}
                                   </p>
                                 </div>
                               </div>
@@ -638,40 +598,6 @@ export default function MeseroPage() {
                           )}
                         </div>
                       )}
-
-                    {/* Resumen financiero */}
-                    <div className="bg-primary/20 p-4 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-3">
-                        Resumen
-                      </h4>
-                      <div className="space-y-2">
-                        {ordenSeleccionada.subtotal && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Subtotal:</span>
-                            <span className="font-medium">
-                              {formatCOP(ordenSeleccionada.subtotal)}
-                            </span>
-                          </div>
-                        )}
-                        {ordenSeleccionada.descuento &&
-                          ordenSeleccionada.descuento > 0 && (
-                            <div className="flex justify-between text-green-600">
-                              <span>Descuento:</span>
-                              <span className="font-medium">
-                                -{formatCOP(ordenSeleccionada.descuento)}
-                              </span>
-                            </div>
-                          )}
-                        <div className="flex justify-between pt-2 border-t border-primary">
-                          <span className="font-bold text-gray-900">
-                            Total:
-                          </span>
-                          <span className="font-bold text-primary text-lg">
-                            {formatCOP(ordenSeleccionada.total)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
               </ModalBody>

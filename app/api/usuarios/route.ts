@@ -368,3 +368,79 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+// PATCH - Activar/Desactivar usuario
+export async function PATCH(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const body = await request.json();
+    const { activo } = body;
+
+    // Validar que se proporcione el ID
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "ID de usuario requerido" },
+        { status: 400 },
+      );
+    }
+
+    // Validar que se proporcione el estado activo
+    if (activo === undefined || typeof activo !== "boolean") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El campo 'activo' es requerido y debe ser un booleano",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Verificar que el usuario existe
+    const usuarioExistente = await prisma.usuarios.findUnique({
+      where: { id },
+    });
+
+    if (!usuarioExistente) {
+      return NextResponse.json(
+        { success: false, message: "Usuario no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    // Actualizar solo el estado activo
+    const usuarioActualizado = await prisma.usuarios.update({
+      where: { id },
+      data: {
+        activo,
+        actualizado_en: new Date(),
+      },
+      select: {
+        id: true,
+        nombre_completo: true,
+        identificacion: true,
+        correo: true,
+        telefono: true,
+        rol: true,
+        activo: true,
+        creado_en: true,
+        actualizado_en: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Usuario ${activo ? "activado" : "desactivado"} exitosamente`,
+        data: usuarioActualizado,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Error al actualizar estado del usuario:", error);
+    return NextResponse.json(
+      { success: false, message: "Error al actualizar estado del usuario" },
+      { status: 500 },
+    );
+  }
+}

@@ -340,7 +340,7 @@ function UserMenu({
       <DropdownTrigger>
         <Button
           variant="light"
-          className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-100 w-full"
+          className="flex items-center gap-3 px-3 py-8 rounded-lg hover:bg-gray-100 w-full"
         >
           <div className="w-8 h-8 bg-wine/20 rounded-full flex-shrink-0 flex items-center justify-center text-wine font-bold">
             {user.nombre_completo.charAt(0).toUpperCase()}
@@ -423,7 +423,7 @@ function DesktopSidebar({
       </nav>
 
       {/* User section */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+      <div className={`absolute bottom-0 left-0 right-0 border-t border-gray-200 bg-white ${isHovered ? "p-4" : ""} transition-all`}>
         <UserMenu user={user} onLogout={onLogout} isExpanded={isHovered} />
       </div>
     </aside>

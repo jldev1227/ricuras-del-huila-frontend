@@ -656,18 +656,6 @@ export default function MeseroMesasPage() {
                             </p>
                           </div>
                         )}
-
-                        {/* Total */}
-                        <div className="bg-primary/20 p-4 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-gray-900">
-                              Total de la orden:
-                            </span>
-                            <span className="font-bold text-primary text-lg">
-                              {formatCOP(mesaSeleccionada.ordenActual.total)}
-                            </span>
-                          </div>
-                        </div>
                       </>
                     ) : (
                       <div className="text-center py-8">

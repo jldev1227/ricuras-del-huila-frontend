@@ -104,7 +104,7 @@ export default function MesasPage() {
         // Fetch mesas con filtros
         const params = new URLSearchParams();
         if (searchNumero) params.append("numero", searchNumero);
-        if (selectedSucursal) params.append("sucursalId", selectedSucursal);
+        if (selectedSucursal) params.append("sucursal_id", selectedSucursal);
         if (selectedUbicacion) params.append("ubicacion", selectedUbicacion);
         if (selectedDisponible) params.append("disponible", selectedDisponible);
 
