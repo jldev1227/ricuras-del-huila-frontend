@@ -248,6 +248,6 @@ enum tipos_persona {
 
 enum metodos_pago {
   EFECTIVO
-  TARJETA
-  TRANSFERENCIA
+  NEQUI
+  DAVIPLATA
 }

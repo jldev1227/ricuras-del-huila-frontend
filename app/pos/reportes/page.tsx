@@ -1638,8 +1638,8 @@ export default function ReportsPage() {
                     ></div>
                     <p className="text-xs text-gray-600">
                       {metodo.metodo === 'EFECTIVO' ? 'Efectivo' :
-                        metodo.metodo === 'TARJETA' ? 'Tarjeta' :
-                          metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
+                        metodo.metodo === 'NEQUI' ? 'Nequi' :
+                          metodo.metodo === 'DAVIPLATA' ? 'Daviplata' : metodo.metodo}
                     </p>
                   </div>
                   <p className="text-base lg:text-lg font-bold text-gray-900">
@@ -2012,8 +2012,8 @@ export default function ReportsPage() {
                           ></div>
                           <span className="text-sm font-medium text-gray-900">
                             {metodo.metodo === 'EFECTIVO' ? 'Efectivo' :
-                              metodo.metodo === 'TARJETA' ? 'Tarjeta' :
-                                metodo.metodo === 'TRANSFERENCIA' ? 'Transferencia' : metodo.metodo}
+                              metodo.metodo === 'NEQUI' ? 'Nequi' :
+                                metodo.metodo === 'DAVIPLATA' ? 'Daviplata' : metodo.metodo}
                           </span>
                         </div>
                       </td>
@@ -2043,8 +2043,8 @@ export default function ReportsPage() {
                 </h3>
                 <p className="text-2xl font-bold text-primary mb-1">
                   {ventasPorMetodoPago[0]?.metodo === 'EFECTIVO' ? 'Efectivo' :
-                    ventasPorMetodoPago[0]?.metodo === 'TARJETA' ? 'Tarjeta' :
-                      ventasPorMetodoPago[0]?.metodo === 'TRANSFERENCIA' ? 'Transferencia' :
+                    ventasPorMetodoPago[0]?.metodo === 'NEQUI' ? 'Nequi' :
+                      ventasPorMetodoPago[0]?.metodo === 'DAVIPLATA' ? 'Daviplata' :
                         ventasPorMetodoPago[0]?.metodo || 'N/A'}
                 </p>
                 <p className="text-xs text-gray-600">
@@ -2069,8 +2069,8 @@ export default function ReportsPage() {
                         (metodo.ventas / metodo.ordenes) > (max.ventas / max.ordenes) ? metodo : max
                       );
                       return `${maxTicket.metodo === 'EFECTIVO' ? 'Efectivo' :
-                        maxTicket.metodo === 'TARJETA' ? 'Tarjeta' :
-                          maxTicket.metodo === 'TRANSFERENCIA' ? 'Transferencia' : maxTicket.metodo}`;
+                        maxTicket.metodo === 'NEQUI' ? 'Nequi' :
+                          maxTicket.metodo === 'DAVIPLATA' ? 'Daviplata' : maxTicket.metodo}`;
                     })()
                     : 'N/A'
                   }

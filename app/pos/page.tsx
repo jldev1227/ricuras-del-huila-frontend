@@ -1266,8 +1266,8 @@ export default function OrderDashboard() {
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-black bg-white"
                       >
                         <option value="EFECTIVO">Efectivo</option>
-                        <option value="TARJETA">Tarjeta</option>
-                        <option value="TRANSFERENCIA">Transferencia</option>
+                        <option value="NEQUI">Nequi</option>
+                        <option value="DAVIPLATA">Daviplata</option>
                       </select>
                     </div>
 
