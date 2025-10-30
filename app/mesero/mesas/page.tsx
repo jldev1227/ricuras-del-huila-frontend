@@ -525,8 +525,7 @@ export default function MeseroMesasPage() {
                               </span>
                               <p className="font-medium">
                                 #
-                                {mesaSeleccionada.ordenActual.numeroOrden ||
-                                  mesaSeleccionada.ordenActual.id.slice(-6)}
+                                {mesaSeleccionada.ordenActual.id.slice(-6)}
                               </p>
                             </div>
 

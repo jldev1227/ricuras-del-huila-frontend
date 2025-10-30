@@ -534,7 +534,7 @@ export default function MeseroNuevaOrden() {
         </div>
 
         {/* Lista de productos */}
-        <div className="flex-1 p-4 lg:p-6 bg-gray-50">
+        <div className="flex-1 p-4 lg:p-6 bg-gray-50 overflow-scroll">
           {carrito.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <ShoppingBag size={48} className="mb-4 opacity-30" />

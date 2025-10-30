@@ -243,15 +243,6 @@ export default function MeseroPage() {
         <CardHeader className="pb-4">
           <div className="flex justify-between items-center w-full">
             <h2 className="text-xl font-semibold">Mis Órdenes Recientes</h2>
-            <Button
-              variant="light"
-              color="primary"
-              size="sm"
-              endContent={<Eye className="w-4 h-4" />}
-              onPress={() => router.push("/mesero/ordenes")}
-            >
-              Ver Todas
-            </Button>
           </div>
         </CardHeader>
         <CardBody className="pt-0">
@@ -279,6 +270,9 @@ export default function MeseroPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">
+                            #{orden.id.slice(-6)}
+                          </span>
                           <Chip
                             size="sm"
                             color={getEstadoColor(orden.estado)}
@@ -374,7 +368,7 @@ export default function MeseroPage() {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-gray-900">
-                              #{orden.numeroOrden || orden.id.slice(-6)}
+                              #{orden.id.slice(-6)}
                             </span>
                             <Chip
                               size="sm"
@@ -442,8 +436,7 @@ export default function MeseroPage() {
                   <div>
                     <h3 className="text-xl font-bold">
                       Orden #
-                      {ordenSeleccionada?.numeroOrden ||
-                        ordenSeleccionada?.id.slice(-6)}
+                      {ordenSeleccionada?.id.slice(-6)}
                     </h3>
                     {ordenSeleccionada && (
                       <div className="flex items-center gap-2 mt-1">
