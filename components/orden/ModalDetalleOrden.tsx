@@ -218,7 +218,7 @@ export default function ModalDetalleOrden({
     const SIZE_NORMAL = [GS, 0x21, 0x00];
     const SIZE_DOUBLE = [GS, 0x21, 0x11];
     const CUT = [GS, 0x56, 0x00];
-    const OPEN_DRAWER = [0x1B, 0x70, 0x00x 0x19, 0xFA]
+    const OPEN_DRAWER = [0x1B, 0x70, 0x00, 0x19, 0xFA]
     const SET_CP850 = [ESC, 0x74, 0x02];
 
     const addText = (text: string) => commands.push(...encodeText(text));
