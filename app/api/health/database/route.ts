@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { verificarConexionDB } from "@/lib/prisma";
 
 export async function GET(_request: NextRequest) {
-  try {
-    console.log('🔍 [API] Verificación de salud de la base de datos solicitada');
-    
+  try {    
     const resultado = await verificarConexionDB();
     
     if (resultado.success) {
-      console.log('✅ [API] Verificación exitosa');
       return NextResponse.json({
         status: 'healthy',
         database: 'connected',
@@ -21,7 +18,6 @@ export async function GET(_request: NextRequest) {
         ...resultado
       }, { status: 200 });
     } else {
-      console.log('❌ [API] Verificación falló');
       return NextResponse.json({
         status: 'unhealthy',
         database: 'disconnected',

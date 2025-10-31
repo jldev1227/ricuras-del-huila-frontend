@@ -601,11 +601,20 @@ export default function OrdenesPage() {
                         {orden._count?.orden_items !== 1 ? "s" : ""}
                       </p>
                       <p className="font-bold text-wine">
-                        {formatCOP(orden.total)}
+                        {Number(orden.total).toLocaleString("es-CO", {
+                          style: "currency",
+                          currency: "COP",
+                          maximumFractionDigits: 0
+                        })}
                       </p>
                       {orden.descuento > 0 && (
                         <p className="text-xs text-red-600">
-                          -{formatCOP(orden.descuento)}
+                          -{Number(orden.descuento).toLocaleString("es-CO", {
+                            style: "currency",
+                            currency: "COP",
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          })}
                         </p>
                       )}
                       <p className="text-sm text-gray-600">

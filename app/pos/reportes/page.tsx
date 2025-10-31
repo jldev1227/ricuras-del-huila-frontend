@@ -197,9 +197,6 @@ export default function ReportsPage() {
           }
         }
 
-        console.log("📦 Órdenes cargadas:", allFetchedOrders.length);
-        console.log("🔍 Primera orden:", allFetchedOrders[0]);
-
         setAllOrders(allFetchedOrders);
       } catch (error) {
         console.error("❌ Error fetching orders:", error);
@@ -221,11 +218,6 @@ export default function ReportsPage() {
   }, [allOrders]);
 
   const filteredOrders = useMemo(() => {
-    console.log("=== INICIO FILTRADO ===");
-    console.log("Total órdenes:", allOrders.length);
-    console.log("Sucursal seleccionada:", selectedSucursal);
-    console.log("Tipo de filtro:", filterType);
-
     // 1. Validar y normalizar fechas
     const normalizarFecha = (fecha: any): Date => {
       if (fecha instanceof Date) return fecha;
@@ -245,7 +237,6 @@ export default function ReportsPage() {
 
     // 3. Filtrar por estado ENTREGADA
     let filtered = allOrders.filter((order) => order.estado === "ENTREGADA");
-    console.log("Después de filtrar por estado:", filtered.length);
 
     // 4. Filtrar por sucursal
     if (selectedSucursal && selectedSucursal !== "todas") {
@@ -254,11 +245,9 @@ export default function ReportsPage() {
         const match = sucursalOrder === selectedSucursal;
         return match;
       });
-      console.log(`Después de filtrar por sucursal "${selectedSucursal}":`, filtered.length);
     }
 
     const now = new Date();
-    console.log("Fecha actual:", now.toISOString());
 
     switch (filterType) {
       case "dia-especifico": {
@@ -266,20 +255,15 @@ export default function ReportsPage() {
           console.warn("Filtro 'dia-especifico' seleccionado pero no hay specificDate");
           break;
         }
-        console.log("specificDate recibido:", specificDate);
 
         // ✅ Crear fecha en zona horaria de Colombia
         const targetDate = new Date(specificDate + "T00:00:00-05:00");
 
-        console.log("targetDate normalizada:", targetDate.toISOString());
-
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
-          console.log(orderDate, targetDate, "DATES");
           const match = mismaFecha(orderDate, targetDate);
           return match;
         });
-        console.log("Después de filtro día específico:", filtered.length);
         break;
       }
 
@@ -296,17 +280,11 @@ export default function ReportsPage() {
         const start = new Date(startDate + "T00:00:00-05:00");
         const end = new Date(endDate + "T23:59:59-05:00");
 
-        console.log("Rango de fechas:", {
-          inicio: start.toISOString(),
-          fin: end.toISOString(),
-        });
-
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
           const match = orderDate >= start && orderDate <= end;
           return match;
         });
-        console.log("Después de filtro rango de fechas:", filtered.length);
         break;
       }
 
@@ -319,8 +297,6 @@ export default function ReportsPage() {
         const weekNum = parseInt(selectedWeek, 10);
         const yearForWeek = parseInt(selectedYear, 10);
         const monthForWeek = now.getMonth();
-
-        console.log("Filtrando por semana:", { weekNum, yearForWeek, monthForWeek });
 
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
@@ -339,13 +315,10 @@ export default function ReportsPage() {
           const match = dayOfMonth >= weekStart && dayOfMonth <= weekEnd;
           return match;
         });
-        console.log("Después de filtro semana específica:", filtered.length);
         break;
       }
 
       case "mes-actual": {
-        console.log("Filtrando mes actual");
-
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
           const match =
@@ -353,7 +326,6 @@ export default function ReportsPage() {
             orderDate.getFullYear() === now.getFullYear();
           return match;
         });
-        console.log("Después de filtro mes actual:", filtered.length);
         break;
       }
 
@@ -369,17 +341,11 @@ export default function ReportsPage() {
           999,
         );
 
-        console.log("Filtrando hace un mes:", {
-          inicio: lastMonth.toISOString(),
-          fin: lastMonthEnd.toISOString(),
-        });
-
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
           const match = orderDate >= lastMonth && orderDate <= lastMonthEnd;
           return match;
         });
-        console.log("Después de filtro hace un mes:", filtered.length);
         break;
       }
 
@@ -390,7 +356,6 @@ export default function ReportsPage() {
         }
 
         const [year, month] = selectedMonth.split("-");
-        console.log("Filtrando mes específico:", { year, month });
 
         const yearNum = parseInt(year, 10);
         const monthNum = parseInt(month, 10) - 1;
@@ -402,7 +367,6 @@ export default function ReportsPage() {
             orderDate.getFullYear() === yearNum;
           return match;
         });
-        console.log("Después de filtro mes específico:", filtered.length);
         break;
       }
 
@@ -413,24 +377,18 @@ export default function ReportsPage() {
         }
 
         const yearNum = parseInt(selectedYear, 10);
-        console.log("Filtrando año específico:", yearNum);
 
         filtered = filtered.filter((o) => {
           const orderDate = normalizarFecha(o.fecha);
           const match = orderDate.getFullYear() === yearNum;
           return match;
         });
-        console.log("Después de filtro año específico:", filtered.length);
         break;
       }
 
       default:
         console.warn("Tipo de filtro no reconocido:", filterType);
     }
-
-    console.log("=== RESULTADO FINAL ===");
-    console.log("Órdenes filtradas:", filtered.length);
-    console.log("Primeras 3 órdenes:", filtered.slice(0, 3));
 
     return filtered;
   }, [
@@ -451,7 +409,6 @@ export default function ReportsPage() {
       (sum, o) => sum + o.descuento,
       0,
     );
-    console.log(filteredOrders, 'filteredOrders');
 
     const totalCostos = totalVentas * 0.4;
     const gananciaBruta = totalVentas - totalCostos;

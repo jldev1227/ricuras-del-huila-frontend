@@ -115,7 +115,6 @@ export default function MeseroPage() {
         const data = await response.json();
         if (data.success) {
           setOrdenSeleccionada(data.orden);
-          console.log(data.orden)
           onOpen();
         }
       }

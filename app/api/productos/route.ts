@@ -75,9 +75,6 @@ export async function POST(request: NextRequest) {
       destacado = false,
     } = body;
 
-
-    console.log(imagen, "Imagen dele body")
-
     // 🔍 Validaciones mejoradas
     if (!nombre || typeof nombre !== "string" || nombre.trim().length === 0) {
       return NextResponse.json(

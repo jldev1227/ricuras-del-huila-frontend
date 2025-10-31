@@ -5,17 +5,10 @@ import { getUserFromRequest } from '@/lib/auth-server'
 
 export async function POST(request: Request) {
   try {
-    console.log('📥 [upload-image] POST request received')
-    console.log('🔍 [upload-image] Request URL:', request.url)
-    console.log('🔍 [upload-image] Request headers:', Object.fromEntries(request.headers.entries()))
-    console.log(request)
-    
     // Verificar autenticación
     const authHeader = request.headers.get('authorization')
-    console.log(`🔐 Authorization header: ${authHeader ? 'Present' : 'No header'}`)
     
     if (!authHeader) {
-      console.log('❌ No valid authorization header found')
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
@@ -66,12 +59,10 @@ export async function POST(request: Request) {
 
       // Eliminar imagen anterior si existe
       if (producto.imagen) {
-        console.log('🗑️ Eliminando imagen anterior:', producto.imagen)
         await deleteProductImage(producto.imagen)
       }
 
       // Subir nueva imagen a Supabase
-      console.log('📤 Subiendo imagen para producto existente:', productId)
       uploadResult = await uploadProductImage(file, productId)
 
       if (!uploadResult.success) {
@@ -86,13 +77,10 @@ export async function POST(request: Request) {
         where: { id: productId },
         data: { imagen: uploadResult.imagePath }
       })
-
-      console.log('✅ Imagen actualizada para producto:', productId)
     } else {
       // Caso 2: Producto nuevo - solo subir imagen temporalmente
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
-      console.log('📤 Subiendo imagen temporal:', tempId)
       uploadResult = await uploadProductImage(file, tempId)
 
       if (!uploadResult.success) {
@@ -101,12 +89,7 @@ export async function POST(request: Request) {
           { status: 500 }
         )
       }
-
-
-      console.log('✅ Imagen temporal subida:', tempId)
     }
-
-    console.log('✅ Imagen subida exitosamente:', uploadResult.path)
 
     return NextResponse.json({
       success: true,
@@ -154,7 +137,6 @@ export async function DELETE(request: NextRequest) {
 
     // Eliminar imagen de Supabase si existe
     if (producto.imagen) {
-      console.log('🗑️ Eliminando imagen de Supabase:', producto.imagen)
       const deleteResult = await deleteProductImage(producto.imagen)
       
       if (!deleteResult.success) {

@@ -24,8 +24,6 @@ export async function sendOTPEmail(
     if (error) {
       throw error;
     }
-
-    console.log("Email enviado exitosamente:", data);
   } catch (error) {
     console.error("Error enviando email con Resend:", error);
     throw new Error("No se pudo enviar el código de verificación");
@@ -65,8 +63,6 @@ export async function sendInvoiceEmail(
     if (error) {
       throw error;
     }
-
-    console.log("Factura enviada exitosamente:", data);
   } catch (error) {
     console.error("Error enviando factura:", error);
     throw new Error("No se pudo enviar la factura");
@@ -99,8 +95,6 @@ export async function sendPasswordChangedEmail(
     if (error) {
       throw error;
     }
-
-    console.log("Email de confirmación enviado:", data);
   } catch (error) {
     console.error("Error enviando email de confirmación:", error);
     // No lanzar error para no bloquear el cambio de contraseña

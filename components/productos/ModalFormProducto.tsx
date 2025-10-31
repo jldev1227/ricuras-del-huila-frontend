@@ -118,8 +118,6 @@ export default function ModalFormProducto({
     const formData = new FormData();
     formData.append("image", file);
 
-    console.log('🚀 [ModalFormProducto] Iniciando upload con authenticatedFetch');
-
     const response = await authenticatedFetch("/api/productos/upload-image", {
       method: "POST",
       body: formData,
@@ -133,7 +131,6 @@ export default function ModalFormProducto({
     // Actualizar el preview con la URL completa de Supabase
     const supabaseUrl = getProductImageUrl(data.imagePath);
     setImagePreview(supabaseUrl);
-    console.log('🖼️ [ModalFormProducto] Preview actualizado con URL de Supabase:', supabaseUrl);
 
     return data.imagePath;
   };
@@ -180,7 +177,6 @@ export default function ModalFormProducto({
       if (producto.imagen) {
         const supabaseUrl = getProductImageUrl(producto.imagen);
         setImagePreview(supabaseUrl);
-        console.log('🖼️ [ModalFormProducto] Preview cargado desde Supabase:', supabaseUrl);
       } else {
         setImagePreview(null);
       }
@@ -191,7 +187,6 @@ export default function ModalFormProducto({
   }, [producto, resetForm]);
 
   const handleSubmit = async () => {
-    console.log('🚀 [ModalFormProducto] Iniciando handleSubmit');
     setError("");
 
     // Validaciones de campos requeridos
@@ -202,14 +197,6 @@ export default function ModalFormProducto({
     const costoValido =
       typeof formData.costo_produccion === "number" &&
       formData.costo_produccion > 0;
-
-    console.log('📋 [ModalFormProducto] Validaciones:', {
-      nombreValido,
-      categoriaValida,
-      precioValido,
-      costoValido,
-      formData: { ...formData }
-    });
 
     if (!nombreValido) {
       console.error('❌ [ModalFormProducto] Error: Nombre vacío');
@@ -232,35 +219,23 @@ export default function ModalFormProducto({
       return;
     }
 
-    console.log('✅ [ModalFormProducto] Validaciones pasadas, iniciando proceso');
     setLoading(true);
 
     try {
       const finalFormData = { ...formData };
-      console.log('📦 [ModalFormProducto] FormData inicial:', finalFormData);
 
       // Si hay una nueva imagen seleccionada, subirla primero
       if (imageFile) {
-        console.log('🖼️ [ModalFormProducto] Subiendo nueva imagen:', {
-          fileName: imageFile.name,
-          fileSize: imageFile.size,
-          fileType: imageFile.type
-        });
-        
         setUploadingImage(true);
         try {
           const imagePath = await uploadImage(imageFile);
-          console.log('✅ [ModalFormProducto] Imagen subida exitosamente:', imagePath);
 
           // Si estamos editando y tenía imagen anterior, eliminarla
           if (producto?.imagen && producto.imagen !== imagePath) {
-            console.log('🗑️ [ModalFormProducto] Eliminando imagen anterior:', producto.imagen);
             await deleteImage(producto.imagen);
-            console.log('✅ [ModalFormProducto] Imagen anterior eliminada');
           }
 
           finalFormData.imagen = imagePath;
-          console.log('📦 [ModalFormProducto] FormData con nueva imagen:', finalFormData);
         } catch (imageError) {
           console.error('❌ [ModalFormProducto] Error al subir imagen:', imageError);
           throw new Error(
@@ -269,8 +244,6 @@ export default function ModalFormProducto({
         } finally {
           setUploadingImage(false);
         }
-      } else {
-        console.log('📷 [ModalFormProducto] No hay nueva imagen para subir');
       }
 
       const url = producto?.id
@@ -279,28 +252,13 @@ export default function ModalFormProducto({
 
       const method = producto?.id ? "PUT" : "POST";
 
-      console.log('🌐 [ModalFormProducto] Enviando request:', {
-        url,
-        method,
-        isEdit: !!producto?.id,
-        productoId: producto?.id,
-        finalFormData
-      });
-
       const response = await authenticatedFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalFormData),
       });
 
-      console.log('📡 [ModalFormProducto] Response recibido:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-
       const data = await response.json();
-      console.log('📄 [ModalFormProducto] Response data:', data);
 
       if (!response.ok) {
         console.error('❌ [ModalFormProducto] Error en response:', {
@@ -311,11 +269,9 @@ export default function ModalFormProducto({
         throw new Error(data.message || "Error al guardar producto");
       }
 
-      console.log('✅ [ModalFormProducto] Producto guardado exitosamente');
       onSuccess();
       onOpenChange(false);
       resetForm();
-      console.log('🎉 [ModalFormProducto] Proceso completado exitosamente');
     } catch (err) {
       console.error('💥 [ModalFormProducto] Error en handleSubmit:', {
         error: err,
@@ -324,7 +280,6 @@ export default function ModalFormProducto({
       });
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
-      console.log('🏁 [ModalFormProducto] Finalizando handleSubmit');
       setLoading(false);
     }
   };

@@ -236,8 +236,6 @@ export default function MeseroNuevaOrden() {
         especificaciones,
       };
 
-      console.log(orden)
-
       const response = await fetch("/api/ordenes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

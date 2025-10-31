@@ -124,7 +124,6 @@ export default function OrderDashboard() {
   // Cargar datos básicos (categorías y productos) - separado de meseros
   useEffect(() => {
     const fetchBasicData = async () => {
-      console.log("🟡 [POS PAGE] Cargando datos básicos...");
       setLoading(true);
       try {
         // Categorías
@@ -132,7 +131,6 @@ export default function OrderDashboard() {
         const dataCategorias = await resCategorias.json();
         if (dataCategorias.success) {
           setCategorias(dataCategorias.categorias);
-          console.log("🟡 [POS PAGE] Categorías cargadas:", dataCategorias.categorias.length);
         }
 
         // Productos

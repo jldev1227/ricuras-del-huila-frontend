@@ -97,7 +97,6 @@ export default function Home() {
 
         // Validar token y usuario
         if (!authData.state.token || !authData.state.user) {
-          console.log("No hay token o usuario válido en auth-storage");
           setAuthLoading(false);
           return;
         }
