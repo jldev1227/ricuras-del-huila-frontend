@@ -6,6 +6,26 @@ import PasswordChangedEmail from "@/components/emails/PasswordChangeEmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Timeout para envío de emails
+const EMAIL_TIMEOUT = 10000; // 10 segundos
+
+/**
+ * Enviar email con timeout automático
+ */
+async function sendEmailWithTimeout<T>(
+  emailPromise: Promise<T>,
+  timeoutMs: number = EMAIL_TIMEOUT
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("Email send timeout")), timeoutMs)
+  );
+
+  return Promise.race([emailPromise, timeoutPromise]);
+}
+
+/**
+ * Enviar OTP por email
+ */
 export async function sendOTPEmail(
   to: string,
   otp: string,
@@ -14,22 +34,30 @@ export async function sendOTPEmail(
   try {
     const emailHtml = await render(OTPEmail({ nombre, otp }));
 
-    const { data, error } = await resend.emails.send({
+    const emailPromise = resend.emails.send({
       from: "Ricuras del Huila <onboarding@resend.dev>",
       to,
       subject: "Código de Recuperación de Contraseña",
       html: emailHtml,
     });
 
+    const { data, error } = await sendEmailWithTimeout(emailPromise);
+
     if (error) {
-      throw error;
+      console.error("Resend error:", error);
+      throw new Error(`Error sending email: ${error.message}`);
     }
+
+    console.log("✅ Email enviado exitosamente:", data?.id);
   } catch (error) {
     console.error("Error enviando email con Resend:", error);
     throw new Error("No se pudo enviar el código de verificación");
   }
 }
 
+/**
+ * Enviar factura por email
+ */
 export async function sendInvoiceEmail(
   to: string,
   clienteNombre: string,
@@ -52,7 +80,7 @@ export async function sendInvoiceEmail(
         ]
       : [];
 
-    const { data, error } = await resend.emails.send({
+    const emailPromise = resend.emails.send({
       from: "Facturación <onboarding@resend.dev>",
       to,
       subject: `Factura #${numeroFactura} - Ricuras del Huila`,
@@ -60,15 +88,23 @@ export async function sendInvoiceEmail(
       attachments,
     });
 
+    const { data, error } = await sendEmailWithTimeout(emailPromise, 15000); // 15s para facturas con PDF
+
     if (error) {
-      throw error;
+      console.error("Resend error:", error);
+      throw new Error(`Error sending invoice: ${error.message}`);
     }
+
+    console.log("✅ Factura enviada exitosamente:", data?.id);
   } catch (error) {
     console.error("Error enviando factura:", error);
     throw new Error("No se pudo enviar la factura");
   }
 }
 
+/**
+ * Enviar notificación de cambio de contraseña
+ */
 export async function sendPasswordChangedEmail(
   to: string,
   nombre: string,
@@ -85,16 +121,22 @@ export async function sendPasswordChangedEmail(
       PasswordChangedEmail({ nombre, fecha, ipAddress }),
     );
 
-    const { data, error } = await resend.emails.send({
+    const emailPromise = resend.emails.send({
       from: "Seguridad - Ricuras del Huila <seguridad@resend.dev>",
       to,
       subject: "⚠️ Tu contraseña ha sido actualizada",
       html: emailHtml,
     });
 
+    const { data, error } = await sendEmailWithTimeout(emailPromise);
+
     if (error) {
-      throw error;
+      console.error("Resend error:", error);
+      // No lanzar error para no bloquear el cambio de contraseña
+      return;
     }
+
+    console.log("✅ Notificación de cambio de contraseña enviada:", data?.id);
   } catch (error) {
     console.error("Error enviando email de confirmación:", error);
     // No lanzar error para no bloquear el cambio de contraseña
