@@ -791,11 +791,19 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <p className="font-bold text-wine">
-                            {formatCOP(orden.total)}
+                            {Number(orden.total).toLocaleString("es-CO", {
+                              style: "currency",
+                              currency: "COP",
+                              maximumFractionDigits: 0
+                            })}
                           </p>
                           {orden.descuento > 0 && (
                             <p className="text-xs text-red-600">
-                              -{formatCOP(orden.descuento)}
+                              -{Number(orden.descuento).toLocaleString("es-CO", {
+                                style: "currency",
+                                currency: "COP",
+                                maximumFractionDigits: 0
+                              })}
                             </p>
                           )}
                         </td>
