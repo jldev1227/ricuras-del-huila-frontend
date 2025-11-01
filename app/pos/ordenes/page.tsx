@@ -13,7 +13,7 @@ import {
   Spinner,
   useDisclosure,
 } from "@heroui/react";
-import type { ordenes, sucursales, usuarios } from "@prisma/client";
+import type { ordenes, sucursales } from "@prisma/client";
 import {
   AlertTriangle,
   Building2,
@@ -34,9 +34,9 @@ import { formatCOP } from "@/utils/formatCOP";
 
 export default function OrdenesPage() {
   const router = useRouter();
-  const [ordenes, setOrdenes] = useState<Orden[]>([]);
+  const [ordenes, setOrdenes] = useState<ordenes[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [sucursales, setSucursales] = useState<sucursales[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filtros
@@ -50,7 +50,8 @@ export default function OrdenesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-
+  const [totalAcumulado, setTotalAcumulado] = useState(0);
+  
   // Modales
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<string | null>(
     null,
@@ -109,6 +110,7 @@ export default function OrdenesPage() {
           setOrdenes(ordenesData.ordenes);
           setTotal(ordenesData.pagination.total);
           setTotalPages(ordenesData.pagination.totalPages);
+          setTotalAcumulado(ordenesData.totalAcumulado);
         }
       } catch (error) {
         console.error("Error al cargar datos:", error);
@@ -504,9 +506,11 @@ export default function OrdenesPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <p className="text-sm text-gray-600 mb-1">Ventas totales</p>
               <p className="text-2xl font-bold text-wine">
-                {formatCOP(
-                  ordenes.reduce((sum, o) => sum + Number(o.total), 0),
-                )}
+                {Number(totalAcumulado).toLocaleString("es-CO", {
+                  style: "currency",
+                  currency: "COP",
+                  maximumFractionDigits: 0,
+                })}
               </p>
             </div>
           </div>

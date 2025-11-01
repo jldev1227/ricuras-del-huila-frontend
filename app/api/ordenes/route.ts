@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Obtener órdenes con solo los campos necesarios
-    const [ordenes, total] = await Promise.all([
+    // Obtener órdenes con solo los campos necesarios y calcular total acumulado
+    const [ordenes, total, totalAcumuladoResult] = await Promise.all([
       prisma.ordenes.findMany({
         where,
         select: {
@@ -118,6 +118,13 @@ export async function GET(request: NextRequest) {
         take: limit,
       }),
       prisma.ordenes.count({ where }),
+      // ✅ Calcular total acumulado de TODAS las órdenes que cumplen los filtros (sin paginación)
+      prisma.ordenes.aggregate({
+        where,
+        _sum: {
+          total: true,
+        },
+      }),
     ]);
 
     // Formatear las fechas en la respuesta a hora de Colombia
@@ -127,9 +134,13 @@ export async function GET(request: NextRequest) {
       creado_en_utc: orden.creado_en, // Mantener el original si lo necesitas
     }));
 
+    // Total acumulado de TODAS las órdenes (sin límite de paginación)
+    const totalAcumulado = totalAcumuladoResult._sum.total || 0;
+
     return NextResponse.json({
       success: true,
       ordenes: ordenesConFechaColombia,
+      totalAcumulado, // ✅ Total acumulado de los valores de todas las órdenes
       pagination: {
         total,
         page,
