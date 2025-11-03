@@ -10,9 +10,12 @@ import {
   ModalHeader,
   Spinner,
   Textarea,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import { AlertCircle, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import ModalSeleccionarMesa from "./ModalSeleccionarMesa";
 
 interface ModalActualizarOrdenProps {
   ordenId: string | null;
@@ -40,6 +43,13 @@ export default function ModalActualizarOrden({
     }>;
     tipoOrden: string;
     subtotal: number;
+    mesa_id?: string;
+    mesero_id?: string;
+    cliente_id?: string;
+    metodo_pago?: string;
+    mesas?: { numero: number };
+    usuarios?: { nombre: string };
+    clientes?: { nombre: string };
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -50,6 +60,14 @@ export default function ModalActualizarOrden({
   const [descuento, setDescuento] = useState<number>(0);
   const [costoAdicional, setCostoAdicional] = useState<number>(0);
   const [costoEnvio, setCostoEnvio] = useState<number>(0);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState<any>(null);
+  const [meseroSeleccionado, setMeseroSeleccionado] = useState("");
+  const [metodoPago, setMetodoPago] = useState("");
+  const [nombreCliente, setNombreCliente] = useState("");
+  
+  // Estados para datos auxiliares
+  const [meseros, setMeseros] = useState<Array<{id: string, nombre: string}>>([]);
+  const [clientes, setClientes] = useState<Array<{id: string, nombre: string}>>([]);
 
   const estadosPermitidosParaEditar = ["PENDIENTE", "EN_PREPARACION"];
 
@@ -59,22 +77,41 @@ export default function ModalActualizarOrden({
 
       setLoading(true);
       try {
-        const response = await fetch(`/api/ordenes/${ordenId}`);
-        const data = await response.json();
+        // Cargar datos en paralelo
+        const [ordenResponse, meserosResponse, clientesResponse] = await Promise.all([
+          fetch(`/api/ordenes/${ordenId}`),
+          fetch('/api/usuarios?rol=MESERO'),
+          fetch('/api/clientes')
+        ]);
 
-        if (data.success) {
-          setOrden(data.orden);
-          setEspecificaciones(data.orden.especificaciones || "");
-          setNotas(data.orden.notas || "");
-          setDescuento(Number(data.orden.descuento) || 0);
-          setCostoAdicional(Number(data.orden.costoAdicional) || 0);
-          setCostoEnvio(Number(data.orden.costoEnvio) || 0);
+        const ordenData = await ordenResponse.json();
+        const meserosData = await meserosResponse.json();
+        const clientesData = await clientesResponse.json();
+
+        if (ordenData.success) {
+          setOrden(ordenData.orden);
+          setEspecificaciones(ordenData.orden.especificaciones || "");
+          setNotas(ordenData.orden.notas || "");
+          setDescuento(Number(ordenData.orden.descuento) || 0);
+          setCostoAdicional(Number(ordenData.orden.costoAdicional) || 0);
+          setCostoEnvio(Number(ordenData.orden.costoEnvio) || 0);
+          setMeseroSeleccionado(ordenData.orden.mesero_id || "");
+          setMetodoPago(ordenData.orden.metodo_pago || "");
+          setNombreCliente(ordenData.orden.clientes?.nombre || "");
+        }
+
+        if (meserosData.success) {
+          setMeseros(meserosData.usuarios || []);
+        }
+
+        if (clientesData.success) {
+          setClientes(clientesData.clientes || []);
         }
       } catch (error) {
-        console.error("Error al cargar orden:", error);
+        console.error("Error al cargar datos:", error);
         addToast({
           title: "Error",
-          description: "No se pudo cargar la orden",
+          description: "No se pudieron cargar los datos",
           color: "danger",
         });
       } finally {
@@ -97,20 +134,40 @@ export default function ModalActualizarOrden({
 
     setGuardando(true);
     try {
+      const payload: any = {
+        especificaciones,
+        notas,
+        descuento: Number(descuento),
+      };
+
+      // Agregar campos opcionales según el tipo de orden
+      if (orden.tipoOrden === "LLEVAR") {
+        payload.costoAdicional = Number(costoAdicional);
+      }
+      
+      if (orden.tipoOrden === "DOMICILIO") {
+        payload.costoEnvio = Number(costoEnvio);
+      }
+
+      // Agregar nuevos campos editables
+      if (mesaSeleccionada) {
+        payload.mesa_id = mesaSeleccionada.id;
+      }
+      
+      if (meseroSeleccionado) {
+        payload.mesero_id = meseroSeleccionado;
+      }
+      
+      if (metodoPago) {
+        payload.metodo_pago = metodoPago;
+      }
+
       const response = await fetch(`/api/ordenes/${ordenId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          especificaciones,
-          notas,
-          descuento: Number(descuento),
-          costoAdicional:
-            orden.tipoOrden === "LLEVAR" ? Number(costoAdicional) : undefined,
-          costoEnvio:
-            orden.tipoOrden === "DOMICILIO" ? Number(costoEnvio) : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -252,6 +309,90 @@ export default function ModalActualizarOrden({
                       maxRows={6}
                     />
                   </div>
+
+                  {/* Selección de Mesa (solo para órdenes LOCAL) */}
+                  {orden.tipoOrden === "LOCAL" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mesa asignada
+                      </label>
+                      <div className="space-y-2">
+                        <div className="p-3 bg-gray-50 rounded-lg border">
+                          <p className="text-sm text-gray-600">
+                            Mesa actual: #{orden.mesas?.numero || 'Sin asignar'}
+                          </p>
+                        </div>
+                        <ModalSeleccionarMesa
+                          mesaSeleccionada={mesaSeleccionada?.id || null}
+                          onSelectMesa={setMesaSeleccionada}
+                          mesaActualId={orden.mesa_id}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selección de Mesero */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mesero asignado
+                    </label>
+                    <Select
+                      placeholder="Seleccionar mesero"
+                      selectedKeys={meseroSeleccionado ? [meseroSeleccionado] : []}
+                      onSelectionChange={(keys) => {
+                        const selected = Array.from(keys)[0] as string;
+                        setMeseroSeleccionado(selected || "");
+                      }}
+                      items={[{id: "", nombre: "Sin asignar"}, ...meseros]}
+                    >
+                      {(mesero) => <SelectItem key={mesero.id}>{mesero.nombre}</SelectItem>}
+                    </Select>
+                    {orden.usuarios?.nombre && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Mesero actual: {orden.usuarios.nombre}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Método de Pago */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Método de pago
+                    </label>
+                    <Select
+                      placeholder="Seleccionar método de pago"
+                      selectedKeys={metodoPago ? [metodoPago] : []}
+                      onSelectionChange={(keys) => {
+                        const selected = Array.from(keys)[0] as string;
+                        setMetodoPago(selected || "");
+                      }}
+                      items={[
+                        {id: "EFECTIVO", nombre: "Efectivo"},
+                        {id: "TARJETA", nombre: "Tarjeta"},
+                        {id: "TRANSFERENCIA", nombre: "Transferencia"},
+                        {id: "QR", nombre: "Código QR"}
+                      ]}
+                    >
+                      {(metodo) => <SelectItem key={metodo.id}>{metodo.nombre}</SelectItem>}
+                    </Select>
+                    {orden.metodo_pago && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Método actual: {orden.metodo_pago}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Cliente (solo mostrar nombre, no editable directamente) */}
+                  {orden.clientes?.nombre && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cliente
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border">
+                        <p className="text-sm text-gray-900">{orden.clientes.nombre}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Notas */}
                   <div>

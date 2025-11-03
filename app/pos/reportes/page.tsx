@@ -89,6 +89,7 @@ export default function ReportsPage() {
   const [compareMonth2, setCompareMonth2] = useState("");
   const [selectedSucursal, setSelectedSucursal] = useState("todas");
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0); // Estado para manejar paginación
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -208,6 +209,11 @@ export default function ReportsPage() {
 
     fetchOrders();
   }, []);
+
+  // ✅ Resetear página cuando cambien los filtros de fecha
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [filterType, specificDate, startDate, endDate, selectedMonth, selectedYear, selectedWeek]);
 
   const sucursales = useMemo(() => {
     const uniqueSucursales = [
@@ -806,6 +812,9 @@ export default function ReportsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // ✅ Resetear página después de exportar
+    setCurrentPage(0);
   }, [filteredOrders]);
 
   const sucursalesRanking = useMemo(() => {

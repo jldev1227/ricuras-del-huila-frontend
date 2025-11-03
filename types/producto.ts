@@ -2,14 +2,14 @@
 import type { Prisma } from "@prisma/client";
 
 // Tipo de Producto con la relación de categoría incluida
-export type ProductoConCategoria = Prisma.ProductoGetPayload<{
+export type ProductoConCategoria = Prisma.productosGetPayload<{
   include: {
-    categoria: true;
+    categorias: true;
   };
 }>;
 
 // Tipo de Categoría
-export type Categoria = Prisma.CategoriaGetPayload<{
+export type Categoria = Prisma.categoriasGetPayload<{
   select: {
     id: true;
     nombre: true;

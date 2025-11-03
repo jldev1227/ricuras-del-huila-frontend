@@ -42,6 +42,7 @@ interface FormMesa {
 interface ModalSeleccionarMesaProps {
   mesaSeleccionada: string | null;
   onSelectMesa: (mesa: Mesa) => void;
+  mesaActualId?: string | null; // ID de la mesa actual (para permitir seleccionarla al editar)
 }
 
 interface MesaIlustracionProps {
@@ -49,6 +50,8 @@ interface MesaIlustracionProps {
   estado: boolean;
   onClick: (mesa: Mesa) => void;
   isSelected: boolean;
+  mesa: Mesa; // Agregar el objeto mesa completo
+  isCurrentMesa?: boolean; // Indica si es la mesa actual de la orden
 }
 
 // Componente de mesa con imagen
@@ -57,30 +60,23 @@ const MesaIlustracion = ({
   estado,
   onClick,
   isSelected,
+  mesa,
+  isCurrentMesa = false,
 }: MesaIlustracionProps) => {
-  const isDisabled = !estado;
+  const isDisabled = !estado && !isCurrentMesa; // Permitir seleccionar si es la mesa actual
 
   return (
     <Card
       isPressable
       onPress={() => {
         if (!isDisabled) {
-          onClick({
-            id: "",
-            numero,
-            disponible: estado,
-            sucursal_id: "",
-            ubicacion: null,
-            notas: null,
-            ultima_limpieza: null,
-            creado_en: new Date(),
-            actualizado_en: new Date(),
-          });
+          onClick(mesa);
         }
       }}
       className={`
                 relative rounded-2xl border-1 bg-[#f2f2f2] p-2 py-5
                 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+                ${isCurrentMesa && !estado ? "border-blue-500 border-2" : ""}
             `}
     >
       {isDisabled && (
@@ -109,11 +105,17 @@ const MesaIlustracion = ({
           </div>
         </div>
 
-        {/* Badge de estado (solo si está ocupada) */}
+        {/* Badge de estado */}
         {!estado ? (
-          <div className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">
-            Ocupada
-          </div>
+          isCurrentMesa ? (
+            <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">
+              Mesa Actual
+            </div>
+          ) : (
+            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">
+              Ocupada
+            </div>
+          )
         ) : (
           !isSelected && (
             <div className="absolute top-0 right-0 bg-default-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">
@@ -128,6 +130,7 @@ const MesaIlustracion = ({
 
 export default function ModalSeleccionarMesa({
   onSelectMesa,
+  mesaActualId = null,
 }: ModalSeleccionarMesaProps) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const {
@@ -374,6 +377,8 @@ export default function ModalSeleccionarMesa({
                         estado={mesa.disponible}
                         onClick={() => onSelectTemp(mesa)}
                         isSelected={tempMesa?.id === mesa.id}
+                        mesa={mesa}
+                        isCurrentMesa={mesa.id === mesaActualId}
                       />
                       ))}
                     </div>

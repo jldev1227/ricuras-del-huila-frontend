@@ -73,6 +73,11 @@ export async function POST(request: NextRequest) {
       imagen,
       disponible = true,
       destacado = false,
+      stock_actual = 0,
+      stock_minimo = 0,
+      stock_maximo,
+      unidad_medida = "unidad",
+      controlar_stock = false,
     } = body;
 
     // 🔍 Validaciones mejoradas
@@ -116,6 +121,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 🔍 Validaciones de stock
+    if (controlar_stock && stock_actual < 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El stock actual no puede ser negativo",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (controlar_stock && stock_minimo < 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El stock mínimo no puede ser negativo",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (controlar_stock && stock_maximo !== null && stock_maximo !== undefined && stock_maximo < stock_minimo) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El stock máximo debe ser mayor o igual al stock mínimo",
+        },
+        { status: 400 },
+      );
+    }
+
     // 🔍 Verificar que la categoría existe
     const categoriaExiste = await prisma.categorias.findUnique({
       where: { id: categoria_id },
@@ -149,18 +185,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 💾 Crear el producto
+    // � Determinar disponibilidad automática si se controla stock
+    const disponibilidadFinal = controlar_stock ? stock_actual > 0 : disponible;
+
+    const productoId = uuidv4();
+
+    // �💾 Crear el producto
     const producto = await prisma.productos.create({
       data: {
-        id: uuidv4(),
+        id: productoId,
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         precio,
         costo_produccion,
         categoria_id: categoria_id,
         imagen,
-        disponible: Boolean(disponible),
+        disponible: Boolean(disponibilidadFinal),
         destacado: Boolean(destacado),
+        stock_actual: Number(stock_actual),
+        stock_minimo: Number(stock_minimo),
+        stock_maximo: stock_maximo ? Number(stock_maximo) : null,
+        unidad_medida: unidad_medida.trim(),
+        controlar_stock: Boolean(controlar_stock),
         creado_en: new Date(),
         actualizado_en: new Date(),
       },
@@ -174,6 +220,23 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // 📝 Crear movimiento de stock inicial si se controla stock y hay stock inicial
+    if (controlar_stock && stock_actual > 0) {
+      await prisma.movimientos_stock.create({
+        data: {
+          id: uuidv4(),
+          producto_id: productoId,
+          tipo_movimiento: "entrada",
+          cantidad: stock_actual,
+          stock_anterior: 0,
+          stock_nuevo: stock_actual,
+          motivo: "Stock inicial del producto",
+          referencia: `PRODUCTO_CREADO_${productoId}`,
+          creado_en: new Date(),
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

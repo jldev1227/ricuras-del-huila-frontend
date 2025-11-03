@@ -20,6 +20,11 @@ export async function PUT(
       imagen,
       disponible,
       destacado,
+      stock_actual,
+      stock_minimo,
+      stock_maximo,
+      unidad_medida,
+      controlar_stock,
     } = body;
 
     if (!nombre || !categoria_id) {
@@ -27,6 +32,39 @@ export async function PUT(
         { message: "Nombre y categoría son requeridos" },
         { status: 400 },
       );
+    }
+
+    // 🔍 Validaciones de stock
+    if (controlar_stock !== undefined && controlar_stock) {
+      if (stock_actual !== undefined && stock_actual < 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "El stock actual no puede ser negativo",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (stock_minimo !== undefined && stock_minimo < 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "El stock mínimo no puede ser negativo",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (stock_maximo !== undefined && stock_maximo !== null && stock_minimo !== undefined && stock_maximo < stock_minimo) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "El stock máximo debe ser mayor o igual al stock mínimo",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const productoActual = await prisma.productos.findUnique({ where: { id } });
@@ -37,26 +75,64 @@ export async function PUT(
       );
     }
 
+    // 🔄 Preparar datos para actualización
+    const updateData: any = {
+      nombre,
+      descripcion,
+      precio,
+      costo_produccion: costo_produccion,
+      categoria_id: categoria_id,
+      imagen,
+      disponible,
+      destacado,
+      actualizado_en: new Date(),
+    };
+
+    // 📝 Agregar campos de stock si están presentes
+    if (stock_actual !== undefined) updateData.stock_actual = Number(stock_actual);
+    if (stock_minimo !== undefined) updateData.stock_minimo = Number(stock_minimo);
+    if (stock_maximo !== undefined) updateData.stock_maximo = stock_maximo ? Number(stock_maximo) : null;
+    if (unidad_medida !== undefined) updateData.unidad_medida = unidad_medida.trim();
+    if (controlar_stock !== undefined) updateData.controlar_stock = Boolean(controlar_stock);
+
+    // 🔍 Si se está actualizando stock_actual, crear movimiento
+    let movimientoCreado = false;
+    if (stock_actual !== undefined && stock_actual !== productoActual.stock_actual) {
+      const diferencia = stock_actual - productoActual.stock_actual;
+      const tipoMovimiento = diferencia > 0 ? "entrada" : "salida";
+      
+      await prisma.movimientos_stock.create({
+        data: {
+          id: crypto.randomUUID(),
+          producto_id: id,
+          tipo_movimiento: tipoMovimiento,
+          cantidad: Math.abs(diferencia),
+          stock_anterior: productoActual.stock_actual,
+          stock_nuevo: stock_actual,
+          motivo: "Ajuste manual de stock",
+          referencia: `AJUSTE_${id}_${Date.now()}`,
+          creado_en: new Date(),
+        },
+      });
+      movimientoCreado = true;
+    }
+
+    // 🔍 Auto-determinar disponibilidad si se controla stock
+    if (controlar_stock && stock_actual !== undefined) {
+      updateData.disponible = stock_actual > 0;
+    }
+
     // Actualizar en la base de datos
     const producto = await prisma.productos.update({
       where: { id },
-      data: {
-        nombre,
-        descripcion,
-        precio,
-        costo_produccion: costo_produccion,
-        categoria_id: categoria_id,
-        imagen, // ✅ ya tiene /productos/
-        disponible,
-        destacado,
-        actualizado_en: new Date(),
-      },
+      data: updateData,
       include: { categorias: true },
     });
 
     return NextResponse.json({
       success: true,
       producto,
+      movimiento_creado: movimientoCreado,
       message: "Producto actualizado exitosamente",
     });
   } catch (error) {

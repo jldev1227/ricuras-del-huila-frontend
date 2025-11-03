@@ -4,16 +4,18 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Configuración optimizada para serverless
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    // Logs mínimos en producción
+// ✅ Configuración optimizada para Vercel Serverless + Supabase
+const prismaClientSingleton = () => {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" 
       ? ["query", "error", "warn"] 
       : ["error"],
     errorFormat: process.env.NODE_ENV === "development" ? "pretty" : "minimal",
   });
+};
+
+// Singleton pattern para evitar múltiples instancias
+export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
 // Event listeners SOLO en desarrollo
 if (process.env.NODE_ENV === "development") {
@@ -22,28 +24,25 @@ if (process.env.NODE_ENV === "development") {
   });
 }
 
-// Singleton pattern para desarrollo
+// Guardar instancia en global para desarrollo (hot reload)
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-// ✅ CRÍTICO: Preparar conexión en serverless
-if (process.env.VERCEL) {
-  prisma.$connect().catch((err) => {
-    console.error("Error conectando Prisma:", err);
+// ✅ IMPORTANTE: Cerrar conexiones al finalizar (desarrollo)
+if (process.env.NODE_ENV === "development") {
+  process.on("beforeExit", async () => {
+    await prisma.$disconnect();
   });
 }
 
-// ✅ CRÍTICO: Helper para verificar conexión bajo demanda
+// ✅ Helper para verificar conexión de base de datos
 export async function verificarConexionDB() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return { success: true };
   } catch (error) {
-    console.error("Error de conexión DB:", error);
+    console.error("❌ Error de conexión DB:", error);
     return { success: false, error };
   }
 }
-
-// ❌ NO ejecutar automáticamente en producción
-// La verificación debe ser manual o por health check

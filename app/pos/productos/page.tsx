@@ -176,6 +176,33 @@ export default function ProductosPage() {
           </Button>
         </div>
 
+        {/* 📦 Información del Sistema de Inventario */}
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-2xl">📦</span>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">
+                💡 ¿Cómo gestionar el inventario?
+              </h3>
+              <div className="mt-2 text-sm text-blue-700">
+                <p className="mb-2">
+                  <strong>Sistema actual:</strong> Control por disponibilidad (Disponible ✅ / No disponible ❌)
+                </p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>✅ Disponible:</strong> El producto aparece en el POS para vender</li>
+                  <li><strong>❌ No disponible:</strong> El producto se oculta del POS (agotado)</li>
+                  <li><strong>📝 Para gestionar:</strong> Editar producto → Activar/Desactivar "Producto disponible"</li>
+                </ul>
+                <p className="mt-2 text-xs text-blue-600">
+                  💭 <strong>Tip:</strong> Cuando se agote un ingrediente, desactiva todos los productos que lo usen.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Filtros de búsqueda */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
@@ -325,12 +352,12 @@ export default function ProductosPage() {
                         </span>
                       )}
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${producto.disponible
+                        className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${producto.disponible
                           ? "bg-green-500 text-white"
                           : "bg-red-500 text-white"
                           }`}
                       >
-                        {producto.disponible ? "Disponible" : "Agotado"}
+                        {producto.disponible ? "📦 Disponible" : "❌ Agotado"}
                       </span>
                     </div>
 

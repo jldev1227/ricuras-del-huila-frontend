@@ -15,6 +15,86 @@ interface OrderItem {
   notas?: string;
 }
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Actualiza el stock de productos y su disponibilidad automática
+ */
+async function actualizarStockProductos(
+  items: OrderItem[],
+  transactionClient: any, // PrismaTransaction
+  tipoMovimiento: "entrada" | "salida" = "salida",
+  referencia: string,
+  creadoPor?: string
+) {
+  for (const item of items) {
+    // Obtener el producto actual
+    const producto = await transactionClient.productos.findUnique({
+      where: { id: item.producto_id },
+      select: {
+        id: true,
+        nombre: true,
+        stock_actual: true,
+        controlar_stock: true,
+        unidad_medida: true,
+      },
+    });
+
+    if (!producto) {
+      throw new Error(`Producto con ID ${item.producto_id} no encontrado`);
+    }
+
+    // Solo procesar productos que controlan stock
+    if (!producto.controlar_stock) {
+      continue;
+    }
+
+    // Calcular nuevo stock
+    const cantidadMovimiento = item.cantidad;
+    const stockAnterior = producto.stock_actual;
+    let stockNuevo = stockAnterior;
+
+    if (tipoMovimiento === "salida") {
+      stockNuevo = Math.max(0, stockAnterior - cantidadMovimiento);
+      
+      // Validar que hay suficiente stock
+      if (stockAnterior < cantidadMovimiento) {
+        throw new Error(`Stock insuficiente para el producto ${producto.nombre}. Stock disponible: ${stockAnterior}, cantidad solicitada: ${cantidadMovimiento}`);
+      }
+    } else if (tipoMovimiento === "entrada") {
+      stockNuevo = stockAnterior + cantidadMovimiento;
+    }
+
+    // Actualizar stock del producto
+    await transactionClient.productos.update({
+      where: { id: producto.id },
+      data: {
+        stock_actual: stockNuevo,
+        disponible: stockNuevo > 0, // Auto-actualizar disponibilidad
+        actualizado_en: new Date(),
+      },
+    });
+
+    // Crear movimiento de stock
+    await transactionClient.movimientos_stock.create({
+      data: {
+        id: crypto.randomUUID(),
+        producto_id: producto.id,
+        tipo_movimiento: tipoMovimiento,
+        cantidad: cantidadMovimiento,
+        stock_anterior: stockAnterior,
+        stock_nuevo: stockNuevo,
+        motivo: tipoMovimiento === "salida" ? "Venta realizada" : "Devolución de venta",
+        referencia,
+        creado_por: creadoPor,
+        creado_en: new Date(),
+      },
+    });
+  }
+}
+
 // GET - Listar órdenes con filtros
 export async function GET(request: NextRequest) {
   try {
@@ -277,6 +357,7 @@ export async function POST(request: NextRequest) {
           id: crypto.randomUUID(),
           sucursal_id: sucursalId,
           tipo_orden: tipoOrden,
+          estado: tipoOrden === "LLEVAR" ? "ENTREGADA" : "PENDIENTE", // ✅ Auto-completar LLEVAR como ENTREGADA
           mesa_id: tipoOrden === "LOCAL" ? mesaId : null,
           cliente_id: clienteId || null,
           mesero_id: meseroId || null,
@@ -338,6 +419,15 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // ✅ Actualizar stock de productos si están configurados para controlarlo
+      await actualizarStockProductos(
+        items,
+        tx,
+        "salida",
+        `ORDEN_${nuevaOrden.id}`,
+        finalUserId
+      );
 
       return nuevaOrden;
     });

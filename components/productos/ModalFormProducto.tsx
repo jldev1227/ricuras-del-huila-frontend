@@ -32,6 +32,12 @@ interface ProductoForm {
   imagen: string;
   disponible: boolean;
   destacado: boolean;
+  // Campos de stock
+  stock_actual: number;
+  stock_minimo: number;
+  stock_maximo: number | null;
+  unidad_medida: string;
+  controlar_stock: boolean;
 }
 
 interface ModalFormProductoProps {
@@ -65,6 +71,11 @@ export default function ModalFormProducto({
     imagen: "",
     disponible: true,
     destacado: false,
+    stock_actual: 0,
+    stock_minimo: 0,
+    stock_maximo: null,
+    unidad_medida: "unidad",
+    controlar_stock: false,
   });
 
   const resetForm = useCallback(() => {
@@ -77,6 +88,11 @@ export default function ModalFormProducto({
       imagen: "",
       disponible: true,
       destacado: false,
+      stock_actual: 0,
+      stock_minimo: 0,
+      stock_maximo: null,
+      unidad_medida: "unidad",
+      controlar_stock: false,
     });
     setError("");
     setImageFile(null);
@@ -171,6 +187,11 @@ export default function ModalFormProducto({
         imagen: producto.imagen || "",
         disponible: producto.disponible,
         destacado: producto.destacado,
+        stock_actual: Number(producto.stock_actual || 0),
+        stock_minimo: Number(producto.stock_minimo || 0),
+        stock_maximo: producto.stock_maximo ? Number(producto.stock_maximo) : null,
+        unidad_medida: producto.unidad_medida || "unidad",
+        controlar_stock: producto.controlar_stock || false,
       });
 
       // Si el producto tiene imagen, establecer preview usando getProductImageUrl
@@ -217,6 +238,26 @@ export default function ModalFormProducto({
       console.error('❌ [ModalFormProducto] Error: Costo inválido');
       setError("El costo de producción debe ser mayor a 0.");
       return;
+    }
+
+    // Validaciones de stock
+    if (formData.controlar_stock) {
+      if (formData.stock_actual < 0) {
+        setError("El stock actual no puede ser negativo.");
+        return;
+      }
+      if (formData.stock_minimo < 0) {
+        setError("El stock mínimo no puede ser negativo.");
+        return;
+      }
+      if (formData.stock_maximo !== null && formData.stock_maximo < formData.stock_minimo) {
+        setError("El stock máximo debe ser mayor o igual al stock mínimo.");
+        return;
+      }
+      if (!formData.unidad_medida.trim()) {
+        setError("La unidad de medida es obligatoria cuando se controla stock.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -517,6 +558,132 @@ export default function ModalFormProducto({
                       Producto destacado
                     </label>
                   </div>
+                </div>
+
+                {/* Sección de Gestión de Stock */}
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-4">
+                    <input
+                      type="checkbox"
+                      id="controlar_stock"
+                      checked={formData.controlar_stock}
+                      onChange={(e) =>
+                        handleChange("controlar_stock", e.target.checked)
+                      }
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <label
+                      htmlFor="controlar_stock"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Controlar stock de este producto
+                    </label>
+                  </div>
+
+                  {formData.controlar_stock && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Stock Actual */}
+                      <div>
+                        <label
+                          htmlFor="stock_actual"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Stock actual *
+                        </label>
+                        <input
+                          id="stock_actual"
+                          type="number"
+                          value={formData.stock_actual}
+                          onChange={(e) =>
+                            handleChange("stock_actual", parseInt(e.target.value) || 0)
+                          }
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
+                          placeholder="100"
+                        />
+                      </div>
+
+                      {/* Stock Mínimo */}
+                      <div>
+                        <label
+                          htmlFor="stock_minimo"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Stock mínimo *
+                        </label>
+                        <input
+                          id="stock_minimo"
+                          type="number"
+                          value={formData.stock_minimo}
+                          onChange={(e) =>
+                            handleChange("stock_minimo", parseInt(e.target.value) || 0)
+                          }
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
+                          placeholder="10"
+                        />
+                      </div>
+
+                      {/* Stock Máximo */}
+                      <div>
+                        <label
+                          htmlFor="stock_maximo"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Stock máximo (opcional)
+                        </label>
+                        <input
+                          id="stock_maximo"
+                          type="number"
+                          value={formData.stock_maximo || ""}
+                          onChange={(e) =>
+                            handleChange("stock_maximo", e.target.value ? parseInt(e.target.value) : null)
+                          }
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-black"
+                          placeholder="500"
+                        />
+                      </div>
+
+                      {/* Unidad de Medida */}
+                      <div>
+                        <label
+                          htmlFor="unidad_medida"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Unidad de medida *
+                        </label>
+                        <select
+                          id="unidad_medida"
+                          value={formData.unidad_medida}
+                          onChange={(e) =>
+                            handleChange("unidad_medida", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="unidad">Unidad</option>
+                          <option value="kg">Kilogramo (kg)</option>
+                          <option value="g">Gramo (g)</option>
+                          <option value="lb">Libra (lb)</option>
+                          <option value="litro">Litro</option>
+                          <option value="ml">Mililitro (ml)</option>
+                          <option value="paquete">Paquete</option>
+                          <option value="caja">Caja</option>
+                          <option value="porcion">Porción</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.controlar_stock && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Importante:</strong> Al activar el control de stock, la disponibilidad del producto se determinará automáticamente según el stock actual.
+                        {formData.stock_actual <= 0 && " Este producto aparecerá como no disponible porque el stock actual es 0."}
+                        {formData.stock_actual > 0 && formData.stock_actual <= formData.stock_minimo && " Este producto está por debajo del stock mínimo."}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Resumen de ganancia */}

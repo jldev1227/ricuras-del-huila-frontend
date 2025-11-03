@@ -97,6 +97,27 @@ const MENU_ITEMS: MenuItem[] = [
     adminOnly: true,
   },
   {
+    name: "Gestión de Stock",
+    href: "/pos/stock",
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        width="24"
+        height="24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21 16V8a2 2 0 0 0-1-1.73L12 2 4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73L12 22l8-4.27A2 2 0 0 0 21 16z"/>
+        <polyline points="7.5,10.5 12,15 16.5,10.5"/>
+      </svg>
+    ),
+    adminOnly: true,
+  },
+  {
     name: "Categorías",
     href: "/pos/categorias",
     icon: <Grid className="w-6 h-6" />,
