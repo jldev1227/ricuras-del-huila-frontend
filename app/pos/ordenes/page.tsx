@@ -13,7 +13,6 @@ import {
   Spinner,
   useDisclosure,
 } from "@heroui/react";
-import type { ordenes } from "@prisma/client";
 import {
   AlertTriangle,
   Calendar,
@@ -81,9 +80,21 @@ export default function OrdenesPage() {
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [tipoOrdenFiltro, setTipoOrdenFiltro] = useState("");
   const [fechaFiltro, setFechaFiltro] = useState(() => {
-    // Establecer la fecha de hoy por defecto
+    // Establecer la fecha de hoy en zona horaria de Colombia por defecto
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    // Obtener la fecha local en formato YYYY-MM-DD
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayString = `${year}-${month}-${day}`;
+    
+    console.log('📅 Fecha inicial establecida:', {
+      today,
+      todayString,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+    
+    return todayString;
   });
 
   // Paginación
@@ -137,44 +148,7 @@ export default function OrdenesPage() {
     return null;
   };
 
-  useEffect(() => {
-    const fetchOrdenes = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        
-        // Usar siempre la sucursal actual del localStorage
-        const sucursalId = getSucursalActual();
-        if (sucursalId) {
-          params.append("sucursal_id", sucursalId);
-        }
-        
-        if (estadoFiltro) params.append("estado", estadoFiltro);
-        if (tipoOrdenFiltro) params.append("tipo_orden", tipoOrdenFiltro);
-        if (fechaFiltro) params.append("fecha", fechaFiltro);
-        params.append("page", page.toString());
-        params.append("limit", "20");
-
-        const response = await fetch(`/api/ordenes?${params}`);
-        const data = await response.json();
-
-        if (data.success) {
-          setOrdenes(data.ordenes);
-          setTotal(data.pagination.total);
-          setTotalPages(data.pagination.totalPages);
-          setTotalAcumulado(data.totalAcumulado);
-        }
-      } catch (error) {
-        console.error("Error al cargar órdenes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrdenes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estadoFiltro, tipoOrdenFiltro, fechaFiltro, page]);
-
+  // Función fetchOrdenes reutilizable
   const fetchOrdenes = async () => {
     setLoading(true);
     try {
@@ -188,9 +162,21 @@ export default function OrdenesPage() {
       
       if (estadoFiltro) params.append("estado", estadoFiltro);
       if (tipoOrdenFiltro) params.append("tipo_orden", tipoOrdenFiltro);
-      if (fechaFiltro) params.append("fecha", fechaFiltro);
+      
+      // Aplicar la misma lógica de fechas que en reportes
+      if (fechaFiltro) {
+        // Formatear la fecha correctamente para la zona horaria de Colombia
+        // El servidor espera el formato YYYY-MM-DD y aplicará la zona horaria
+        params.append("fecha", fechaFiltro);
+      }
+      
       params.append("page", page.toString());
       params.append("limit", "20");
+
+      console.log(`🔍 Consultando órdenes con fecha: ${fechaFiltro}`, {
+        sucursalId,
+        params: params.toString()
+      });
 
       const response = await fetch(`/api/ordenes?${params}`);
       const data = await response.json();
@@ -199,6 +185,16 @@ export default function OrdenesPage() {
         setOrdenes(data.ordenes);
         setTotal(data.pagination.total);
         setTotalPages(data.pagination.totalPages);
+        setTotalAcumulado(data.totalAcumulado);
+        
+        console.log(`✅ Órdenes encontradas: ${data.ordenes.length}/${data.pagination.total}`, {
+          fecha: fechaFiltro,
+          ordenes: data.ordenes.map((o: any) => ({
+            id: o.id.slice(0, 8),
+            creado_en: o.creado_en,
+            total: o.total
+          }))
+        });
       }
     } catch (error) {
       console.error("Error al cargar órdenes:", error);
@@ -207,12 +203,21 @@ export default function OrdenesPage() {
     }
   };
 
+  useEffect(() => {
+    fetchOrdenes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadoFiltro, tipoOrdenFiltro, fechaFiltro, page]);
+
   const limpiarFiltros = () => {
     setEstadoFiltro("");
     setTipoOrdenFiltro("");
     // Restablecer a la fecha de hoy al limpiar filtros
     const today = new Date();
-    setFechaFiltro(today.toISOString().split('T')[0]);
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayString = `${year}-${month}-${day}`;
+    setFechaFiltro(todayString);
     setSearchTerm("");
     setPage(1);
   };
@@ -612,7 +617,6 @@ export default function OrdenesPage() {
                         #{orden.id.slice(0, 8)}
                       </p>
                       <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <Building2 size={14} />
                         <span>{orden.sucursales?.nombre}</span>
                       </div>
                       {orden.mesas && (
@@ -790,7 +794,6 @@ export default function OrdenesPage() {
                         </td>
                         <td className="py-4">
                           <div className="flex items-center gap-1.5">
-                            <Building2 size={16} className="text-gray-500" />
                             <span className="text-sm text-gray-700">
                               {orden.sucursales?.nombre}
                             </span>

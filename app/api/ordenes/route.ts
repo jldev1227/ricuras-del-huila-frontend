@@ -127,11 +127,24 @@ export async function GET(request: NextRequest) {
     if (sincronizado) where.sincronizado = sincronizado === "true";
 
     if (fecha) {
-      // Convertir la fecha a hora de Colombia (UTC-5)
-      const colombiaDate = new Date(fecha + "T00:00:00-05:00");
-      const startDate = new Date(colombiaDate);
-      const endDate = new Date(colombiaDate);
+      // Crear rango de fechas para el día especificado en zona horaria de Colombia
+      // La fecha viene en formato YYYY-MM-DD desde el frontend
+      
+      // Inicio del día en Colombia (00:00:00 Colombia = 05:00:00 UTC)
+      const startDate = new Date(fecha + "T05:00:00.000Z");
+      
+      // Final del día en Colombia (23:59:59.999 Colombia = 04:59:59.999 UTC del día siguiente)
+      const endDate = new Date(fecha + "T05:00:00.000Z");
       endDate.setDate(endDate.getDate() + 1);
+      endDate.setMilliseconds(-1); // 23:59:59.999 del día anterior en UTC
+
+      console.log(`🗓️ Filtro de fecha aplicado:`, {
+        fechaOriginal: fecha,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        startDateColombia: startDate.toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
+        endDateColombia: endDate.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
+      });
 
       where.creado_en = {
         gte: startDate,
