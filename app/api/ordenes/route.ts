@@ -131,23 +131,30 @@ export async function GET(request: NextRequest) {
       // La fecha viene en formato YYYY-MM-DD desde el frontend
       console.log(`🗓️ Procesando fecha recibida: ${fecha}`);
       
-      // Crear fecha en zona horaria de Colombia (UTC-5)
-      const colombiaDate = new Date(fecha + "T00:00:00-05:00");
-      const startDate = new Date(colombiaDate);
-      const endDate = new Date(colombiaDate);
-      endDate.setDate(endDate.getDate() + 1);
+      // Parsear la fecha recibida (formato YYYY-MM-DD)
+      const [year, month, day] = fecha.split('-').map(Number);
+      
+      // Crear fechas en zona horaria de Colombia (UTC-5)
+      // Inicio del día: 00:00:00 Colombia = 05:00:00 UTC
+      const startDate = new Date(Date.UTC(year, month - 1, day, 5, 0, 0, 0));
+      
+      // Final del día: 23:59:59.999 Colombia = 04:59:59.999 UTC del día siguiente
+      const endDate = new Date(Date.UTC(year, month - 1, day + 1, 4, 59, 59, 999));
 
       console.log(`🗓️ Rango de fechas calculado:`, {
         fechaOriginal: fecha,
+        año: year,
+        mes: month,
+        día: day,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        startDateLocal: startDate.toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
-        endDateLocal: endDate.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
+        startDateColombia: startDate.toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
+        endDateColombia: endDate.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
       });
 
       where.creado_en = {
         gte: startDate,
-        lt: endDate,
+        lte: endDate,
       };
     }
 
