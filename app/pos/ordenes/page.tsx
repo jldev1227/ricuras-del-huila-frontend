@@ -175,6 +175,9 @@ export default function OrdenesPage() {
 
       console.log(`🔍 Consultando órdenes con fecha: ${fechaFiltro}`, {
         sucursalId,
+        fechaFiltro,
+        estadoFiltro,
+        tipoOrdenFiltro,
         params: params.toString()
       });
 
@@ -189,12 +192,16 @@ export default function OrdenesPage() {
         
         console.log(`✅ Órdenes encontradas: ${data.ordenes.length}/${data.pagination.total}`, {
           fecha: fechaFiltro,
+          totalFound: data.pagination.total,
           ordenes: data.ordenes.map((o: any) => ({
             id: o.id.slice(0, 8),
             creado_en: o.creado_en,
-            total: o.total
+            total: o.total,
+            fecha_formateada: new Date(o.creado_en).toLocaleString('es-CO', { timeZone: 'America/Bogota' })
           }))
         });
+      } else {
+        console.error('❌ Error en respuesta del API:', data);
       }
     } catch (error) {
       console.error("Error al cargar órdenes:", error);
