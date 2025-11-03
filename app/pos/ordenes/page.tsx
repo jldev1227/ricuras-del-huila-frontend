@@ -13,10 +13,9 @@ import {
   Spinner,
   useDisclosure,
 } from "@heroui/react";
-import type { ordenes, sucursales } from "@prisma/client";
+import type { ordenes } from "@prisma/client";
 import {
   AlertTriangle,
-  Building2,
   Calendar,
   CheckCircle,
   Edit,
@@ -31,21 +30,61 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ModalDetalleOrden from "@/components/orden/ModalDetalleOrden";
 import { formatCOP } from "@/utils/formatCOP";
-import { useSucursal } from "@/hooks/useSucursal";
+
+// Tipo personalizado para órdenes con relaciones
+interface OrdenConRelaciones {
+  id: string;
+  mesero_id: string | null;
+  total: number;
+  estado: string;
+  tipo_orden: string;
+  descuento: number;
+  creado_en: string;
+  mesa_id: string | null;
+  cliente_id: string | null;
+  sucursal_id: string;
+  nombre_cliente: string | null;
+  telefono_cliente: string | null;
+  direccion_entrega: string | null;
+  notas: string | null;
+  especificaciones: string | null;
+  metodo_pago: string;
+  usuarios?: {
+    id: string;
+    nombre_completo: string;
+  };
+  mesas?: {
+    id: string;
+    numero: number;
+  };
+  clientes?: {
+    id: string;
+    nombre: string;
+  };
+  sucursales?: {
+    id: string;
+    nombre: string;
+  };
+  _count?: {
+    orden_items: number;
+  };
+}
 
 export default function OrdenesPage() {
   const router = useRouter();
-  const [ordenes, setOrdenes] = useState<ordenes[]>([]);
+  const [ordenes, setOrdenes] = useState<OrdenConRelaciones[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sucursales, setSucursales] = useState<sucursales[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [tipoOrdenFiltro, setTipoOrdenFiltro] = useState("");
-  const [fechaFiltro, setFechaFiltro] = useState("");
-  const [sucursalFiltro, setSucursalFiltro] = useState("");
+  const [fechaFiltro, setFechaFiltro] = useState(() => {
+    // Establecer la fecha de hoy por defecto
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
 
   // Paginación
   const [page, setPage] = useState(1);
@@ -82,56 +121,74 @@ export default function OrdenesPage() {
     onClose: onEliminarClose,
   } = useDisclosure();
 
-  const [ordenAccion, setOrdenAccion] = useState<ordenes | null>(null);
+  const [ordenAccion, setOrdenAccion] = useState<OrdenConRelaciones | null>(null);
+
+  // Función para obtener la sucursal actual del localStorage
+  const getSucursalActual = () => {
+    try {
+      const sucursalStorage = localStorage.getItem("sucursal-actual");
+      if (sucursalStorage) {
+        const sucursal = JSON.parse(sucursalStorage);
+        return sucursal.id;
+      }
+    } catch (error) {
+      console.error("Error al obtener sucursal actual:", error);
+    }
+    return null;
+  };
 
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchOrdenes = async () => {
       setLoading(true);
       try {
-        // Fetch sucursales
-        const sucursalesRes = await fetch("/api/sucursales");
-        const sucursalesData = await sucursalesRes.json();
-        if (sucursalesData.success) {
-          setSucursales(sucursalesData.sucursales);
-        }
-
-        // Fetch ordenes
         const params = new URLSearchParams();
+        
+        // Usar siempre la sucursal actual del localStorage
+        const sucursalId = getSucursalActual();
+        if (sucursalId) {
+          params.append("sucursal_id", sucursalId);
+        }
+        
         if (estadoFiltro) params.append("estado", estadoFiltro);
         if (tipoOrdenFiltro) params.append("tipo_orden", tipoOrdenFiltro);
         if (fechaFiltro) params.append("fecha", fechaFiltro);
-        if (sucursalFiltro) params.append("sucursal_id", sucursalFiltro);
         params.append("page", page.toString());
         params.append("limit", "20");
 
-        const ordenesRes = await fetch(`/api/ordenes?${params}`);
-        const ordenesData = await ordenesRes.json();
+        const response = await fetch(`/api/ordenes?${params}`);
+        const data = await response.json();
 
-        if (ordenesData.success) {
-          setOrdenes(ordenesData.ordenes);
-          setTotal(ordenesData.pagination.total);
-          setTotalPages(ordenesData.pagination.totalPages);
-          setTotalAcumulado(ordenesData.totalAcumulado);
+        if (data.success) {
+          setOrdenes(data.ordenes);
+          setTotal(data.pagination.total);
+          setTotalPages(data.pagination.totalPages);
+          setTotalAcumulado(data.totalAcumulado);
         }
       } catch (error) {
-        console.error("Error al cargar datos:", error);
+        console.error("Error al cargar órdenes:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAll();
+    fetchOrdenes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estadoFiltro, tipoOrdenFiltro, fechaFiltro, sucursalFiltro, page]);
+  }, [estadoFiltro, tipoOrdenFiltro, fechaFiltro, page]);
 
   const fetchOrdenes = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      
+      // Usar siempre la sucursal actual del localStorage
+      const sucursalId = getSucursalActual();
+      if (sucursalId) {
+        params.append("sucursal_id", sucursalId);
+      }
+      
       if (estadoFiltro) params.append("estado", estadoFiltro);
       if (tipoOrdenFiltro) params.append("tipo_orden", tipoOrdenFiltro);
       if (fechaFiltro) params.append("fecha", fechaFiltro);
-      if (sucursalFiltro) params.append("sucursal_id", sucursalFiltro);
       params.append("page", page.toString());
       params.append("limit", "20");
 
@@ -153,8 +210,9 @@ export default function OrdenesPage() {
   const limpiarFiltros = () => {
     setEstadoFiltro("");
     setTipoOrdenFiltro("");
-    setFechaFiltro("");
-    setSucursalFiltro("");
+    // Restablecer a la fecha de hoy al limpiar filtros
+    const today = new Date();
+    setFechaFiltro(today.toISOString().split('T')[0]);
     setSearchTerm("");
     setPage(1);
   };
@@ -251,8 +309,7 @@ export default function OrdenesPage() {
     estadoFiltro ||
     tipoOrdenFiltro ||
     fechaFiltro ||
-    searchTerm ||
-    sucursalFiltro;
+    searchTerm;
 
   type EstadoOrden =
     | "PENDIENTE"
@@ -297,10 +354,9 @@ export default function OrdenesPage() {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      orden.usuarios?.nombre_completo.toLowerCase().includes(search) ||
-      orden.mesas?.numero.toString().includes(search) ||
-      orden.clientes?.nombre.toLowerCase().includes(search) ||
-      orden.sucursales?.nombre.toLowerCase().includes(search)
+      orden.id.toLowerCase().includes(search) ||
+      orden.tipo_orden.toLowerCase().includes(search) ||
+      orden.estado.toLowerCase().includes(search)
     );
   });
 
@@ -345,7 +401,7 @@ export default function OrdenesPage() {
               />
               <input
                 type="text"
-                placeholder="Buscar por mesero, mesa, cliente o sucursal..."
+                placeholder="Buscar por ID de orden, tipo o estado..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wine/20 focus:border-wine transition-all text-black"
@@ -372,36 +428,7 @@ export default function OrdenesPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Sucursal */}
-              <div>
-                <label
-                  htmlFor="sucursal"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Sucursal
-                </label>
-                <div className="relative">
-                  <Building2
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={16}
-                  />
-                  <select
-                    id="sucursal"
-                    value={sucursalFiltro}
-                    onChange={(e) => setSucursalFiltro(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all appearance-none bg-white"
-                  >
-                    <option value="">Todas las sucursales</option>
-                    {sucursales.map((sucursal) => (
-                      <option key={sucursal.id} value={sucursal.id}>
-                        {sucursal.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Estado */}
               <div>
                 <label
@@ -586,16 +613,16 @@ export default function OrdenesPage() {
                       </p>
                       <div className="flex items-center gap-1.5 text-xs text-gray-600">
                         <Building2 size={14} />
-                        <span>{orden.sucursales.nombre}</span>
+                        <span>{orden.sucursales?.nombre}</span>
                       </div>
-                      {orden.mesa && (
+                      {orden.mesas && (
                         <p className="text-xs text-gray-500">
-                          Mesa {orden.mesa.numero}
+                          Mesa {orden.mesas.numero}
                         </p>
                       )}
-                      {orden.cliente && (
+                      {orden.clientes && (
                         <p className="text-xs text-gray-500">
-                          {orden.cliente.nombre}
+                          {orden.clientes.nombre}
                         </p>
                       )}
                       <p className="text-sm text-gray-700">
@@ -749,14 +776,14 @@ export default function OrdenesPage() {
                             <p className="font-semibold text-gray-900">
                               #{orden.id.slice(0, 8)}
                             </p>
-                            {orden.mesa && (
+                            {orden.mesas && (
                               <p className="text-xs text-gray-500">
-                                Mesa {orden.mesa.numero}
+                                Mesa {orden.mesas.numero}
                               </p>
                             )}
-                            {orden.cliente && (
+                            {orden.clientes && (
                               <p className="text-xs text-gray-500">
-                                {orden.cliente.nombre}
+                                {orden.clientes.nombre}
                               </p>
                             )}
                           </div>
@@ -765,7 +792,7 @@ export default function OrdenesPage() {
                           <div className="flex items-center gap-1.5">
                             <Building2 size={16} className="text-gray-500" />
                             <span className="text-sm text-gray-700">
-                              {orden.sucursales.nombre}
+                              {orden.sucursales?.nombre}
                             </span>
                           </div>
                         </td>
@@ -968,16 +995,16 @@ export default function OrdenesPage() {
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Total:</span>{" "}
-                      {formatCOP(ordenAccion.total)}
+                      {formatCOP(Number(ordenAccion.total))}
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Tipo:</span>{" "}
                       {ordenAccion.tipo_orden}
                     </p>
-                    {ordenAccion.mesa && (
+                    {ordenAccion.mesas && (
                       <p className="text-sm">
                         <span className="font-semibold">Mesa:</span>{" "}
-                        {ordenAccion.mesa.numero}
+                        {ordenAccion.mesas.numero}
                       </p>
                     )}
                   </div>
@@ -1032,16 +1059,16 @@ export default function OrdenesPage() {
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Total:</span>{" "}
-                      {formatCOP(ordenAccion.total)}
+                      {formatCOP(Number(ordenAccion.total))}
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Estado actual:</span>{" "}
                       {ordenAccion.estado}
                     </p>
-                    {ordenAccion.cliente && (
+                    {ordenAccion.clientes && (
                       <p className="text-sm">
                         <span className="font-semibold">Cliente:</span>{" "}
-                        {ordenAccion.cliente.nombre}
+                        {ordenAccion.clientes.nombre}
                       </p>
                     )}
                   </div>
@@ -1102,7 +1129,7 @@ export default function OrdenesPage() {
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Total:</span>{" "}
-                      {formatCOP(ordenAccion.total)}
+                      {formatCOP(Number(ordenAccion.total))}
                     </p>
                     <p className="text-sm">
                       <span className="font-semibold">Estado:</span>{" "}
