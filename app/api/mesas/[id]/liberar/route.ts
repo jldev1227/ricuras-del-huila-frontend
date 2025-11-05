@@ -9,9 +9,9 @@ export async function PUT(
     const { params } = await context;
     const mesaId = params.id;
     const body = await request.json();
-    const { mesero_id } = body;
+    const { meseroId } = body;
 
-    if (!mesaId || !mesero_id) {
+    if (!mesaId || !meseroId) {
       return NextResponse.json(
         {
           success: false,
@@ -65,7 +65,7 @@ export async function PUT(
     }
 
     // Verificar que el mesero que intenta liberar la mesa es el mismo que la tiene asignada
-    if (ordenActiva.mesero_id !== mesero_id) {
+    if (ordenActiva.mesero_id !== meseroId) {
       return NextResponse.json(
         {
           success: false,
@@ -75,26 +75,31 @@ export async function PUT(
       );
     }
 
-    // Verificar que la orden esté en un estado que permita liberar la mesa (ENTREGADA o CANCELADA)
-    if (!["ENTREGADA", "CANCELADA"].includes(ordenActiva.estado)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Solo se pueden liberar mesas con órdenes entregadas o canceladas",
+    // Al liberar la mesa, automáticamente marcar la orden como ENTREGADA y liberar la mesa
+    await prisma.$transaction(async (tx) => {
+      // 1. Actualizar el estado de la orden a ENTREGADA
+      await tx.ordenes.update({
+        where: { id: ordenActiva.id },
+        data: {
+          estado: "ENTREGADA",
+          actualizado_en: new Date(),
+          actualizado_por: meseroId,
         },
-        { status: 400 },
-      );
-    }
+      });
 
-    // Como no hay campo ordenActualId, vamos a marcar la orden como finalizada
-    // En lugar de "liberar" la mesa, podemos marcar que la mesa está disponible
-    // O simplemente retornar éxito ya que conceptualmente la mesa está libre
-    // cuando no tiene órdenes activas
+      // 2. Liberar la mesa
+      await tx.mesas.update({
+        where: { id: mesaId },
+        data: {
+          disponible: true,
+          actualizado_en: new Date(),
+        },
+      });
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Mesa liberada exitosamente",
+      message: "Mesa liberada y orden entregada exitosamente",
     });
   } catch (error) {
     console.error("Error al liberar mesa:", error);

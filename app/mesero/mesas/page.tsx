@@ -15,6 +15,7 @@ import {
 import {
   AlertCircle,
   CheckCircle,
+  Edit,
   Eye,
   Package,
   Plus,
@@ -75,10 +76,16 @@ export default function MeseroMesasPage() {
     try {
       if (!sucursal?.id) return;
 
-      const response = await fetch(`/api/mesas?sucursalId=${sucursal.id}`);
+      console.log('🔍 Cargando mesas para sucursal:', sucursal.id);
+      const response = await fetch(`/api/mesas?sucursal_id=${sucursal.id}`);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Mesas cargadas:', {
+          total: data.mesas?.length || 0,
+          mesasConOrden: data.mesas?.filter((m: Mesa) => m.ordenActual)?.length || 0,
+          mesas: data.mesas
+        });
         setMesas(data.mesas || []);
       }
     } catch (error) {
@@ -142,7 +149,7 @@ export default function MeseroMesasPage() {
       if (data.success) {
         addToast({
           title: "Mesa liberada",
-          description: "La mesa ha sido liberada exitosamente",
+          description: "La mesa ha sido liberada y la orden marcada como entregada",
           color: "success",
         });
 
@@ -181,9 +188,22 @@ export default function MeseroMesasPage() {
   };
 
   const getMisMesas = () => {
-    return mesas.filter(
+    const misMesas = mesas.filter(
       (mesa) => mesa.ordenActual && mesa.ordenActual.meseroId === user?.id,
     );
+    console.log('🏠 Mis mesas filtradas:', {
+      userId: user?.id,
+      totalMesas: mesas.length,
+      mesasConOrden: mesas.filter(m => m.ordenActual).length,
+      misMesasCount: misMesas.length,
+      misMesas: misMesas.map(m => ({
+        numero: m.numero,
+        ordenId: m.ordenActual?.id,
+        meseroId: m.ordenActual?.meseroId,
+        estado: m.ordenActual?.estado
+      }))
+    });
+    return misMesas;
   };
 
   const getMesasDisponibles = () => {
@@ -288,10 +308,6 @@ export default function MeseroMesasPage() {
 
                 {/* Información */}
                 <div className="space-y-2.5 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <Users className="text-gray-400" size={16} />
-                  </div>
-
                   {mesa.ordenActual && (
                     <div className="flex items-center gap-2">
                       <Chip
@@ -333,6 +349,17 @@ export default function MeseroMesasPage() {
                     onPress={() => fetchDetallesMesa(mesa)}
                   >
                     Ver Detalles
+                  </Button>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="bordered"
+                    startContent={<Edit className="w-4 h-4" />}
+                    onPress={() => 
+                      router.push(`/mesero/orden?ordenId=${mesa.ordenActual?.id}`)
+                    }
+                  >
+                    Editar
                   </Button>
                 </div>
               </div>
@@ -679,7 +706,7 @@ export default function MeseroMesasPage() {
                       mesaSeleccionada && liberarMesa(mesaSeleccionada.id)
                     }
                   >
-                    Liberar Mesa
+                    Entregar y Liberar Mesa
                   </Button>
                 )}
                 <Button color="primary" variant="light" onPress={onClose}>

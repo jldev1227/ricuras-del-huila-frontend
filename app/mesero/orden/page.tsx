@@ -23,10 +23,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
+import { useAuthenticatedFetch } from "@/lib/api-client";
 import { formatCOP } from "@/utils/formatCOP";
 import ProductImage from "@/components/productos/ProductImage";
 
@@ -39,6 +40,10 @@ export default function MeseroNuevaOrden() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { sucursal } = useSucursal();
+  const authenticatedFetch = useAuthenticatedFetch();
+
+  // Obtener ordenId de los parámetros URL para modo edición
+  const ordenId = searchParams.get("ordenId");
 
   const [productos, setProductos] = useState<productos[]>([]);
   const [categorias, setCategorias] = useState<categorias[]>([]);
@@ -52,6 +57,23 @@ export default function MeseroNuevaOrden() {
   const [mostrarAside, setMostrarAside] = useState(false);
   const [especificaciones, setEspecificaciones] = useState("");
   const [procesandoOrden, setProcesandoOrden] = useState(false);
+
+  // Estados para el modo de edición
+  const [modoEdicion, setModoEdicion] = useState(!!ordenId);
+  const [ordenExistente, setOrdenExistente] = useState<{
+    id: string;
+    tipo_orden: string;
+    especificaciones?: string;
+    nombre_cliente?: string;
+    mesas?: { id: string; numero: number; ubicacion?: string };
+    orden_items?: Array<{
+      cantidad: number;
+      notas?: string;
+      productos: productos;
+    }>;
+  } | null>(null);
+  const [cargandoOrden, setCargandoOrden] = useState(!!ordenId);
+  const [ordenCargada, setOrdenCargada] = useState(false);
 
   // Cargar mesa desde parámetro URL si existe
   useEffect(() => {
@@ -99,6 +121,62 @@ export default function MeseroNuevaOrden() {
       fetchMesa();
     }
   }, [searchParams, router]);
+
+  // Cargar orden existente si se está editando
+  const cargarOrdenExistente = useCallback(async () => {
+    if (!ordenId || ordenCargada) return;
+
+    setCargandoOrden(true);
+    try {
+      const response = await authenticatedFetch(`/api/ordenes/${ordenId}`);
+      if (!response.ok) throw new Error("Error al cargar la orden");
+
+      const data = await response.json();
+      if (data.success && data.orden) {
+        const orden = data.orden;
+
+        setOrdenExistente(orden);
+        setTipoOrden(orden.tipo_orden.toLowerCase() || "local");
+        setEspecificaciones(orden.especificaciones || "");
+        setNombreCliente(orden.nombre_cliente || "");
+
+        if (orden.mesas) {
+          setMesaSeleccionada(orden.mesas);
+        }
+
+        if (orden.orden_items?.length > 0) {
+          const productosCarrito = orden.orden_items.map((item: {
+            cantidad: number;
+            notas?: string;
+            productos: productos;
+          }) => ({
+            ...item.productos,
+            cantidad: item.cantidad,
+            notas: item.notas || "",
+          }));
+          setCarrito(productosCarrito);
+          setMostrarAside(true);
+        }
+
+        setOrdenCargada(true);
+      }
+    } catch (error) {
+      console.error("Error al cargar la orden:", error);
+      addToast({
+        title: "Error al cargar orden",
+        description: "No se pudo cargar la orden para editar",
+        color: "danger",
+      });
+    } finally {
+      setCargandoOrden(false);
+    }
+  }, [authenticatedFetch, ordenId, ordenCargada]);
+
+  useEffect(() => {
+    if (ordenId && !ordenCargada) {
+      cargarOrdenExistente();
+    }
+  }, [ordenId, ordenCargada, cargarOrdenExistente]);
 
   // Cargar productos y categorías
   useEffect(() => {
@@ -234,29 +312,60 @@ export default function MeseroNuevaOrden() {
         subtotal: calcularTotal(),
         total: calcularTotal(),
         especificaciones,
+        userId: user?.id,
       };
 
-      const response = await fetch("/api/ordenes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orden),
+      console.log('🚀 Datos de orden que se van a enviar:', {
+        sucursalId: orden.sucursalId,
+        meseroId: orden.meseroId,
+        tipoOrden: orden.tipoOrden,
+        mesaId: orden.mesaId,
+        nombreCliente: orden.nombreCliente,
+        itemsCount: orden.items.length,
+        items: orden.items,
+        subtotal: orden.subtotal,
+        total: orden.total
       });
+
+      let response: Response;
+      let successMessage: string;
+
+      if (modoEdicion && ordenExistente) {
+        // Actualizar orden existente
+        response = await authenticatedFetch(`/api/ordenes/${ordenExistente.id}`, {
+          method: "PUT",
+          body: JSON.stringify(orden),
+        });
+        successMessage = "Orden actualizada exitosamente";
+      } else {
+        // Crear nueva orden
+        response = await fetch("/api/ordenes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orden),
+        });
+        successMessage = "Orden creada exitosamente";
+      }
 
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
 
       addToast({
-        title: "Orden creada exitosamente",
+        title: successMessage,
         description: `Total: ${formatCOP(calcularTotal())}`,
         color: "success",
       });
 
-      // Redirigir de vuelta al dashboard del mesero
-      router.push("/mesero");
+      // En modo edición, redirigir a las mesas, sino al dashboard del mesero
+      if (modoEdicion) {
+        router.push("/mesero/mesas");
+      } else {
+        router.push("/mesero");
+      }
     } catch (error: unknown) {
       console.error(error);
       addToast({
-        title: "Error al crear orden",
+        title: `Error al ${modoEdicion ? 'actualizar' : 'crear'} orden`,
         description:
           error instanceof Error
             ? error.message
@@ -331,10 +440,15 @@ export default function MeseroNuevaOrden() {
               </Button>
               <div>
                 <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
-                  Nueva Orden
+                  {modoEdicion ? "Editar Orden" : "Nueva Orden"}
                 </h1>
                 <p className="text-sm text-gray-600">
                   {user?.nombre_completo} - {sucursal?.nombre}
+                  {modoEdicion && ordenExistente && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
+                      Editando orden #{ordenExistente.id.slice(-8)}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -421,11 +535,11 @@ export default function MeseroNuevaOrden() {
               )}
             </div>
 
-            {loading ? (
+            {loading || cargandoOrden ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Spinner size="lg" color="primary" />
                 <p className="mt-4 text-gray-500 text-sm">
-                  Cargando productos...
+                  {cargandoOrden ? "Cargando orden..." : "Cargando productos..."}
                 </p>
               </div>
             ) : productosFiltrados.length > 0 ? (
@@ -709,7 +823,7 @@ export default function MeseroNuevaOrden() {
                     <ClipboardCheck size={20} />
                     <span>
                       {validarOrden()
-                        ? `Crear orden - ${formatCOP(calcularTotal())}`
+                        ? `${modoEdicion ? 'Actualizar' : 'Crear'} orden - ${formatCOP(calcularTotal())}`
                         : "Completa la información"}
                     </span>
                   </div>

@@ -40,13 +40,57 @@ interface Stats {
   promedioOrden: number;
 }
 
+interface OrdenCompleta {
+  id: string;
+  tipo_orden: string;
+  estado: string;
+  total: number;
+  descuento?: number;
+  metodo_pago?: string;
+  creado_en: string;
+  especificaciones?: string;
+  notas?: string;
+  mesas?: {
+    numero: number;
+    ubicacion?: string;
+  };
+  usuarios?: {
+    nombre_completo: string;
+  };
+  clientes?: {
+    nombre: string;
+  };
+  orden_items?: Array<{
+    id: string;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+    notas?: string;
+    productos: {
+      id: string;
+      nombre: string;
+      precio: number;
+      imagen?: string;
+    };
+  }>;
+  _count?: {
+    orden_items: number;
+  };
+  // Para compatibilidad con el código existente
+  cliente?: {
+    nombre: string;
+  };
+  nombre_cliente?: string;
+  direccion_entrega?: string;
+}
+
 export default function MeseroPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { sucursal } = useSucursal();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const [ordenes, setOrdenes] = useState<ordenes[]>([]);
+    const [ordenes, setOrdenes] = useState<OrdenCompleta[]>([]);
   const [stats, setStats] = useState<Stats>({
     ordenesHoy: 0,
     ordenesActivas: 0,
@@ -54,7 +98,7 @@ export default function MeseroPage() {
     promedioOrden: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [ordenSeleccionada, setOrdenSeleccionada] = useState<ordenes | null>(
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState<OrdenCompleta | null>(
     null,
   );
   const [_loadingDetalles, setLoadingDetalles] = useState(false);
@@ -65,7 +109,7 @@ export default function MeseroPage() {
       if (!user?.id || !sucursal?.id) return;
 
       const response = await fetch(
-        `/api/ordenes?meseroId=${user.id}&sucursalId=${sucursal.id}&limit=20`,
+        `/api/ordenes?mesero_id=${user.id}&sucursal_id=${sucursal.id}&limit=20`,
       );
 
       if (response.ok) {
@@ -74,16 +118,16 @@ export default function MeseroPage() {
 
         // Calcular estadísticas
         const today = new Date().toISOString().split("T")[0];
-        const ordenesHoy = data.ordenes.filter((orden: ordenes) =>
-          orden.creado_en.startsWith(today),
+        const ordenesHoy = data.ordenes.filter((orden: OrdenCompleta) =>
+          new Date(orden.creado_en).toISOString().startsWith(today),
         );
 
-        const ordenesActivas = data.ordenes.filter((orden: ordenes) =>
+        const ordenesActivas = data.ordenes.filter((orden: OrdenCompleta) =>
           ["PENDIENTE", "EN_PREPARACION"].includes(orden.estado),
         );
 
         const ventasHoy = ordenesHoy.reduce(
-          (sum: number, orden: ordenes) => sum + Number(orden.total),
+          (sum: number, orden: OrdenCompleta) => sum + Number(orden.total),
           0,
         );
 
@@ -303,8 +347,8 @@ export default function MeseroPage() {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <p className="text-sm text-gray-500">
-                          {orden._count.orden_items} producto
-                          {orden._count.orden_items !== 1 ? "s" : ""}
+                          {orden._count ? orden._count.orden_items : 0} producto
+                          {orden._count && orden._count.orden_items !== 1 ? "s" : ""}
                         </p>
                       </div>
 
@@ -503,13 +547,13 @@ export default function MeseroPage() {
                             </div>
                           )}
 
-                        {ordenSeleccionada.direccion && (
+                        {ordenSeleccionada.direccion_entrega && (
                           <div>
                             <span className="text-sm text-gray-500">
                               Dirección de entrega:
                             </span>
                             <p className="font-medium">
-                              {ordenSeleccionada.direccion}
+                              {ordenSeleccionada.direccion_entrega}
                             </p>
                           </div>
                         )}
@@ -524,7 +568,7 @@ export default function MeseroPage() {
                             Productos
                           </h4>
                           <div className="space-y-3">
-                            {ordenSeleccionada.orden_items.map((item: orden_items) => (
+                            {ordenSeleccionada.orden_items.map((item) => (
                               <div
                                 key={item.id}
                                 className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"

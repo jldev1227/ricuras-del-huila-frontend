@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
       include: {
         sucursales: true,
         ordenes: {
+          where: {
+            estado: {
+              in: ["PENDIENTE", "EN_PREPARACION", "LISTA"], // Solo órdenes activas
+            },
+          },
           include: {
             usuarios: true,
             _count: {
@@ -52,29 +57,42 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          orderBy: {
+            creado_en: "desc", // Ordenar por más reciente
+          },
+          take: 1, // Solo tomar la más reciente
         },
       },
     });
 
     // Transformar los datos para incluir ordenActual
-    const mesasConOrdenActual = mesas.map((mesa) => ({
-      ...mesa,
-      ordenActual:
-        mesa.ordenes.length > 0
+    const mesasConOrdenActual = mesas.map((mesa) => {
+      const ordenActiva = mesa.ordenes.length > 0 ? mesa.ordenes[0] : null;
+      
+      return {
+        ...mesa,
+        ordenActual: ordenActiva
           ? {
-              id: mesa.ordenes[0].id,
-              numeroOrden: mesa.ordenes[0].id.slice(-6), // Assuming numeroOrden is derived from id
-              estado: mesa.ordenes[0].estado,
-              total: mesa.ordenes[0].total,
-              creadoEn: mesa.ordenes[0].creado_en,
-              meseroId: mesa.ordenes[0].mesero_id,
-              mesero: mesa.ordenes[0].usuarios,
-              _count: mesa.ordenes[0]._count,
+              id: ordenActiva.id,
+              numeroOrden: ordenActiva.id.slice(-6),
+              estado: ordenActiva.estado,
+              total: ordenActiva.total,
+              subtotal: ordenActiva.subtotal,
+              creadoEn: ordenActiva.creado_en,
+              meseroId: ordenActiva.mesero_id,
+              especificaciones: ordenActiva.especificaciones,
+              mesero: ordenActiva.usuarios
+                ? {
+                    nombre_completo: ordenActiva.usuarios.nombre_completo,
+                  }
+                : null,
+              _count: ordenActiva._count,
             }
           : null,
-      ordenes: undefined, // Remove the ordenes array from response
-      activa: mesa.disponible && mesa.ordenes.length === 0, // Mesa is active if available and no active orders
-    }));
+        ordenes: undefined, // Remove the ordenes array from response
+        activa: true, // Las mesas siempre están activas (pueden recibir órdenes)
+      };
+    });
 
     return NextResponse.json({
       success: true,

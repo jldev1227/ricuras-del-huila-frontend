@@ -16,6 +16,7 @@ import { useState, useCallback, useEffect } from "react";
 import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import ModalCrearCliente from "@/components/cliente/ModalCrearCliente";
+import ModalEntregarOrden from "@/components/orden/ModalEntregarOrden";
 import ProductImage from "@/components/productos/ProductImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
@@ -476,12 +477,12 @@ export default function OrderDashboard() {
     try {
       const orden = {
         sucursalId: sucursal?.id,
-        tipo_orden: tipoOrden.toUpperCase(),
-        mesa_id: tipoOrden === "local" ? mesaSeleccionada?.id : null,
-        cliente_id: clienteSeleccionado?.id || null,
-        mesero_id: hubMesero ? meseroSeleccionado?.id : null,
-        direccion_entrega: tipoOrden === "domicilio" ? direccionEntrega : null,
-        costo_adicional: costoAdicional || null,
+        tipoOrden: tipoOrden.toUpperCase(),
+        mesaId: tipoOrden === "local" ? mesaSeleccionada?.id : null,
+        clienteId: clienteSeleccionado?.id || null,
+        meseroId: hubMesero ? meseroSeleccionado?.id : null,
+        direccionEntrega: tipoOrden === "domicilio" ? direccionEntrega : null,
+        costoAdicional: costoAdicional || null,
         items: carrito.map((item) => ({
           producto_id: item.id,
           cantidad: item.cantidad,
@@ -491,7 +492,7 @@ export default function OrderDashboard() {
         descuento,
         total: calcularTotal(),
         especificaciones,
-        metodo_pago: metodoPago,
+        metodoPago: metodoPago,
         notas: `Pago: ${formatCOP(montoPagado)} | Vueltas: ${formatCOP(calcularVueltas())}`,
         userId: user?.id, // ID del usuario que crea/actualiza la orden
       };
@@ -518,16 +519,29 @@ export default function OrderDashboard() {
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
 
-      addToast({
-        title: successMessage,
-        description: `Total: ${formatCOP(calcularTotal())} | Vueltas: ${formatCOP(calcularVueltas())}`,
-        color: "success",
-      });
+      // Verificar si se debe mostrar el modal de entrega
+      const debeEntregarImmediatamente = 
+        !modoEdicion && // Solo para órdenes nuevas
+        requiereFactura; // Que requieran factura (para cualquier tipo de orden)
+
+      if (debeEntregarImmediatamente && data.orden?.id) {
+        // Mostrar modal de entrega en lugar de toast
+        setOrdenCreadaId(data.orden.id);
+        setModalEntregarOrdenAbierto(true);
+      } else {
+        // Comportamiento normal con toast
+        addToast({
+          title: successMessage,
+          description: `Total: ${formatCOP(calcularTotal())} | Vueltas: ${formatCOP(calcularVueltas())}`,
+          color: "success",
+        });
+      }
 
       // En modo edición, redirigir a la lista de órdenes, sino resetear
       if (modoEdicion) {
         window.location.href = "/pos/ordenes";
-      } else {
+      } else if (!debeEntregarImmediatamente) {
+        // Solo resetear si no se va a mostrar el modal
         resetearOrden();
       }
     } catch (error: unknown) {
@@ -560,6 +574,29 @@ export default function OrderDashboard() {
     setClienteSeleccionado(null);
   };
 
+  const onOrdenEntregada = () => {
+    // Resetear la orden después de entregarla
+    resetearOrden();
+    
+    // Cerrar el modal
+    setModalEntregarOrdenAbierto(false);
+    setOrdenCreadaId(null);
+    
+    // Mostrar toast de confirmación
+    addToast({
+      title: "🎉 Orden completada",
+      description: "La orden ha sido entregada exitosamente",
+      color: "success",
+    });
+  };
+
+  const onCerrarModalEntrega = () => {
+    // Solo resetear si el usuario cierra el modal sin entregar (para órdenes que no son LLEVAR)
+    resetearOrden();
+    setModalEntregarOrdenAbierto(false);
+    setOrdenCreadaId(null);
+  };
+
   const onSelectMesa = (mesa: { id: string; numero: number; ubicacion?: string | null }) => {
     setMesaSeleccionada(mesa as mesas);
   };
@@ -570,6 +607,10 @@ export default function OrderDashboard() {
   }));
 
   const [modalCrearClienteAbierto, setModalCrearClienteAbierto] = useState(false);
+
+  // Estados para el modal de entrega
+  const [modalEntregarOrdenAbierto, setModalEntregarOrdenAbierto] = useState(false);
+  const [ordenCreadaId, setOrdenCreadaId] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-gray-50">
@@ -1566,6 +1607,17 @@ export default function OrderDashboard() {
           seleccionarCliente(cliente);
           setModalCrearClienteAbierto(false);
         }}
+      />
+
+      <ModalEntregarOrden
+        ordenId={ordenCreadaId}
+        isOpen={modalEntregarOrdenAbierto}
+        onOpenChange={(open) => {
+          if (!open) {
+            onCerrarModalEntrega();
+          }
+        }}
+        onOrdenEntregada={onOrdenEntregada}
       />
     </div>
   );

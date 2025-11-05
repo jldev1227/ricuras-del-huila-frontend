@@ -44,6 +44,148 @@ interface OrderItem {
   notas?: string;
 }
 
+// ============================================================================
+// HELPER FUNCTIONS PARA STOCK
+// ============================================================================
+
+/**
+ * Actualiza el stock de productos y su disponibilidad automática
+ */
+async function actualizarStockProductos(
+  items: OrderItem[],
+  transactionClient: any, // PrismaTransaction
+  tipoMovimiento: "entrada" | "salida" = "salida",
+  referencia: string,
+  creadoPor?: string
+) {
+  for (const item of items) {
+    // Obtener el producto actual
+    const producto = await transactionClient.productos.findUnique({
+      where: { id: item.producto_id },
+      select: {
+        id: true,
+        nombre: true,
+        stock_actual: true,
+        controlar_stock: true,
+        unidad_medida: true,
+      },
+    });
+
+    if (!producto) {
+      throw new Error(`Producto con ID ${item.producto_id} no encontrado`);
+    }
+
+    // Solo procesar productos que controlan stock
+    if (!producto.controlar_stock) {
+      console.log(`⏭️ Producto ${producto.nombre} no controla stock, omitiendo...`);
+      continue;
+    }
+
+    // Calcular nuevo stock
+    const cantidadMovimiento = item.cantidad;
+    const stockAnterior = producto.stock_actual;
+    let stockNuevo = stockAnterior;
+
+    if (tipoMovimiento === "salida") {
+      stockNuevo = Math.max(0, stockAnterior - cantidadMovimiento);
+      
+      console.log(`📦 ${tipoMovimiento.toUpperCase()}: ${producto.nombre} | Stock: ${stockAnterior} - ${cantidadMovimiento} = ${stockNuevo}`);
+      
+      // Validar que hay suficiente stock (permitir continuar pero alertar)
+      if (stockAnterior < cantidadMovimiento) {
+        console.warn(`⚠️ Stock insuficiente para ${producto.nombre}. Disponible: ${stockAnterior}, Requerido: ${cantidadMovimiento}`);
+        // No lanzar error, permitir que continúe pero quede en 0
+      }
+    } else if (tipoMovimiento === "entrada") {
+      stockNuevo = stockAnterior + cantidadMovimiento;
+      console.log(`📦 ${tipoMovimiento.toUpperCase()}: ${producto.nombre} | Stock: ${stockAnterior} + ${cantidadMovimiento} = ${stockNuevo}`);
+    }
+
+    // Actualizar stock del producto
+    await transactionClient.productos.update({
+      where: { id: producto.id },
+      data: {
+        stock_actual: stockNuevo,
+        disponible: stockNuevo > 0, // Auto-actualizar disponibilidad
+        actualizado_en: new Date(),
+      },
+    });
+
+    // Crear movimiento de stock
+    await transactionClient.movimientos_stock.create({
+      data: {
+        id: crypto.randomUUID(),
+        producto_id: producto.id,
+        tipo_movimiento: tipoMovimiento,
+        cantidad: cantidadMovimiento,
+        stock_anterior: stockAnterior,
+        stock_nuevo: stockNuevo,
+        motivo: tipoMovimiento === "salida" ? "Venta realizada" : "Devolución/Cancelación",
+        referencia,
+        creado_por: creadoPor,
+        creado_en: new Date(),
+      },
+    });
+
+    console.log(`✅ Stock actualizado para ${producto.nombre}: ${stockAnterior} → ${stockNuevo}`);
+  }
+}
+
+/**
+ * Calcula las diferencias entre items anteriores y nuevos para ajustar stock
+ */
+async function ajustarStockPorCambios(
+  itemsAnteriores: any[],
+  itemsNuevos: OrderItem[],
+  transactionClient: any,
+  referencia: string,
+  creadoPor?: string
+) {
+  console.log(`🔄 Ajustando stock por cambios en orden ${referencia}...`);
+  
+  // Crear mapas para facilitar la comparación
+  const mapaAnteriores = new Map();
+  const mapaNuevos = new Map();
+  
+  itemsAnteriores.forEach((item: any) => {
+    mapaAnteriores.set(item.producto_id, item.cantidad);
+  });
+  
+  itemsNuevos.forEach(item => {
+    mapaNuevos.set(item.producto_id, item.cantidad);
+  });
+  
+  // Obtener todos los productos únicos
+  const todosLosProductos = new Set([...mapaAnteriores.keys(), ...mapaNuevos.keys()]);
+  
+  for (const productoId of todosLosProductos) {
+    const cantidadAnterior = mapaAnteriores.get(productoId) || 0;
+    const cantidadNueva = mapaNuevos.get(productoId) || 0;
+    const diferencia = cantidadNueva - cantidadAnterior;
+    
+    if (diferencia !== 0) {
+      const itemAjuste: OrderItem = {
+        producto_id: productoId,
+        cantidad: Math.abs(diferencia),
+        precio_unitario: 0, // No relevante para movimientos de stock
+      };
+      
+      const tipoMovimiento = diferencia > 0 ? "salida" : "entrada";
+      const referenciaDetallada = `${referencia}_AJUSTE_${tipoMovimiento.toUpperCase()}`;
+      
+      await actualizarStockProductos(
+        [itemAjuste],
+        transactionClient,
+        tipoMovimiento,
+        referenciaDetallada,
+        creadoPor
+      );
+      
+      console.log(`📊 Ajuste: Producto ${productoId} | Anterior: ${cantidadAnterior} → Nuevo: ${cantidadNueva} (${diferencia > 0 ? '+' : ''}${diferencia})`);
+    }
+  }
+}
+
 // GET - Obtener una orden específica
 export async function GET(
   _request: NextRequest,
@@ -177,6 +319,19 @@ export async function PUT(
     const ordenActualizada = await prisma.$transaction(async (tx) => {
       // Si hay nuevos items, eliminar los antiguos y crear los nuevos
       if (items && Array.isArray(items)) {
+        console.log(`🔄 Actualizando items de orden ${id}...`);
+        
+        // ============================================================================
+        // GESTIÓN DE STOCK: Ajustar stock por cambios en items
+        // ============================================================================
+        await ajustarStockPorCambios(
+          ordenExistente.orden_items,
+          items,
+          tx,
+          `ORDEN_${id}`,
+          finalUserId
+        );
+
         // Eliminar items antiguos
         await tx.orden_items.deleteMany({
           where: { orden_id: id },

@@ -48,6 +48,7 @@ async function actualizarStockProductos(
 
     // Solo procesar productos que controlan stock
     if (!producto.controlar_stock) {
+      console.log(`⏭️ Producto ${producto.nombre} no controla stock, omitiendo...`);
       continue;
     }
 
@@ -59,12 +60,16 @@ async function actualizarStockProductos(
     if (tipoMovimiento === "salida") {
       stockNuevo = Math.max(0, stockAnterior - cantidadMovimiento);
       
-      // Validar que hay suficiente stock
+      console.log(`📦 ${tipoMovimiento.toUpperCase()}: ${producto.nombre} | Stock: ${stockAnterior} - ${cantidadMovimiento} = ${stockNuevo}`);
+      
+      // Validar que hay suficiente stock (permitir continuar pero alertar)
       if (stockAnterior < cantidadMovimiento) {
-        throw new Error(`Stock insuficiente para el producto ${producto.nombre}. Stock disponible: ${stockAnterior}, cantidad solicitada: ${cantidadMovimiento}`);
+        console.warn(`⚠️ Stock insuficiente para ${producto.nombre}. Disponible: ${stockAnterior}, Requerido: ${cantidadMovimiento}`);
+        // No lanzar error, permitir que continúe pero quede en 0
       }
     } else if (tipoMovimiento === "entrada") {
       stockNuevo = stockAnterior + cantidadMovimiento;
+      console.log(`📦 ${tipoMovimiento.toUpperCase()}: ${producto.nombre} | Stock: ${stockAnterior} + ${cantidadMovimiento} = ${stockNuevo}`);
     }
 
     // Actualizar stock del producto
@@ -92,6 +97,66 @@ async function actualizarStockProductos(
         creado_en: new Date(),
       },
     });
+
+    console.log(`✅ Stock actualizado para ${producto.nombre}: ${stockAnterior} → ${stockNuevo}`);
+  }
+}
+
+/**
+ * Restaura el stock de productos cuando se elimina una orden
+ */
+async function restaurarStockOrden(
+  ordenId: string,
+  transactionClient: any,
+  creadoPor?: string
+) {
+  console.log(`🔄 Restaurando stock para orden ${ordenId}...`);
+  
+  // Obtener los items de la orden que se va a eliminar
+  const orden = await transactionClient.ordenes.findUnique({
+    where: { id: ordenId },
+    include: {
+      orden_items: {
+        include: {
+          productos: {
+            select: {
+              id: true,
+              nombre: true,
+              controlar_stock: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!orden) {
+    throw new Error(`Orden ${ordenId} no encontrada`);
+  }
+
+  // Solo restaurar stock si la orden no está cancelada (las canceladas ya restauraron stock)
+  if (orden.estado === "CANCELADA") {
+    console.log(`⏭️ Orden ${ordenId} ya está cancelada, stock ya restaurado`);
+    return;
+  }
+
+  // Convertir items a formato esperado y restaurar stock
+  const itemsParaRestaurar = orden.orden_items.map((item: any) => ({
+    producto_id: item.producto_id,
+    cantidad: item.cantidad,
+    precio_unitario: Number(item.precio_unitario),
+  }));
+
+  if (itemsParaRestaurar.length > 0) {
+    await actualizarStockProductos(
+      itemsParaRestaurar,
+      transactionClient,
+      "entrada", // Devolver stock
+      `ORDEN_ELIMINADA_${ordenId}`,
+      creadoPor
+    );
+    
+    console.log(`✅ Stock restaurado para ${itemsParaRestaurar.length} productos de la orden ${ordenId}`);
   }
 }
 
@@ -170,6 +235,10 @@ export async function GET(request: NextRequest) {
           descuento: true,
           metodo_pago: true,
           creado_en: true,
+          especificaciones: true,
+          notas: true,
+          nombre_cliente: true,
+          direccion_entrega: true,
           sucursales: {
             select: {
               id: true,
@@ -202,6 +271,7 @@ export async function GET(request: NextRequest) {
                   id: true,
                   nombre: true,
                   precio: true,
+                  imagen: true,
                 },
               },
             },
@@ -277,6 +347,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    console.log('🔍 POST /api/ordenes - Datos recibidos:', {
+      sucursalId: body.sucursalId,
+      tipoOrden: body.tipoOrden,
+      meseroId: body.meseroId,
+      mesaId: body.mesaId,
+      items: body.items?.length || 0,
+      fullBody: body
+    });
 
     const {
       sucursalId,
@@ -620,8 +699,14 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Usar transacción para liberar mesa si es necesario
+    // Usar transacción para liberar mesa y restaurar stock
     await prisma.$transaction(async (tx) => {
+      // Obtener el usuario autenticado
+      const userIdFromAuth = await getUserFromRequest(request);
+      
+      // 📦 Restaurar stock de productos antes de eliminar
+      await restaurarStockOrden(id, tx, userIdFromAuth || undefined);
+      
       // Si la orden tiene mesa, liberarla
       if (orden.mesa_id) {
         await tx.mesas.update({
@@ -634,6 +719,8 @@ export async function DELETE(request: NextRequest) {
       await tx.ordenes.delete({
         where: { id },
       });
+      
+      console.log(`🗑️ Orden ${id} eliminada exitosamente con stock restaurado`);
     });
 
     return NextResponse.json({
