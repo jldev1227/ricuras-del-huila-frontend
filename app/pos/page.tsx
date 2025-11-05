@@ -82,7 +82,7 @@ export default function OrderDashboard() {
     descuento?: number;
     costo_adicional?: number;
     direccion_entrega?: string;
-    mesa?: { id: string; numero: number; ubicacion?: string };
+    mesas?: { id: string; numero: number; ubicacion?: string };
     mesero?: { id: string; nombre_completo: string; correo?: string };
     cliente?: {
       id: string;
@@ -189,6 +189,14 @@ export default function OrderDashboard() {
       if (data.success && data.orden) {
         const orden = data.orden;
 
+        console.log('📦 Datos completos de la orden recibida:', {
+          ordenId: orden.id,
+          tipoOrden: orden.tipo_orden,
+          mesaCompleta: orden.mesas,
+          mesaId: orden.mesa_id,
+          estructura: Object.keys(orden)
+        });
+
         setOrdenExistente(orden);
 
         setTipoOrden(orden.tipo_orden.toLowerCase() || "llevar");
@@ -197,7 +205,15 @@ export default function OrderDashboard() {
         setCostoAdicional(orden.costo_adicional || 0);
         setDireccionEntrega(orden.direccion_entrega || "");
 
-        if (orden.mesa) setMesaSeleccionada(orden.mesa);
+        if (orden.mesas) {
+          console.log('🏠 Orden tiene mesa asignada:', {
+            mesaId: orden.mesas.id,
+            mesaNumero: orden.mesas.numero,
+            modoEdicion,
+            mesaCompleta: orden.mesas
+          });
+          setMesaSeleccionada(orden.mesas);
+        }
 
         if (orden.mesero) {
           setMeseroSeleccionado({
@@ -460,12 +476,12 @@ export default function OrderDashboard() {
     try {
       const orden = {
         sucursalId: sucursal?.id,
-        tipoOrden: tipoOrden.toUpperCase(),
-        mesaId: tipoOrden === "local" ? mesaSeleccionada?.id : null,
-        clienteId: clienteSeleccionado?.id || null,
-        meseroId: hubMesero ? meseroSeleccionado?.id : null,
-        direccionEntrega: tipoOrden === "domicilio" ? direccionEntrega : null,
-        costoAdicional: costoAdicional || null,
+        tipo_orden: tipoOrden.toUpperCase(),
+        mesa_id: tipoOrden === "local" ? mesaSeleccionada?.id : null,
+        cliente_id: clienteSeleccionado?.id || null,
+        mesero_id: hubMesero ? meseroSeleccionado?.id : null,
+        direccion_entrega: tipoOrden === "domicilio" ? direccionEntrega : null,
+        costo_adicional: costoAdicional || null,
         items: carrito.map((item) => ({
           producto_id: item.id,
           cantidad: item.cantidad,
@@ -475,7 +491,7 @@ export default function OrderDashboard() {
         descuento,
         total: calcularTotal(),
         especificaciones,
-        metodoPago,
+        metodo_pago: metodoPago,
         notas: `Pago: ${formatCOP(montoPagado)} | Vueltas: ${formatCOP(calcularVueltas())}`,
         userId: user?.id, // ID del usuario que crea/actualiza la orden
       };
@@ -768,12 +784,14 @@ export default function OrderDashboard() {
               <div>
                 <h2 className="text-lg lg:text-xl font-bold text-white">
                   {pasoActual === "carrito"
-                    ? "Nueva orden"
+                    ? modoEdicion ? "Editar orden" : "Nueva orden"
                     : "Pago y facturación"}
                 </h2>
                 <p className="text-xs text-white/80">
                   {pasoActual === "carrito"
-                    ? `${carrito.length} productos`
+                    ? modoEdicion 
+                      ? `Orden #${ordenExistente?.id?.slice(-8)} - ${carrito.length} productos`
+                      : `${carrito.length} productos`
                     : "Finalizar orden"}
                 </p>
               </div>
@@ -971,36 +989,67 @@ export default function OrderDashboard() {
                   {tipoOrden === "local" && (
                     <div className="space-y-3">
                       {!mesaSeleccionada ? (
-                        <ModalSeleccionarMesa
-                          mesaSeleccionada={mesaSeleccionada}
-                          onSelectMesa={onSelectMesa}
-                        />
+                        <div>
+                          {modoEdicion && (
+                            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-sm text-amber-800">
+                                <span className="font-medium">Editando orden:</span> Selecciona una mesa para continuar
+                              </p>
+                            </div>
+                          )}
+                          <ModalSeleccionarMesa
+                            mesaSeleccionada={null}
+                            onSelectMesa={onSelectMesa}
+                            mesaActualId={modoEdicion && ordenExistente?.mesas?.id ? ordenExistente.mesas.id : null}
+                          />
+                        </div>
                       ) : (
-                        <div className="flex items-center justify-between p-3 lg:p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2 lg:gap-3">
-                            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
-                              <span className="text-white font-bold text-base lg:text-lg">
-                                {mesaSeleccionada.numero}
-                              </span>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 lg:p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 lg:gap-3">
+                              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                                <span className="text-white font-bold text-base lg:text-lg">
+                                  {mesaSeleccionada.numero}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 text-sm lg:text-base">
+                                  Mesa {mesaSeleccionada.numero}
+                                  {modoEdicion ? (
+                                    <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                                      Editando
+                                    </span>
+                                  ) : (
+                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                      Nueva orden
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-xs lg:text-sm text-gray-600">
+                                  📍 {mesaSeleccionada.ubicacion || "Principal"}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm lg:text-base">
-                                Mesa {mesaSeleccionada.numero}
-                              </p>
-                              <p className="text-xs lg:text-sm text-gray-600">
-                                📍 {mesaSeleccionada.ubicacion || "Principal"}
-                              </p>
-                            </div>
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              onPress={() => setMesaSeleccionada(null)}
+                              className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center text-gray-400 hover:text-danger-500 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                              <X size={16} />
+                            </Button>
                           </div>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            onPress={() => setMesaSeleccionada(null)}
-                            className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center text-gray-400 hover:text-danger-500 hover:bg-red-50 rounded-lg transition-all"
-                          >
-                            <X size={16} />
-                          </Button>
+                          
+                          {/* Botón para cambiar mesa */}
+                          <div className="flex gap-2">
+                            <ModalSeleccionarMesa
+                              mesaSeleccionada={mesaSeleccionada.id}
+                              onSelectMesa={onSelectMesa}
+                              mesaActualId={modoEdicion && ordenExistente?.mesas?.id ? ordenExistente.mesas.id : null}
+                              buttonText="🔄 Cambiar mesa"
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -1173,7 +1222,7 @@ export default function OrderDashboard() {
                     className="w-full bg-wine text-white py-3 lg:py-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
                   >
                     {validarOrden()
-                      ? "Continuar al pago →"
+                      ? modoEdicion ? "Continuar a actualizar →" : "Continuar al pago →"
                       : "Completa la información"}
                   </Button>
                 </div>

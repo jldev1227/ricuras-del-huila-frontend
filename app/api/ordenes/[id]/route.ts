@@ -29,16 +29,6 @@ interface NotasUpdateData {
   especificaciones?: string;
 }
 
-interface OrdenExistente {
-  id: string;
-  estado: string;
-  meseroId?: string | null;
-  mesa_id?: string | null;
-  notas?: string | null;
-  mesa?: { numero: number } | null;
-  [key: string]: unknown;
-}
-
 interface OrdenActualizada {
   id: string;
   estado: string;
@@ -127,6 +117,13 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    console.log('🔄 PUT - Datos recibidos para actualización:', {
+      ordenId: id,
+      mesa_id: body.mesa_id,
+      tipo_orden: body.tipo_orden,
+      allFields: Object.keys(body)
+    });
+
     // Verificar que la orden existe
     const ordenExistente = await prisma.ordenes.findUnique({
       where: { id },
@@ -140,16 +137,17 @@ export async function PUT(
       );
     }
 
-    // No permitir actualizar órdenes entregadas o canceladas
-    if (["ENTREGADA", "CANCELADA"].includes(ordenExistente.estado)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "No se puede actualizar una orden entregada o cancelada",
-        },
-        { status: 400 },
-      );
-    }
+    // Permitir actualizar órdenes en cualquier estado
+    // Comentado: No permitir actualizar órdenes entregadas o canceladas
+    // if (["ENTREGADA", "CANCELADA"].includes(ordenExistente.estado)) {
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: "No se puede actualizar una orden entregada o cancelada",
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
 
     const {
       tipo_orden,
@@ -285,7 +283,15 @@ export async function PUT(
         };
 
         if (tipo_orden) dataUpdate.tipo_orden = tipo_orden;
-        if (mesa_id !== undefined) dataUpdate.mesa_id = mesa_id;
+        if (mesa_id !== undefined) {
+          console.log('🏠 Actualizando mesa_id:', {
+            valorAnterior: ordenExistente.mesa_id,
+            valorNuevo: mesa_id,
+            esNull: mesa_id === null,
+            esUndefined: mesa_id === undefined
+          });
+          dataUpdate.mesa_id = mesa_id;
+        }
         if (cliente_id !== undefined) dataUpdate.cliente_id = cliente_id;
         if (mesero_id) dataUpdate.mesero_id = mesero_id;
         if (nombre_cliente !== undefined)
@@ -444,7 +450,7 @@ export async function PATCH(
           ordenActualizada = await prisma.$transaction(async (tx) => {
             // Liberar la mesa
             await tx.mesas.update({
-              where: { id: ordenExistente.mesa_id },
+              where: { id: ordenExistente.mesa_id! }, // Non-null assertion ya que verificamos que existe
               data: {
                 disponible: true,
                 actualizado_en: new Date(),
@@ -565,7 +571,7 @@ async function cambiarEstado(
     return await prisma.$transaction(async (tx) => {
       // Liberar la mesa
       await tx.mesas.update({
-        where: { id: ordenExistente.mesa_id },
+        where: { id: ordenExistente.mesa_id! }, // Non-null assertion ya que verificamos que existe
         data: {
           disponible: true,
           actualizado_en: new Date(),
@@ -662,10 +668,11 @@ async function cancelarOrden(ordenId: string, datos: CancelacionData, userId?: s
       throw new Error("Orden no encontrada");
     }
 
-    // No permitir cancelar órdenes ya entregadas
-    if (orden.estado === "ENTREGADA") {
-      throw new Error("No se puede cancelar una orden ya entregada");
-    }
+    // Permitir cancelar órdenes en cualquier estado
+    // Comentado: No permitir cancelar órdenes ya entregadas
+    // if (orden.estado === "ENTREGADA") {
+    //   throw new Error("No se puede cancelar una orden ya entregada");
+    // }
 
     // Si tiene mesa, liberarla
     if (orden.mesa_id) {
@@ -715,9 +722,11 @@ async function marcarFacturada(ordenId: string, datos: FacturacionData, userId?:
     throw new Error("Orden no encontrada");
   }
 
-  if (orden.estado !== "ENTREGADA") {
-    throw new Error("Solo se pueden facturar órdenes entregadas");
-  }
+  // Permitir facturar órdenes en cualquier estado
+  // Comentado: Solo se pueden facturar órdenes entregadas
+  // if (orden.estado !== "ENTREGADA") {
+  //   throw new Error("Solo se pueden facturar órdenes entregadas");
+  // }
 
   const infoFacturacion = `
 [FACTURACIÓN]

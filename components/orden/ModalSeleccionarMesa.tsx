@@ -16,19 +16,10 @@ import {
 import { Plus, Search, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import type { mesas } from "@prisma/client";
 
-// Interfaces
-interface Mesa {
-  id: string;
-  numero: number;
-  disponible: boolean;
-  sucursal_id: string;
-  ubicacion?: string | null;
-  notas?: string | null;
-  ultima_limpieza?: Date | null;
-  creado_en: Date;
-  actualizado_en: Date;
-}
+// Usar el tipo de Prisma directamente
+type Mesa = mesas;
 
 // Interface para formulario de mesa
 interface FormMesa {
@@ -43,6 +34,7 @@ interface ModalSeleccionarMesaProps {
   mesaSeleccionada: string | null;
   onSelectMesa: (mesa: Mesa) => void;
   mesaActualId?: string | null; // ID de la mesa actual (para permitir seleccionarla al editar)
+  buttonText?: string; // Texto personalizable para el botón
 }
 
 interface MesaIlustracionProps {
@@ -76,7 +68,10 @@ const MesaIlustracion = ({
       className={`
                 relative rounded-2xl border-1 bg-[#f2f2f2] p-2 py-5
                 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
-                ${isCurrentMesa && !estado ? "border-blue-500 border-2" : ""}
+                ${isCurrentMesa && !estado ? "border-blue-500 border-3 bg-blue-50" : ""}
+                ${isCurrentMesa && estado ? "border-blue-400 border-2 bg-blue-25" : ""}
+                ${isSelected && !isCurrentMesa ? "border-green-500 border-2 bg-green-50" : ""}
+                ${isSelected && isCurrentMesa ? "border-amber-500 border-3 bg-amber-50" : ""}
             `}
     >
       {isDisabled && (
@@ -108,7 +103,7 @@ const MesaIlustracion = ({
         {/* Badge de estado */}
         {!estado ? (
           isCurrentMesa ? (
-            <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">
+            <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg animate-pulse">
               Mesa Actual
             </div>
           ) : (
@@ -117,11 +112,25 @@ const MesaIlustracion = ({
             </div>
           )
         ) : (
-          !isSelected && (
+          !isSelected && !isCurrentMesa && (
             <div className="absolute top-0 right-0 bg-default-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">
               Disponible
             </div>
           )
+        )}
+
+        {/* Badge adicional para mesa seleccionada */}
+        {isSelected && (
+          <div className="absolute top-0 left-0 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-br-lg rounded-tl-lg">
+            ✓ Seleccionada
+          </div>
+        )}
+
+        {/* Badge especial para mesa actual auto-seleccionada */}
+        {isCurrentMesa && isSelected && (
+          <div className="absolute bottom-0 left-0 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-tr-lg rounded-bl-lg">
+            Auto-seleccionada
+          </div>
         )}
       </div>
     </Card>
@@ -131,6 +140,7 @@ const MesaIlustracion = ({
 export default function ModalSeleccionarMesa({
   onSelectMesa,
   mesaActualId = null,
+  buttonText = "📍 Escoger mesa",
 }: ModalSeleccionarMesaProps) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const {
@@ -197,8 +207,35 @@ export default function ModalSeleccionarMesa({
 
     if (isOpen) {
       fetchData();
+    } else {
+      // Limpiar mesa temporal cuando se cierre el modal
+      setTempMesa(null);
     }
   }, [isOpen, searchNumero, formData.sucursal_id]);
+
+  // Efecto separado para auto-seleccionar la mesa actual
+  useEffect(() => {
+    console.log('🔍 Auto-selección de mesa - Estado actual:', {
+      isOpen,
+      mesaActualId,
+      mesasLength: mesas.length,
+      tempMesa: tempMesa?.id,
+      mesas: mesas.map(m => ({ id: m.id, numero: m.numero, disponible: m.disponible }))
+    });
+
+    if (isOpen && mesaActualId && mesas.length > 0) {
+      const mesaActual = mesas.find((mesa: Mesa) => mesa.id === mesaActualId);
+      console.log('🎯 Buscando mesa actual:', {
+        mesaActualId,
+        mesaEncontrada: mesaActual ? { id: mesaActual.id, numero: mesaActual.numero } : 'NO ENCONTRADA'
+      });
+
+      if (mesaActual && (!tempMesa || tempMesa.id !== mesaActual.id)) {
+        setTempMesa(mesaActual);
+        console.log('✅ Mesa actual auto-seleccionada:', mesaActual.numero);
+      }
+    }
+  }, [isOpen, mesaActualId, mesas]);
 
   const onSelectTemp = (mesa: Mesa) => {
     if (mesa) {
@@ -308,7 +345,7 @@ export default function ModalSeleccionarMesa({
   return (
     <>
       <Button fullWidth color="primary" onPress={onOpen}>
-        📍 Escoger mesa
+        {buttonText}
       </Button>
 
       <Modal
@@ -327,15 +364,37 @@ export default function ModalSeleccionarMesa({
           {(onClose) => (
             <>
               <ModalHeader className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Selecciona una mesa
-                </h2>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {mesaActualId ? "Confirmar o cambiar mesa" : "Selecciona una mesa"}
+                  </h2>
+                  {mesaActualId && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Esta orden ya tiene una mesa asignada
+                    </p>
+                  )}
+                </div>
                 <Button isIconOnly size="sm" variant="light" onPress={onClose}>
                   <X className="w-5 h-5 text-gray-400" />
                 </Button>
               </ModalHeader>
 
               <ModalBody>
+                {/* Mensaje informativo cuando hay mesa actual */}
+                {mesaActualId && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <p className="text-sm font-medium text-blue-800">
+                        Mesa actual de la orden detectada
+                      </p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      La mesa asignada a esta orden se ha auto-seleccionado. Puedes cambiarla si es necesario.
+                    </p>
+                  </div>
+                )}
+
                 {/* Search y botón agregar */}
                 <div className="flex gap-3 mb-6">
                   <Input
@@ -394,10 +453,16 @@ export default function ModalSeleccionarMesa({
                     <Button
                       color="primary"
                       size="lg"
-                      className="shadow-xl"
+                      className={`shadow-xl ${
+                        tempMesa.id === mesaActualId 
+                          ? "bg-amber-500 hover:bg-amber-600" 
+                          : "bg-blue-500 hover:bg-blue-600"
+                      }`}
                       onPress={() => handleConfirmar(onClose)}
                     >
-                      Confirmar Mesa #{tempMesa.numero}
+                      {tempMesa.id === mesaActualId 
+                        ? `✓ Mantener Mesa #${tempMesa.numero}` 
+                        : `Cambiar a Mesa #${tempMesa.numero}`}
                     </Button>
                   </div>
                 )}
