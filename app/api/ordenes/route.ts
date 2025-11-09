@@ -15,6 +15,14 @@ interface OrderItem {
   notas?: string;
 }
 
+// Tipos para los pagos
+interface PagoOrden {
+  metodo_pago: string;
+  monto: number;
+  referencia?: string;
+  notas?: string;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -276,6 +284,16 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          pagos_orden: {
+            select: {
+              id: true,
+              metodo_pago: true,
+              monto: true,
+              referencia: true,
+              notas: true,
+              creado_en: true,
+            },
+          },
           _count: {
             select: {
               orden_items: true,
@@ -376,7 +394,8 @@ export async function POST(request: NextRequest) {
       especificaciones,
       creadoOffline = false,
       userId, // Campo para el usuario que crea la orden (desde el frontend)
-      metodoPago = "EFECTIVO", // Método de pago por defecto
+      metodoPago = "EFECTIVO", // Método de pago por defecto (legacy)
+      pagos, // Array de pagos parciales - nuevo campo
     } = body;
 
     // Obtener el usuario autenticado del header Authorization
@@ -456,6 +475,43 @@ export async function POST(request: NextRequest) {
     if (costoEnvio) total += Number(costoEnvio) || 0;
     if (costoAdicional) total += Number(costoAdicional) || 0;
 
+    // Validar pagos si se proporcionan
+    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+      // Validar que no haya más de 3 métodos de pago
+      if (pagos.length > 3) {
+        return NextResponse.json(
+          { success: false, message: "Máximo 3 métodos de pago permitidos" },
+          { status: 400 },
+        );
+      }
+
+      // Calcular total pagado
+      const totalPagado = pagos.reduce((sum: number, pago: PagoOrden) => {
+        return sum + Number(pago.monto);
+      }, 0);
+
+      // Validar que el total pagado sea igual o mayor al total de la orden
+      if (totalPagado < total) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: `Monto insuficiente. Total: ${total}, Pagado: ${totalPagado}` 
+          },
+          { status: 400 },
+        );
+      }
+
+      // Validar que cada pago tenga método y monto
+      for (const pago of pagos) {
+        if (!pago.metodo_pago || !pago.monto || pago.monto <= 0) {
+          return NextResponse.json(
+            { success: false, message: "Todos los pagos deben tener método y monto válido" },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     // Crear la orden con transacción
     const orden = await prisma.$transaction(async (tx) => {
       // Si es orden local, marcar mesa como ocupada
@@ -532,8 +588,28 @@ export async function POST(request: NextRequest) {
               nombre_completo: true,
             },
           },
+          pagos_orden: true, // Incluir pagos en la respuesta
         },
       });
+
+      // ✅ Crear registros de pagos si se proporcionan
+      if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+        for (const pago of pagos) {
+          await tx.pagos_orden.create({
+            data: {
+              id: crypto.randomUUID(),
+              orden_id: nuevaOrden.id,
+              metodo_pago: pago.metodo_pago,
+              monto: Number(pago.monto),
+              referencia: pago.referencia || null,
+              notas: pago.notas || null,
+              creado_por: finalUserId || null,
+              creado_en: new Date(),
+            },
+          });
+        }
+        console.log(`💳 Registrados ${pagos.length} pagos para la orden ${nuevaOrden.id}`);
+      }
 
       // ✅ Actualizar stock de productos si están configurados para controlarlo
       await actualizarStockProductos(

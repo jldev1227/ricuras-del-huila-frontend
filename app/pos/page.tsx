@@ -17,6 +17,7 @@ import SelectReact, { type CSSObjectWithLabel } from "react-select";
 import ModalSeleccionarMesa from "@/components/orden/ModalSeleccionarMesa";
 import ModalCrearCliente from "@/components/cliente/ModalCrearCliente";
 import ModalEntregarOrden from "@/components/orden/ModalEntregarOrden";
+import GestionPagos, { type PagoItem } from "@/components/orden/GestionPagos";
 import ProductImage from "@/components/productos/ProductImage";
 import { useAuth } from "@/hooks/useAuth";
 import { useSucursal } from "@/hooks/useSucursal";
@@ -51,6 +52,7 @@ export default function OrderDashboard() {
   const [pasoActual, setPasoActual] = useState<PasoOrden>("carrito");
   const [montoPagado, setMontoPagado] = useState<number>(0);
   const [metodoPago, setMetodoPago] = useState("EFECTIVO");
+  const [pagos, setPagos] = useState<PagoItem[]>([]); // 🆕 Estado para pagos múltiples
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<{
     id: string;
@@ -454,10 +456,23 @@ export default function OrderDashboard() {
   };
 
   const guardarOrden = async () => {
-    if (montoPagado < calcularTotal()) {
+    // Validar que el total pagado cubra el total de la orden
+    const totalPagado = pagos.reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
+    
+    if (totalPagado < calcularTotal()) {
       addToast({
         title: "Monto insuficiente",
-        description: "El monto pagado debe ser mayor o igual al total",
+        description: `El monto pagado (${formatCOP(totalPagado)}) debe cubrir el total (${formatCOP(calcularTotal())})`,
+        color: "danger",
+      });
+      return;
+    }
+
+    // Validar que haya al menos un pago
+    if (pagos.length === 0 || pagos.some(p => !p.metodo_pago || !p.monto || p.monto <= 0)) {
+      addToast({
+        title: "Pago inválido",
+        description: "Debe configurar al menos un método de pago válido",
         color: "danger",
       });
       return;
@@ -475,6 +490,13 @@ export default function OrderDashboard() {
     setProcesandoOrden(true);
 
     try {
+      // Calcular totales de pago
+      const totalPagado = pagos.reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
+      const vueltas = totalPagado - calcularTotal();
+      const notasPago = pagos.map(p => 
+        `${p.metodo_pago}: ${formatCOP(p.monto)}${p.referencia ? ` (Ref: ${p.referencia})` : ''}`
+      ).join(' | ');
+
       const orden = {
         sucursalId: sucursal?.id,
         tipoOrden: tipoOrden.toUpperCase(),
@@ -492,8 +514,14 @@ export default function OrderDashboard() {
         descuento,
         total: calcularTotal(),
         especificaciones,
-        metodoPago: metodoPago,
-        notas: `Pago: ${formatCOP(montoPagado)} | Vueltas: ${formatCOP(calcularVueltas())}`,
+        metodoPago: pagos[0].metodo_pago, // Campo legacy - usar el primer método
+        pagos: pagos.map(p => ({ // 🆕 Enviar array de pagos
+          metodo_pago: p.metodo_pago,
+          monto: p.monto,
+          referencia: p.referencia || null,
+          notas: p.notas || null,
+        })),
+        notas: `${notasPago} | Total pagado: ${formatCOP(totalPagado)}${vueltas > 0 ? ` | Vueltas: ${formatCOP(vueltas)}` : ''}`,
         userId: user?.id, // ID del usuario que crea/actualiza la orden
       };
 
@@ -532,7 +560,7 @@ export default function OrderDashboard() {
         // Comportamiento normal con toast
         addToast({
           title: successMessage,
-          description: `Total: ${formatCOP(calcularTotal())} | Vueltas: ${formatCOP(calcularVueltas())}`,
+          description: `Total: ${formatCOP(calcularTotal())} | Pagado: ${formatCOP(totalPagado)}${vueltas > 0 ? ` | Vueltas: ${formatCOP(vueltas)}` : ''}`,
           color: "success",
         });
       }
@@ -570,6 +598,7 @@ export default function OrderDashboard() {
     setPasoActual("carrito");
     setMontoPagado(0);
     setMetodoPago("EFECTIVO");
+    setPagos([]); // 🆕 Limpiar pagos
     setRequiereFactura(false);
     setClienteSeleccionado(null);
   };
@@ -1335,85 +1364,11 @@ export default function OrderDashboard() {
 
                 {/* Información de pago */}
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <h3 className="font-bold text-gray-900 mb-3">
-                    Información de pago
-                  </h3>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label
-                        htmlFor="metodoPago"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Método de pago *
-                      </label>
-                      <select
-                        id="metodoPago"
-                        value={metodoPago}
-                        onChange={(e) => setMetodoPago(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-black bg-white"
-                      >
-                        <option value="EFECTIVO">Efectivo</option>
-                        <option value="NEQUI">Nequi</option>
-                        <option value="DAVIPLATA">Daviplata</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="montoPagado"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Con cuánto paga el cliente *
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                          $
-                        </span>
-                        <input
-                          id="montoPagado"
-                          type="number"
-                          placeholder="0"
-                          value={montoPagado || ""}
-                          onChange={(e) =>
-                            setMontoPagado(Number(e.target.value) || 0)
-                          }
-                          min={calcularTotal()}
-                          className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-wine/20 focus:border-wine outline-none transition-all text-lg font-semibold text-black"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Cálculo de vueltas */}
-                    {montoPagado > 0 && (
-                      <div
-                        className={`p-4 rounded-lg border-2 ${calcularVueltas() >= 0
-                          ? "bg-green-50 border-green-200"
-                          : "bg-red-50 border-red-200"
-                          }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-gray-700">
-                            Devolver:
-                          </span>
-                          <span
-                            className={`text-2xl font-bold ${calcularVueltas() >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                              }`}
-                          >
-                            {formatCOP(Math.abs(calcularVueltas()))}
-                          </span>
-                        </div>
-                        {calcularVueltas() < 0 && (
-                          <p className="text-xs text-red-600 mt-1">
-                            Falta {formatCOP(Math.abs(calcularVueltas()))} para
-                            completar el pago
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <GestionPagos
+                    totalOrden={calcularTotal()}
+                    onPagosChange={(nuevosPagos) => setPagos(nuevosPagos)}
+                    pagosIniciales={pagos}
+                  />
                 </div>
 
                 {/* Facturación */}

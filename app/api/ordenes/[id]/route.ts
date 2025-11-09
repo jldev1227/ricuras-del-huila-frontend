@@ -227,6 +227,22 @@ export async function GET(
             nombre_completo: true,
           },
         },
+        pagos_orden: {
+          select: {
+            id: true,
+            metodo_pago: true,
+            monto: true,
+            referencia: true,
+            notas: true,
+            creado_en: true,
+            usuario: {
+              select: {
+                id: true,
+                nombre_completo: true,
+              },
+            },
+          },
+        },
       },
     });
 

@@ -97,12 +97,26 @@ model ordenes {
   creado_por           String?       @db.Uuid
   actualizado_por      String?       @db.Uuid
   orden_items          orden_items[]
+  pagos_orden          pagos_orden[]
   clientes             clientes?     @relation(fields: [cliente_id], references: [id], onUpdate: NoAction)
   mesas                mesas?        @relation(fields: [mesa_id], references: [id], onUpdate: NoAction)
   usuarios             usuarios?     @relation(fields: [mesero_id], references: [id], onUpdate: NoAction)
   sucursales           sucursales    @relation(fields: [sucursal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   creador              usuarios?     @relation("OrdenCreador", fields: [creado_por], references: [id], onUpdate: NoAction)
   actualizador         usuarios?     @relation("OrdenActualizador", fields: [actualizado_por], references: [id], onUpdate: NoAction)
+}
+
+model pagos_orden {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orden_id      String       @db.Uuid
+  metodo_pago   metodos_pago
+  monto         Decimal      @db.Decimal(10, 2)
+  referencia    String?      // Número de transacción, comprobante, etc.
+  notas         String?
+  creado_por    String?      @db.Uuid
+  creado_en     DateTime     @default(now())
+  ordenes       ordenes      @relation(fields: [orden_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario       usuarios?    @relation(fields: [creado_por], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 model password_resets {
@@ -198,6 +212,7 @@ model usuarios {
   ordenes               ordenes[]
   ordenes_creadas       ordenes[]           @relation("OrdenCreador")
   ordenes_actualizadas  ordenes[]           @relation("OrdenActualizador")
+  pagos_orden           pagos_orden[]
   password_resets       password_resets[]
   sesiones              sesiones[]
 }
