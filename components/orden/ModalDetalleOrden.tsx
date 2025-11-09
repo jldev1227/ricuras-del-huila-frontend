@@ -24,6 +24,7 @@ import {
 import { useEffect, useState } from "react";
 import { formatCOP } from "@/utils/formatCOP";
 import ProductImage from "../productos/ProductImage";
+import Image from "next/image";
 
 type OrdenCompleta = Prisma.ordenesGetPayload<{
   include: {
@@ -505,13 +506,13 @@ export default function ModalDetalleOrden({
                     <div className="font-mono text-xs leading-tight">
                       {/* Logo */}
                       <div className="text-center mb-2">
-                        <div className="w-20 h-20 mx-auto mb-2 relative">
-                          {/* <Image
-                            src="/logo.png"
-                            alt="Logo"
-                            fill
-                            className="object-contain"
-                          /> */}
+                        <div className="w-24 h-24 mx-auto mb-2 relative">
+                          <Image
+                          src="/logo.png"
+                          alt="Logo"
+                          fill
+                          className="object-contain scale-150"
+                          />
                         </div>
                       </div>
 
@@ -731,13 +732,13 @@ export default function ModalDetalleOrden({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     {/* Logo */}
-                    <div className="w-12 h-12 relative flex-shrink-0">
-                      {/* <Image
+                    <div className="w-16 h-16 relative flex-shrink-0">
+                      <Image
                         src="/logo.png"
                         alt="Logo"
                         fill
                         className="object-contain"
-                      /> */}
+                      />
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">
